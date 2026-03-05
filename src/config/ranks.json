@@ -1,0 +1,24 @@
+{
+  "stadium": {
+    "Rookie": 1000,
+    "Novice": 1500,
+    "Contender": 2000,
+    "Elite": 2500,
+    "Pro": 3000,
+    "All-Star": 3500,
+    "Legend": 4000
+  },
+  "competitive": {
+    "Bronze": 1000,
+    "Silver": 1500,
+    "Gold": 2000,
+    "Platinum": 2500,
+    "Diamond": 3000,
+    "Master": 3500,
+    "Grandmaster": 4000,
+    "Champion": 4400
+  },
+  "subRankMultiplier": 100,
+  "defaultSubRank": 3,
+  "defaultSR": 2500
+}

@@ -1,0 +1,18 @@
+{
+  "archetypes": {
+    "flyer": ["Pharah", "Echo"],
+    "hitscan": ["Soldier: 76", "Cassidy", "Ashe", "Widowmaker", "Sojourn"],
+    "main_healer": ["Ana", "Kiriko", "Moira", "Baptiste"],
+    "off_healer": ["Mercy", "Lucio", "Zenyatta", "Brigitte", "Lifeweaver", "Juno", "Illari"],
+    "dive_tank": ["Winston", "D.Va", "Wrecking Ball"],
+    "anchor_tank": ["Reinhardt", "Orisa", "Sigma", "Ramattra"],
+    "brawl_tank": ["Junker Queen", "Mauga", "Roadhog", "Zarya"]
+  },
+  "parity_rules": [
+    {
+      "if_team_has": "flyer",
+      "opponent_needs": "hitscan",
+      "warning": "Team has flyer but opponent lacks hitscan"
+    }
+  ]
+}

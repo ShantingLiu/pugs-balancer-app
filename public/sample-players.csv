@@ -1,0 +1,31 @@
+battletag,tank_rank,dps_rank,support_rank,roles_willing,role_preference,hero_pool,is_one_trick,one_trick_hero,regular_comp_rank,weight_modifier,notes
+Fury#1234,Legend 2,All-Star 1,Elite 3,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya,Soldier: 76,Tracer",false,,Grandmaster 2,0,Main tank player
+Aurora#5678,Elite 2,All-Star 3,Legend 2,"DPS,Support","Support,DPS","Ana,Kiriko,Juno,Ashe,Vendetta",false,,Master 1,0,Flex support / hitscan
+Blaze#9012,Contender 3,Contender 2,Contender 1,"Tank,DPS,Support","DPS,Tank,Support","Pharah,Freya,Junkrat,D.Va,Lucio",false,,Gold 2,0,Projectile specialist
+Storm#3456,Legend 1,Elite 1,Elite 2,"Tank","Tank","Winston,Hazard,D.Va",false,,Grandmaster 1,-100,Dive tank only
+Pixel#7890,Contender 3,All-Star 2,Novice 1,"DPS","DPS","Tracer",true,Tracer,Master 1,0,Tracer OTP
+Nova#2345,Elite 1,Contender 1,Legend 3,"Support","Support","Mercy,Kiriko,Moira,Lucio",false,,Master 2,0,Main support
+Vortex#6789,Legend 3,All-Star 2,Contender 2,"Tank,DPS","Tank,DPS","Sigma,Reinhardt,Cassidy,Ashe,Soldier: 76",false,,Grandmaster 3,50,Experienced shotcaller
+Echo#0123,Contender 2,Elite 3,Elite 1,"DPS,Support","DPS,Support","Freya,Pharah,Ana,Zenyatta",false,,Platinum 3,0,Flyer player
+Zenith#4567,Novice 2,Novice 3,Contender 2,"Support","Support","Zenyatta,Ana,Wuyang",false,,Gold 1,0,Off-support main
+Titan#8901,All-Star 2,Contender 1,Novice 3,"Tank","Tank","Reinhardt,Orisa,Sigma",false,,Master 3,0,Shield tank specialist
+Shadow#2346,Elite 3,Legend 1,Contender 3,"DPS","DPS","Genji,Tracer,Vendetta",false,,Master 2,0,Flanker
+Crystal#5679,Contender 1,Elite 2,Legend 3,"Support","Support","Ana,Juno,Wuyang",false,,Master 2,100,Cracked Ana player
+Raze#9013,Novice 1,Contender 3,Novice 2,"Tank,DPS","Tank,DPS","Zarya,Junker Queen,Reaper,Mei",false,,Gold 3,0,Brawl style
+Mystic#3457,Elite 2,Elite 1,Elite 3,"Tank,DPS,Support","DPS,Tank,Support","D.Va,Sigma,Sojourn,Ashe,Kiriko",false,,Diamond 1,0,True flex
+Bolt#7891,Contender 2,Legend 3,Contender 1,"DPS","DPS","Vendetta,Ashe,Cassidy",false,,Master 3,0,Hitscan player
+Nebula#1235,All-Star 1,Elite 2,Contender 2,"Tank","Tank","Winston,D.Va,Doomfist",false,,Grandmaster 1,0,Aggressive dive
+Cipher#5670,Novice 3,Novice 2,Contender 3,"Support","Support","Lucio,Brigitte,Moira",false,,Gold 2,-50,Learning support
+Phantom#9014,Elite 1,Legend 2,Novice 1,"DPS","DPS","Genji",true,Genji,Master 2,0,Genji OTP
+Apex#3458,Contender 3,Contender 2,Elite 2,"Tank,Support","Tank,Support","Reinhardt,Zarya,Ana,Moira",false,,Platinum 2,0,Tank/support flex
+Flux#7892,Elite 3,Elite 2,All-Star 2,"DPS,Support","Support,DPS","Kiriko,Juno,Sojourn,Tracer",false,,Master 3,0,DPS support
+Omega#1111,Legend 1,Legend 2,All-Star 3,"Tank,DPS","Tank,DPS","Reinhardt,Sigma,Cassidy,Soldier: 76",false,,Champion 2,0,Top tier main tank
+Striker#2222,All-Star 4,Legend 1,Pro 3,"DPS","DPS","Tracer,Genji,Sojourn",false,,Grandmaster 1,0,Elite DPS carry
+Cosmos#3333,Pro 2,All-Star 5,Legend 2,"Support","Support","Ana,Kiriko,Juno,Mercy",false,,Grandmaster 4,0,Legend support player
+Blitz#4444,Legend 4,All-Star 2,Elite 1,"Tank,DPS","DPS,Tank","D.Va,Winston,Ashe,Tracer",false,,Champion 3,0,Flexible high elo
+Surge#5555,All-Star 1,All-Star 3,All-Star 2,"Tank,DPS,Support","DPS,Support,Tank","Zarya,Pharah,Mercy,Lucio",false,,Grandmaster 2,0,All-Star flex
+Venom#6666,Elite 5,Pro 1,Legend 5,"DPS,Support","DPS,Support","Genji,Reaper,Kiriko,Moira",false,,Master 4,0,Ninja player
+Havoc#7777,Legend 2,Pro 5,Elite 4,"Tank","Tank","Junker Queen,Doomfist,Reinhardt",false,,Grandmaster 3,0,Aggro tank
+Prime#8888,Pro 3,Legend 3,All-Star 4,"DPS","DPS","Cassidy,Ashe,Soldier: 76",false,,Grandmaster 5,0,Hitscan main
+Glitch#9999,Contender 4,Elite 4,All-Star 1,"Support","Support","Lucio",true,Lucio,Master 5,0,Lucio OTP Legend
+Dynamo#0000,All-Star 2,All-Star 4,Pro 1,"Tank,DPS","Tank,DPS","Orisa,Sigma,Junkrat,Mei",false,,Grandmaster 4,0,All-Star ranked

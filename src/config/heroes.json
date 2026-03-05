@@ -1,0 +1,37 @@
+{
+  "heroes": {
+    "D.Va": { "role": "Tank" },
+    "Doomfist": { "role": "Tank" },
+    "Hazard": { "role": "Tank" },
+    "Junker Queen": { "role": "Tank" },
+    "Orisa": { "role": "Tank" },
+    "Reinhardt": { "role": "Tank" },
+    "Sigma": { "role": "Tank" },
+    "Winston": { "role": "Tank" },
+    "Zarya": { "role": "Tank" },
+
+    "Ashe": { "role": "DPS" },
+    "Cassidy": { "role": "DPS" },
+    "Freya": { "role": "DPS" },
+    "Genji": { "role": "DPS" },
+    "Junkrat": { "role": "DPS" },
+    "Mei": { "role": "DPS" },
+    "Pharah": { "role": "DPS" },
+    "Reaper": { "role": "DPS" },
+    "Sojourn": { "role": "DPS" },
+    "Soldier: 76": { "role": "DPS" },
+    "Torbjorn": { "role": "DPS" },
+    "Tracer": { "role": "DPS" },
+    "Vendetta": { "role": "DPS" },
+
+    "Ana": { "role": "Support" },
+    "Brigitte": { "role": "Support" },
+    "Juno": { "role": "Support" },
+    "Kiriko": { "role": "Support" },
+    "Lucio": { "role": "Support" },
+    "Mercy": { "role": "Support" },
+    "Moira": { "role": "Support" },
+    "Wuyang": { "role": "Support" },
+    "Zenyatta": { "role": "Support" }
+  }
+}
