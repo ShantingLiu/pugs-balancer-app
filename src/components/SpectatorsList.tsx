@@ -10,9 +10,20 @@ export function SpectatorsList() {
   const lobbyBattletags = useSessionStore((state) => state.lobbyBattletags);
   const afkPlayers = useSessionStore((state) => state.afkPlayers);
   const mustPlay = useSessionStore((state) => state.mustPlay);
+  const draftMode = useSessionStore((state) => state.draftMode);
+  const lockedTeam1 = useSessionStore((state) => state.lockedTeam1);
+  const lockedTeam2 = useSessionStore((state) => state.lockedTeam2);
 
   // Calculate who is sitting out (in lobby but not on a team)
   const spectators = useMemo(() => {
+    if (draftMode) {
+      // In draft mode, use locked teams instead of lastResult
+      if (lockedTeam1.size === 0 && lockedTeam2.size === 0) return [];
+      return lobbyBattletags.filter(
+        (bt) => !lockedTeam1.has(bt) && !lockedTeam2.has(bt)
+      );
+    }
+
     if (!lastResult || lastResult.team1.length === 0) {
       return [];
     }
@@ -25,10 +36,13 @@ export function SpectatorsList() {
     return lobbyBattletags.filter(
       (bt) => !playingBattletags.has(bt)
     );
-  }, [lastResult, lobbyBattletags]);
+  }, [lastResult, lobbyBattletags, draftMode, lockedTeam1, lockedTeam2]);
 
   // Don't render anything if no teams or no spectators
-  if (!lastResult || lastResult.team1.length === 0 || spectators.length === 0) {
+  const hasTeams = draftMode
+    ? (lockedTeam1.size > 0 || lockedTeam2.size > 0)
+    : (lastResult && lastResult.team1.length > 0);
+  if (!hasTeams || spectators.length === 0) {
     return null;
   }
 
@@ -41,7 +55,7 @@ export function SpectatorsList() {
         {spectators.map((bt) => {
           const name = bt.split("#")[0];
           const isAfk = afkPlayers.has(bt);
-          const isMustPlay = mustPlay.has(bt);
+          const isMustPlay = mustPlay.has(bt) || (draftMode && !isAfk);
           return (
             <span
               key={bt}

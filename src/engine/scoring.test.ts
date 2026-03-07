@@ -5,7 +5,6 @@ import {
   calculateRolePreferencePenalty,
   countOneTrickConflicts,
   countSoftConstraintViolations,
-  calculateLossStreakPenalty,
   scoreComposition,
 } from "@engine/scoring";
 import type { RoleAssignment, LobbyPlayer, SoftConstraint } from "@engine/types";
@@ -45,6 +44,9 @@ function createRoleAssignment(
     isAfk: false,
     consecutiveLosses: 0,
     mustPlayPriority: 0,
+    stadiumWins: 0,
+    regular5v5Wins: 0,
+    regular6v6Wins: 0,
     allTimeWins: 0,
     ...overrides,
   };
@@ -109,28 +111,30 @@ describe("scoring", () => {
       expect(calculateRolePreferencePenalty(team)).toBe(0);
     });
 
-    it("should add penalty for non-first-choice role", () => {
+    it("should not penalize second-choice role", () => {
       const team = [
         createRoleAssignment("P1#1", "DPS", 3000, { 
           rolesWilling: ["Tank", "DPS"],
-          rolePreference: ["Tank", "DPS"] // Prefers Tank, assigned DPS
+          rolePreference: ["Tank", "DPS"] // Prefers Tank, assigned DPS (2nd choice)
         }),
       ];
 
-      // DPS is index 1, so penalty = 1 * 50 = 50
-      expect(calculateRolePreferencePenalty(team)).toBe(50);
+      // DPS is index 1 (2nd choice) — not penalized
+      expect(calculateRolePreferencePenalty(team)).toBe(0);
     });
 
-    it("should add high penalty for role not in preference", () => {
+    it("should penalize third-choice role", () => {
       const team = [
         createRoleAssignment("P1#1", "Support", 3000, { 
-          rolesWilling: ["Support"],
-          rolePreference: ["Tank", "DPS"] // Support not in list
+          rolesWilling: ["Tank", "DPS", "Support"],
+          rolePreference: ["Tank", "DPS", "Support"] // Assigned 3rd choice
         }),
       ];
 
-      expect(calculateRolePreferencePenalty(team)).toBe(100);
+      // Support is index 2 (3rd choice) — penalized: raw = 2
+      expect(calculateRolePreferencePenalty(team)).toBe(2);
     });
+
   });
 
   describe("countOneTrickConflicts", () => {
@@ -204,34 +208,6 @@ describe("scoring", () => {
     });
   });
 
-  describe("calculateLossStreakPenalty", () => {
-    it("should return 0 when no loss streaks", () => {
-      const team1 = [createRoleAssignment("P1#1", "Tank", 3200)];
-      const team2 = [createRoleAssignment("P2#2", "Tank", 3000)];
-      const lossStreaks = new Map<string, number>();
-
-      expect(calculateLossStreakPenalty(team1, team2, lossStreaks)).toBe(0);
-    });
-
-    it("should penalize loss-streak player on lower-SR team", () => {
-      const team1 = [createRoleAssignment("P1#1", "Tank", 3200)]; // higher SR
-      const team2 = [createRoleAssignment("P2#2", "Tank", 3000)]; // lower SR
-      const lossStreaks = new Map([["P2#2", 2]]);
-
-      // P2 has 2 losses and is on weaker team: 2 * 75 = 150 penalty
-      expect(calculateLossStreakPenalty(team1, team2, lossStreaks)).toBe(150);
-    });
-
-    it("should not penalize loss-streak player on higher-SR team", () => {
-      const team1 = [createRoleAssignment("P1#1", "Tank", 3200)]; // higher SR
-      const team2 = [createRoleAssignment("P2#2", "Tank", 3000)]; // lower SR
-      const lossStreaks = new Map([["P1#1", 2]]);
-
-      // P1 has losses but is already on stronger team: no penalty
-      expect(calculateLossStreakPenalty(team1, team2, lossStreaks)).toBe(0);
-    });
-  });
-
   describe("scoreComposition", () => {
     it("should calculate composite score", () => {
       const team1 = [
@@ -251,9 +227,10 @@ describe("scoring", () => {
 
       const score = scoreComposition(team1, team2);
 
-      // SR difference = 100, so base score is 100
-      // No other penalties in this case
-      expect(score).toBe(100);
+      // Role matchup: Tank 100 + DPS 100 + Support 100 = 300, soft-normalized: 300/(300+4000) × 500 ≈ 34.88
+      // All other factors = 0
+      // Total ≈ 34.88
+      expect(score).toBeCloseTo(34.88, 1);
     });
 
     it("should add penalties for constraints and conflicts", () => {
@@ -265,8 +242,8 @@ describe("scoring", () => {
 
       const score = scoreComposition(team1, team2);
 
-      // Should include 500 for one-trick conflict
-      expect(score).toBeGreaterThanOrEqual(500);
+      // 1 one-trick conflict: 1/(1+4) × 200 = 40
+      expect(score).toBeGreaterThanOrEqual(40);
     });
   });
 });

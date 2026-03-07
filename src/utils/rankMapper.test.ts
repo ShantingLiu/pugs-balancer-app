@@ -113,6 +113,9 @@ describe("rankMapper", () => {
       isAfk: false,
       consecutiveLosses: 0,
       mustPlayPriority: 0,
+      stadiumWins: 0,
+      regular5v5Wins: 0,
+      regular6v6Wins: 0,
       allTimeWins: 0,
     };
 

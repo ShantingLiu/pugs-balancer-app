@@ -41,6 +41,8 @@ export function LobbySelector() {
   const adaptiveWeights = useSessionStore((state) => state.adaptiveWeights);
   const mustPlayPriority = useSessionStore((state) => state.mustPlayPriority);
   const lastResult = useSessionStore((state) => state.lastResult);
+  const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
+  const toggleShowWeightModifiers = useSessionStore((state) => state.toggleShowWeightModifiers);
   const addToLobby = useSessionStore((state) => state.addToLobby);
   const removeFromLobby = useSessionStore((state) => state.removeFromLobby);
   const setLobby = useSessionStore((state) => state.setLobby);
@@ -299,7 +301,7 @@ export function LobbySelector() {
       />
 
       {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as Role | "all")}
@@ -320,6 +322,18 @@ export function LobbySelector() {
           <option value="rank-asc">Sort: Rank ↑</option>
           <option value="role">Sort: Role</option>
         </select>
+        <div className="flex-1" />
+        <button
+          onClick={toggleShowWeightModifiers}
+          className={`px-2 py-1.5 rounded text-sm transition-colors ${
+            showWeightModifiers
+              ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              : "bg-gray-800 text-gray-500 hover:bg-gray-700"
+          }`}
+          title={showWeightModifiers ? "Hide manual weight modifiers (W/L adjustments still visible)" : "Show manual weight modifiers"}
+        >
+          {showWeightModifiers ? "👁️" : "👁️‍🗨️"}
+        </button>
       </div>
 
       {/* Player count indicator */}

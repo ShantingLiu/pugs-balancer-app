@@ -5,6 +5,7 @@ import type {
   TeamAssignment,
   Warning,
   SoftConstraint,
+  GameMode,
 } from "@engine/types";
 import { getEffectiveSR } from "@utils/rankMapper";
 import {
@@ -14,32 +15,366 @@ import {
   getOneTrickConflicts,
   getSoftConstraintViolations,
 } from "@engine/scoring";
+import { getModeConfig, getValidCompositions } from "@engine/modeConfig";
 
 // =============================================================================
-// Core Balancer Algorithm for Stadium PUGs Balancer
+// Core Balancer Algorithm for PUGs Balancer
 // =============================================================================
 
 /**
- * Team composition requirements: 1 Tank, 2 DPS, 2 Support per team
+ * Get team composition for a given mode
+ * Returns array of role/count pairs for building teams
  */
-const TEAM_COMPOSITION: { role: Role; count: number }[] = [
-  { role: "Tank", count: 1 },
-  { role: "DPS", count: 2 },
-  { role: "Support", count: 2 },
-];
-
-const MAX_CANDIDATES = 1000;
+function getTeamComposition(mode: GameMode): { role: Role; count: number }[] {
+  const validComps = getValidCompositions(mode);
+  // Use the first valid composition (for 5v5, this is the only one: 1T/2D/2S)
+  // For 6v6, this picks the first valid (typically 1T/4D/1S or 1T/3D/2S depending on sort)
+  // Later we can optimize to try multiple compositions
+  const comp = validComps[0];
+  const result: { role: Role; count: number }[] = [];
+  if (comp.Tank > 0) result.push({ role: "Tank", count: comp.Tank });
+  if (comp.DPS > 0) result.push({ role: "DPS", count: comp.DPS });
+  if (comp.Support > 0) result.push({ role: "Support", count: comp.Support });
+  return result;
+}
 
 /**
- * Shuffle array in place using Fisher-Yates algorithm
+ * Scoring function type for the optimizer
  */
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
+type CompositionScorer = (team1: RoleAssignment[], team2: RoleAssignment[]) => number;
+
+/** Fisher-Yates shuffle (in-place) */
+function shuffleArray<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return shuffled;
+}
+
+/** Try to place a player into any open slot matching their constraints */
+function tryPlacePlayer(
+  player: LobbyPlayer,
+  needed: Map<string, number>,
+  respectLocks: boolean,
+  team1: RoleAssignment[],
+  team2: RoleAssignment[],
+  mode: GameMode
+): boolean {
+  const teams = Math.random() < 0.5 ? [1, 2] as const : [2, 1] as const;
+  for (const team of teams) {
+    if (respectLocks && player.lockedToTeam !== null && player.lockedToTeam !== team) continue;
+    for (const role of player.rolesWilling) {
+      if (respectLocks && player.lockedToRole !== null && player.lockedToRole !== role) continue;
+      const key = `${team}-${role}`;
+      if ((needed.get(key) || 0) > 0) {
+        const ra = createRoleAssignment(player, role, mode);
+        (team === 1 ? team1 : team2).push(ra);
+        needed.set(key, needed.get(key)! - 1);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Generate one valid random assignment of players to team slots.
+ * Places locked players first, then must-play, then fills remaining slots.
+ * Returns null if no valid assignment can be constructed with this shuffle.
+ */
+function generateInitialAssignment(
+  players: LobbyPlayer[],
+  mode: GameMode,
+  respectLocks: boolean,
+  mustPlayBattletags: Set<string>
+): { team1: RoleAssignment[]; team2: RoleAssignment[]; bench: LobbyPlayer[] } | null {
+  const teamComposition = getTeamComposition(mode);
+
+  // Build needed counts per team+role (e.g., "1-Tank" -> 1, "1-DPS" -> 2)
+  const needed = new Map<string, number>();
+  for (const team of [1, 2] as const) {
+    for (const { role, count } of teamComposition) {
+      needed.set(`${team}-${role}`, count);
+    }
+  }
+
+  const team1: RoleAssignment[] = [];
+  const team2: RoleAssignment[] = [];
+  const used = new Set<string>();
+
+  // Shuffle for randomness across restarts
+  const shuffled = [...players];
+  shuffleArray(shuffled);
+
+  // Phase 1: Place fully locked players (team + role)
+  if (respectLocks) {
+    for (const p of shuffled) {
+      if (p.lockedToTeam !== null && p.lockedToRole !== null) {
+        const key = `${p.lockedToTeam}-${p.lockedToRole}`;
+        if ((needed.get(key) || 0) > 0 && p.rolesWilling.includes(p.lockedToRole)) {
+          const ra = createRoleAssignment(p, p.lockedToRole, mode);
+          (p.lockedToTeam === 1 ? team1 : team2).push(ra);
+          used.add(p.battletag);
+          needed.set(key, needed.get(key)! - 1);
+        }
+      }
+    }
+  }
+
+  // Phase 2: Place must-play players
+  for (const p of shuffled) {
+    if (used.has(p.battletag)) continue;
+    if (!mustPlayBattletags.has(p.battletag)) continue;
+    if (tryPlacePlayer(p, needed, respectLocks, team1, team2, mode)) {
+      used.add(p.battletag);
+    }
+  }
+
+  // Phase 3: Fill remaining slots from available players
+  for (const p of shuffled) {
+    if (used.has(p.battletag)) continue;
+    let anySlotLeft = false;
+    for (const v of needed.values()) { if (v > 0) { anySlotLeft = true; break; } }
+    if (!anySlotLeft) break;
+    if (tryPlacePlayer(p, needed, respectLocks, team1, team2, mode)) {
+      used.add(p.battletag);
+    }
+  }
+
+  // Verify all slots filled and must-play constraints met
+  for (const v of needed.values()) { if (v > 0) return null; }
+  for (const bt of mustPlayBattletags) { if (!used.has(bt)) return null; }
+
+  const bench = players.filter(p => !used.has(p.battletag));
+  return { team1, team2, bench };
+}
+
+/**
+ * Run hill-climbing optimization with simulated annealing on an initial assignment.
+ * Tries random swaps (inter-team, 2-opt, bench, intra-team role) and keeps improvements.
+ * Early iterations accept slightly worse moves to escape shallow local minima;
+ * temperature decays to zero so late iterations are strictly greedy.
+ * Mutates team1/team2/bench in place, returns the final score.
+ */
+function hillClimb(
+  team1: RoleAssignment[],
+  team2: RoleAssignment[],
+  bench: LobbyPlayer[],
+  mode: GameMode,
+  scorer: CompositionScorer,
+  respectLocks: boolean,
+  mustPlayBattletags: Set<string>,
+  iterations: number
+): number {
+  let currentScore = scorer(team1, team2);
+  let bestScore = currentScore;
+  let bestTeam1 = team1.slice();
+  let bestTeam2 = team2.slice();
+  let bestBench = bench.slice();
+
+  // Simulated annealing: start temperature allows accepting moves ~5 score worse
+  // with ~37% probability; decays to 0 over the iteration budget.
+  const T0 = 5;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const temperature = T0 * (1 - iter / iterations);
+    const r = Math.random();
+
+    if (r < 0.35) {
+      // Inter-team player swap: swap one player from each team
+      const i1 = Math.floor(Math.random() * team1.length);
+      const i2 = Math.floor(Math.random() * team2.length);
+      const p1 = team1[i1], p2 = team2[i2];
+
+      if (!p1.player.rolesWilling.includes(p2.assignedRole)) continue;
+      if (!p2.player.rolesWilling.includes(p1.assignedRole)) continue;
+
+      if (respectLocks) {
+        const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
+        if (lp1.lockedToTeam === 1 || lp2.lockedToTeam === 2) continue;
+        if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
+        if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
+      }
+
+      // Each player takes the other's slot (team + role)
+      team1[i1] = createRoleAssignment(p2.player as LobbyPlayer, p1.assignedRole, mode);
+      team2[i2] = createRoleAssignment(p1.player as LobbyPlayer, p2.assignedRole, mode);
+
+      const newScore = scorer(team1, team2);
+      const delta = newScore - currentScore;
+      if (delta < 0 || (temperature > 0 && Math.random() < Math.exp(-delta / temperature))) {
+        currentScore = newScore;
+        if (newScore < bestScore) { bestScore = newScore; bestTeam1 = team1.slice(); bestTeam2 = team2.slice(); bestBench = bench.slice(); }
+      } else {
+        team1[i1] = p1;
+        team2[i2] = p2;
+      }
+    } else if (r < 0.40) {
+      // 2-opt: two simultaneous inter-team swaps to break plateaus
+      if (team1.length < 2 || team2.length < 2) continue;
+
+      const i1a = Math.floor(Math.random() * team1.length);
+      const i2a = Math.floor(Math.random() * team2.length);
+      let i1b = Math.floor(Math.random() * (team1.length - 1));
+      if (i1b >= i1a) i1b++;
+      let i2b = Math.floor(Math.random() * (team2.length - 1));
+      if (i2b >= i2a) i2b++;
+
+      const p1a = team1[i1a], p2a = team2[i2a];
+      const p1b = team1[i1b], p2b = team2[i2b];
+
+      if (!p1a.player.rolesWilling.includes(p2a.assignedRole)) continue;
+      if (!p2a.player.rolesWilling.includes(p1a.assignedRole)) continue;
+      if (!p1b.player.rolesWilling.includes(p2b.assignedRole)) continue;
+      if (!p2b.player.rolesWilling.includes(p1b.assignedRole)) continue;
+
+      if (respectLocks) {
+        const lp1a = p1a.player as LobbyPlayer, lp2a = p2a.player as LobbyPlayer;
+        const lp1b = p1b.player as LobbyPlayer, lp2b = p2b.player as LobbyPlayer;
+        if (lp1a.lockedToTeam === 1 || lp2a.lockedToTeam === 2) continue;
+        if (lp1b.lockedToTeam === 1 || lp2b.lockedToTeam === 2) continue;
+        if (lp1a.lockedToRole !== null && lp1a.lockedToRole !== p2a.assignedRole) continue;
+        if (lp2a.lockedToRole !== null && lp2a.lockedToRole !== p1a.assignedRole) continue;
+        if (lp1b.lockedToRole !== null && lp1b.lockedToRole !== p2b.assignedRole) continue;
+        if (lp2b.lockedToRole !== null && lp2b.lockedToRole !== p1b.assignedRole) continue;
+      }
+
+      team1[i1a] = createRoleAssignment(p2a.player as LobbyPlayer, p1a.assignedRole, mode);
+      team2[i2a] = createRoleAssignment(p1a.player as LobbyPlayer, p2a.assignedRole, mode);
+      team1[i1b] = createRoleAssignment(p2b.player as LobbyPlayer, p1b.assignedRole, mode);
+      team2[i2b] = createRoleAssignment(p1b.player as LobbyPlayer, p2b.assignedRole, mode);
+
+      const newScore = scorer(team1, team2);
+      const delta = newScore - currentScore;
+      if (delta < 0 || (temperature > 0 && Math.random() < Math.exp(-delta / temperature))) {
+        currentScore = newScore;
+        if (newScore < bestScore) { bestScore = newScore; bestTeam1 = team1.slice(); bestTeam2 = team2.slice(); bestBench = bench.slice(); }
+      } else {
+        team1[i1a] = p1a;
+        team2[i2a] = p2a;
+        team1[i1b] = p1b;
+        team2[i2b] = p2b;
+      }
+    } else if (r < 0.70 && bench.length > 0) {
+      // Bench swap: replace a playing player with a benched one
+      const useTeam1 = Math.random() < 0.5;
+      const teamArr = useTeam1 ? team1 : team2;
+      const teamNum = useTeam1 ? 1 : 2;
+      const ti = Math.floor(Math.random() * teamArr.length);
+      const bi = Math.floor(Math.random() * bench.length);
+
+      const playing = teamArr[ti];
+      const benched = bench[bi];
+
+      if (mustPlayBattletags.has(playing.player.battletag)) continue;
+      if (!benched.rolesWilling.includes(playing.assignedRole)) continue;
+
+      if (respectLocks) {
+        if ((playing.player as LobbyPlayer).lockedToTeam !== null) continue;
+        if (benched.lockedToTeam !== null && benched.lockedToTeam !== teamNum) continue;
+        if (benched.lockedToRole !== null && benched.lockedToRole !== playing.assignedRole) continue;
+      }
+
+      teamArr[ti] = createRoleAssignment(benched, playing.assignedRole, mode);
+      bench[bi] = playing.player as LobbyPlayer;
+
+      const newScore = scorer(team1, team2);
+      const delta = newScore - currentScore;
+      if (delta < 0 || (temperature > 0 && Math.random() < Math.exp(-delta / temperature))) {
+        currentScore = newScore;
+        if (newScore < bestScore) { bestScore = newScore; bestTeam1 = team1.slice(); bestTeam2 = team2.slice(); bestBench = bench.slice(); }
+      } else {
+        bench[bi] = benched;
+        teamArr[ti] = playing;
+      }
+    } else {
+      // Intra-team role swap: swap roles of two players on the same team
+      const teamArr = Math.random() < 0.5 ? team1 : team2;
+      if (teamArr.length < 2) continue;
+
+      const idx1 = Math.floor(Math.random() * teamArr.length);
+      let idx2 = Math.floor(Math.random() * (teamArr.length - 1));
+      if (idx2 >= idx1) idx2++;
+
+      const p1 = teamArr[idx1], p2 = teamArr[idx2];
+      if (p1.assignedRole === p2.assignedRole) continue;
+
+      if (!p1.player.rolesWilling.includes(p2.assignedRole)) continue;
+      if (!p2.player.rolesWilling.includes(p1.assignedRole)) continue;
+
+      if (respectLocks) {
+        const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
+        if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
+        if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
+      }
+
+      teamArr[idx1] = createRoleAssignment(p1.player as LobbyPlayer, p2.assignedRole, mode);
+      teamArr[idx2] = createRoleAssignment(p2.player as LobbyPlayer, p1.assignedRole, mode);
+
+      const newScore = scorer(team1, team2);
+      const delta = newScore - currentScore;
+      if (delta < 0 || (temperature > 0 && Math.random() < Math.exp(-delta / temperature))) {
+        currentScore = newScore;
+        if (newScore < bestScore) { bestScore = newScore; bestTeam1 = team1.slice(); bestTeam2 = team2.slice(); bestBench = bench.slice(); }
+      } else {
+        teamArr[idx1] = p1;
+        teamArr[idx2] = p2;
+      }
+    }
+  }
+
+  // Restore best-ever state (annealing may have wandered away)
+  for (let i = 0; i < team1.length; i++) team1[i] = bestTeam1[i];
+  for (let i = 0; i < team2.length; i++) team2[i] = bestTeam2[i];
+  bench.length = 0;
+  bench.push(...bestBench);
+
+  return bestScore;
+}
+
+const NUM_RESTARTS = 20;
+const ITERATIONS_PER_RESTART = 1000;
+
+/**
+ * Find the best team composition using multi-restart hill climbing.
+ * Generates random valid assignments and iteratively improves them via swaps.
+ * Scales to any lobby size — bounded by iteration count, not combinations.
+ */
+function findBestComposition(
+  players: LobbyPlayer[],
+  mode: GameMode,
+  scorer: CompositionScorer,
+  respectLocks: boolean,
+  mustPlayBattletags: Set<string>
+): PartialAssignment | null {
+  let globalBestScore = Infinity;
+  let globalBestResult: PartialAssignment | null = null;
+
+  for (let restart = 0; restart < NUM_RESTARTS; restart++) {
+    const initial = generateInitialAssignment(players, mode, respectLocks, mustPlayBattletags);
+    if (!initial) continue;
+
+    const { team1, team2, bench } = initial;
+
+    const finalScore = hillClimb(
+      team1, team2, bench, mode, scorer,
+      respectLocks, mustPlayBattletags, ITERATIONS_PER_RESTART
+    );
+
+    if (finalScore < globalBestScore) {
+      globalBestScore = finalScore;
+      globalBestResult = {
+        team1: [...team1],
+        team2: [...team2],
+        usedPlayers: new Set([
+          ...team1.map(ra => ra.player.battletag),
+          ...team2.map(ra => ra.player.battletag),
+        ]),
+      };
+    }
+  }
+
+  return globalBestResult;
 }
 
 /**
@@ -66,14 +401,18 @@ export function groupPlayersByRole(
 /**
  * Check if a valid team composition is possible with given players
  */
-export function canFormValidTeams(players: LobbyPlayer[]): {
+export function canFormValidTeams(
+  players: LobbyPlayer[],
+  mode: GameMode = "stadium_5v5"
+): {
   valid: boolean;
   missingRoles: { role: Role; have: number; need: number }[];
 } {
   const groups = groupPlayersByRole(players);
   const missingRoles: { role: Role; have: number; need: number }[] = [];
+  const teamComposition = getTeamComposition(mode);
 
-  for (const { role, count } of TEAM_COMPOSITION) {
+  for (const { role, count } of teamComposition) {
     const needed = count * 2; // For both teams
     const available = groups[role].length;
     if (available < needed) {
@@ -98,216 +437,21 @@ interface PartialAssignment {
 
 /**
  * Create a role assignment for a player
+ * 
+ * @param player - Player to assign
+ * @param role - Role to assign them to
+ * @param mode - Game mode (for SR calculation)
  */
 function createRoleAssignment(
   player: LobbyPlayer,
-  role: Role
+  role: Role,
+  mode: GameMode = "stadium_5v5"
 ): RoleAssignment {
   return {
     player,
     assignedRole: role,
-    effectiveSR: getEffectiveSR(player, role),
+    effectiveSR: getEffectiveSR(player, role, mode),
   };
-}
-
-/**
- * Get the next unfilled slot in a partial assignment
- * Returns null if complete
- */
-function getNextSlot(
-  partial: PartialAssignment
-): { team: 1 | 2; role: Role } | null {
-  // Fill team 1 first, then team 2
-  for (const teamNum of [1, 2] as const) {
-    const team = teamNum === 1 ? partial.team1 : partial.team2;
-
-    for (const { role, count } of TEAM_COMPOSITION) {
-      const filled = team.filter((ra) => ra.assignedRole === role).length;
-      if (filled < count) {
-        return { team: teamNum, role };
-      }
-    }
-  }
-
-  return null; // Complete
-}
-
-/**
- * Get eligible players for a slot
- * @param relaxConstraints - If true, ignore team/role locks during eligibility
- */
-function getEligiblePlayers(
-  partial: PartialAssignment,
-  role: Role,
-  teamNum: 1 | 2,
-  allPlayers: LobbyPlayer[],
-  debugRoleLocked: LobbyPlayer[] = [],
-  relaxConstraints: boolean = false
-): LobbyPlayer[] {
-  return allPlayers.filter((player) => {
-    // Not already used
-    if (partial.usedPlayers.has(player.battletag)) return false;
-
-    // Willing to play this role - always required
-    if (!player.rolesWilling.includes(role)) {
-      // Debug: log if a role-locked player is rejected for not being willing
-      if (debugRoleLocked.some((p) => p.battletag === player.battletag && p.lockedToRole === role)) {
-        console.warn(`${player.battletag} is role-locked to ${role} but NOT willing to play ${role}!`);
-      }
-      return false;
-    }
-
-    // In relaxed mode, ignore locks - they become soft preferences
-    if (relaxConstraints) {
-      return true;
-    }
-
-    // Respect team locks
-    if (player.lockedToTeam !== null && player.lockedToTeam !== teamNum) {
-      return false;
-    }
-
-    // Respect role locks - if player is locked to a different role, skip
-    if (player.lockedToRole !== null && player.lockedToRole !== role) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-/**
- * Generate candidate team compositions using backtracking
- * Includes randomization for variety on each call
- * @param relaxConstraints - If true, treat locks/must-play as soft preferences rather than hard requirements
- */
-function generateCandidates(
-  players: LobbyPlayer[],
-  maxCandidates: number = MAX_CANDIDATES,
-  relaxConstraints: boolean = false
-): PartialAssignment[] {
-  const candidates: PartialAssignment[] = [];
-  let iterations = 0;
-  const MAX_ITERATIONS = 100000; // Safety limit
-
-  // Must-play players need to be verified at the end (unless relaxed)
-  const mustPlayPlayers = relaxConstraints ? [] : players.filter((p) => p.mustPlay);
-  
-  // Locked players must be on their correct team (unless relaxed)
-  const lockedPlayers = relaxConstraints ? [] : players.filter((p) => p.lockedToTeam !== null);
-  
-  // Role-locked players for verification (unless relaxed)
-  const roleLockedPlayers = relaxConstraints ? [] : players.filter((p) => p.lockedToRole !== null);
-  if (!relaxConstraints) {
-    console.log("Role-locked players in generateCandidates:", roleLockedPlayers.map((p) => `${p.battletag} -> ${p.lockedToRole}`));
-  }
-  
-  // Shuffle players for different generation order each call
-  const shuffledPlayers = shuffleArray(players);
-
-  // Start with empty assignment
-  const initial: PartialAssignment = {
-    team1: [],
-    team2: [],
-    usedPlayers: new Set(),
-  };
-
-  // Recursive backtracking
-  function backtrack(partial: PartialAssignment): void {
-    iterations++;
-    if (iterations > MAX_ITERATIONS) return;
-    if (candidates.length >= maxCandidates) return;
-
-    const nextSlot = getNextSlot(partial);
-
-    // Complete assignment
-    if (nextSlot === null) {
-      // Verify must-play players are all included
-      const allUsed = [...partial.team1, ...partial.team2].map(
-        (ra) => ra.player.battletag
-      );
-      const mustPlayIncluded = mustPlayPlayers.every((p) =>
-        allUsed.includes(p.battletag)
-      );
-
-      // Verify locked players are on their correct teams
-      const team1Battletags = new Set(partial.team1.map((ra) => ra.player.battletag));
-      const team2Battletags = new Set(partial.team2.map((ra) => ra.player.battletag));
-      const locksRespected = lockedPlayers.every((p) => {
-        if (p.lockedToTeam === 1) return team1Battletags.has(p.battletag);
-        if (p.lockedToTeam === 2) return team2Battletags.has(p.battletag);
-        return true;
-      });
-
-      // Verify role-locked players are in their correct role
-      const allAssignments = [...partial.team1, ...partial.team2];
-      const roleLocksRespected = roleLockedPlayers.every((p) => {
-        const assignment = allAssignments.find((a) => a.player.battletag === p.battletag);
-        if (!assignment) return true; // Player not in this composition
-        return assignment.assignedRole === p.lockedToRole;
-      });
-
-      if (mustPlayIncluded && locksRespected && roleLocksRespected) {
-        candidates.push({
-          team1: [...partial.team1],
-          team2: [...partial.team2],
-          usedPlayers: new Set(partial.usedPlayers),
-        });
-      }
-      return;
-    }
-
-    const { team, role } = nextSlot;
-    const eligible = getEligiblePlayers(partial, role, team, shuffledPlayers, [], relaxConstraints);
-
-    // Prioritize: team-locked (for this team) > role-locked > must-play > others
-    // Team-locked players MUST be included in their team, so put them first
-    const teamLockedEligible = eligible.filter((p) => p.lockedToTeam === team);
-    const roleLockedEligible = eligible.filter((p) => p.lockedToRole === role && p.lockedToTeam !== team);
-    const mustPlayEligible = eligible.filter((p) => p.mustPlay && p.lockedToRole !== role && p.lockedToTeam !== team);
-    const nonPriority = eligible.filter((p) => !p.mustPlay && p.lockedToRole !== role && p.lockedToTeam !== team);
-    
-    // Shuffle non-priority players to get different results each run
-    const shuffledNonPriority = shuffleArray(nonPriority);
-    
-    // Sort must-play by priority (2=sat out > 1=joined mid-match), then sat-out streak, then role preference
-    const sortedMustPlay = [...mustPlayEligible].sort((a, b) => {
-      // Higher priority = should play first
-      const priorityDiff = b.mustPlayPriority - a.mustPlayPriority;
-      if (priorityDiff !== 0) return priorityDiff;
-      // Higher sat-out streak = higher priority
-      const streakDiff = b.consecutiveSatOut - a.consecutiveSatOut;
-      if (streakDiff !== 0) return streakDiff;
-      // If same streak, prefer players whose first choice is this role
-      const aPrefers = a.rolePreference[0] === role ? -1 : 0;
-      const bPrefers = b.rolePreference[0] === role ? -1 : 0;
-      return aPrefers - bPrefers;
-    });
-    
-    // Team-locked first, then role-locked, then must-play, then others
-    const sortedEligible = [...teamLockedEligible, ...roleLockedEligible, ...sortedMustPlay, ...shuffledNonPriority];
-
-    for (const player of sortedEligible) {
-      const assignment = createRoleAssignment(player, role);
-
-      // Make assignment
-      const newPartial: PartialAssignment = {
-        team1:
-          team === 1 ? [...partial.team1, assignment] : [...partial.team1],
-        team2:
-          team === 2 ? [...partial.team2, assignment] : [...partial.team2],
-        usedPlayers: new Set([...partial.usedPlayers, player.battletag]),
-      };
-
-      backtrack(newPartial);
-
-      if (candidates.length >= maxCandidates) return;
-    }
-  }
-
-  backtrack(initial);
-  console.log("Backtracking complete. Iterations:", iterations, "Candidates:", candidates.length);
-  return candidates;
 }
 
 /**
@@ -315,36 +459,26 @@ function generateCandidates(
  *
  * @param lobby - Players available for balancing (excluding AFK)
  * @param softConstraints - Optional soft constraints (together/apart)
+ * @param mode - Game mode (determines scoring rules and required players)
  * @returns TeamAssignment with best balanced teams, or null if impossible
  */
 export function balanceTeams(
   lobby: LobbyPlayer[],
-  softConstraints: SoftConstraint[] = []
+  softConstraints: SoftConstraint[] = [],
+  mode: GameMode = "stadium_5v5"
 ): TeamAssignment {
-  console.log("balanceTeams called with", lobby.length, "players");
   const warnings: Warning[] = [];
+  const modeConfig = getModeConfig(mode);
+  const requiredPlayers = modeConfig.teamSize * 2;
 
   // Filter out AFK players
   const activePlayers = lobby.filter((p) => !p.isAfk);
-  console.log("Active players:", activePlayers.length);
-
-  // Log locked players
-  const lockedPlayers = activePlayers.filter((p) => p.lockedToTeam !== null);
-  console.log("Locked players in balancer:", lockedPlayers.map((p) => `${p.battletag} -> Team ${p.lockedToTeam}`));
-
-  // Build loss streaks map from lobby players
-  const lossStreaks = new Map<string, number>();
-  for (const player of activePlayers) {
-    if (player.consecutiveLosses > 0) {
-      lossStreaks.set(player.battletag, player.consecutiveLosses);
-    }
-  }
 
   // Validate minimum players
-  if (activePlayers.length < 10) {
+  if (activePlayers.length < requiredPlayers) {
     warnings.push({
       type: "insufficient_players",
-      message: `Need at least 10 active players, have ${activePlayers.length}`,
+      message: `Need at least ${requiredPlayers} active players for ${modeConfig.label}, have ${activePlayers.length}`,
       severity: "error",
     });
 
@@ -358,7 +492,7 @@ export function balanceTeams(
   }
 
   // Check role coverage
-  const { valid: canForm, missingRoles } = canFormValidTeams(activePlayers);
+  const { valid: canForm, missingRoles } = canFormValidTeams(activePlayers, mode);
   if (!canForm) {
     for (const { role, have, need } of missingRoles) {
       warnings.push({
@@ -372,7 +506,7 @@ export function balanceTeams(
   // Handle too many must-play players - prioritize those who sat out longest
   let mustPlayPlayers = activePlayers.filter((p) => p.mustPlay);
   const originalMustPlayCount = mustPlayPlayers.length;
-  const hadMustPlayOverflow = mustPlayPlayers.length > 10;
+  const hadMustPlayOverflow = mustPlayPlayers.length > requiredPlayers;
   
   if (hadMustPlayOverflow) {
     // Sort by priority first (sat-out waiting > joined mid-match), then by sat-out streak
@@ -381,7 +515,7 @@ export function balanceTeams(
       if (priorityDiff !== 0) return priorityDiff;
       return b.consecutiveSatOut - a.consecutiveSatOut;
     });
-    const keepMustPlay = new Set(sortedByPriority.slice(0, 10).map((p) => p.battletag));
+    const keepMustPlay = new Set(sortedByPriority.slice(0, requiredPlayers).map((p) => p.battletag));
     
     // Update players - clear must-play for those not selected
     for (const player of activePlayers) {
@@ -408,22 +542,23 @@ export function balanceTeams(
     (p) => p.mustPlay || lockedPlayerBattletags.has(p.battletag)
   );
   
-  // If we have at least 10 priority players with valid role coverage, use ONLY them
-  if (mustPlayAndLocked.length >= 10) {
-    const { valid: canFormPriority } = canFormValidTeams(mustPlayAndLocked);
+  // If we have at least the required number of priority players with valid role coverage, use ONLY them
+  if (mustPlayAndLocked.length >= requiredPlayers) {
+    const { valid: canFormPriority } = canFormValidTeams(mustPlayAndLocked, mode);
     if (canFormPriority) {
       playerPool = mustPlayAndLocked;
-      console.log("Using ONLY must-play + locked players:", playerPool.length);
     } else {
       // Need to supplement with non-must-play players for role coverage
       // Add the minimum number of non-must-play players needed for each missing role
       const groups = groupPlayersByRole(mustPlayAndLocked);
       const supplementPlayers: LobbyPlayer[] = [];
+      const teamComposition = getTeamComposition(mode);
       
-      for (const { role, count } of [{ role: "Tank" as Role, count: 2 }, { role: "DPS" as Role, count: 4 }, { role: "Support" as Role, count: 4 }]) {
+      for (const { role, count } of teamComposition) {
         const have = groups[role].length;
-        if (have < count) {
-          const needed = count - have;
+        const needed = count * 2; // For both teams
+        if (have < needed) {
+          const deficit = needed - have;
           // Find non-must-play players willing to play this role
           const available = activePlayers.filter(
             (p) => !p.mustPlay && 
@@ -431,45 +566,43 @@ export function balanceTeams(
                    p.rolesWilling.includes(role) &&
                    !supplementPlayers.includes(p)
           );
-          supplementPlayers.push(...available.slice(0, needed));
+          supplementPlayers.push(...available.slice(0, deficit));
         }
       }
       
       playerPool = [...mustPlayAndLocked, ...supplementPlayers];
-      console.log("Using must-play + locked + supplements:", playerPool.length, "supplements:", supplementPlayers.length);
     }
   } else {
-    // Not enough must-play players - use all but warn
+    // Not enough must-play players - use all
     playerPool = activePlayers;
-    console.log("Not enough must-play players, using full pool:", playerPool.length);
   }
   
-  let candidates: PartialAssignment[] = [];
   let constraintsRelaxed = false;
 
-  // Generate candidates from the selected player pool
-  console.log("Generating candidates from player pool of", playerPool.length);
-  candidates = generateCandidates(playerPool, MAX_CANDIDATES, false);
-  console.log("Generated", candidates.length, "candidates");
+  // Get all must-play player battletags
+  const mustPlayBattletags = new Set(mustPlayPlayers.map((p) => p.battletag));
 
-  // If no candidates with strict constraints, retry with relaxed constraints
-  if (candidates.length === 0) {
-    console.log("No candidates with strict constraints, retrying with relaxed constraints...");
-    candidates = generateCandidates(playerPool, MAX_CANDIDATES, true);
-    console.log("Generated", candidates.length, "candidates with relaxed constraints");
+  // Scorer: evaluates complete team compositions (lower = better)
+  const scorer: CompositionScorer = (team1, team2) => {
+    return scoreComposition(team1, team2, softConstraints, mode);
+  };
+
+  // Multi-restart hill climbing: find best composition via iterative swap optimization
+  let bestCandidate = findBestComposition(playerPool, mode, scorer, true, mustPlayBattletags);
+
+  // If no result with strict constraints, retry with relaxed constraints
+  if (!bestCandidate) {
+    bestCandidate = findBestComposition(playerPool, mode, scorer, false, new Set());
     constraintsRelaxed = true;
   }
   
   // Last resort: use all players if player pool failed
-  if (candidates.length === 0 && playerPool !== activePlayers) {
-    console.log("Player pool failed, falling back to all players...");
-    candidates = generateCandidates(activePlayers, MAX_CANDIDATES, true);
-    console.log("Generated", candidates.length, "candidates from all players");
+  if (!bestCandidate && playerPool !== activePlayers) {
+    bestCandidate = findBestComposition(activePlayers, mode, scorer, false, new Set());
     constraintsRelaxed = true;
   }
 
-  if (candidates.length === 0) {
-    // Still no candidates - this shouldn't happen with 10+ players
+  if (!bestCandidate) {
     warnings.push({
       type: "impossible_composition",
       message: "Could not generate any valid team compositions - check role coverage",
@@ -484,61 +617,8 @@ export function balanceTeams(
     };
   }
 
-  // Get all must-play player battletags for penalty calculation
-  const mustPlayBattletags = new Set(mustPlayPlayers.map((p) => p.battletag));
-
-  // Helper to calculate must-play exclusion penalty
-  // Heavy penalty (1000 per player) for excluding must-play players
-  const calculateMustPlayPenalty = (candidate: PartialAssignment): number => {
-    const playing = candidate.usedPlayers;
-    let excluded = 0;
-    for (const bt of mustPlayBattletags) {
-      if (!playing.has(bt)) {
-        excluded++;
-      }
-    }
-    return excluded * 1000; // Very high penalty
-  };
-
-  // Score all candidates and find the best ones
-  // Collect top candidates (within a small margin of the best)
-  const SCORE_MARGIN = 50; // Accept candidates within 50 points of best
-  
-  let bestScore = Infinity;
-  for (const candidate of candidates) {
-    let score = scoreComposition(
-      candidate.team1,
-      candidate.team2,
-      softConstraints,
-      lossStreaks
-    );
-    // Add heavy penalty for excluding must-play players
-    score += calculateMustPlayPenalty(candidate);
-    if (score < bestScore) {
-      bestScore = score;
-    }
-  }
-
-  // Get all candidates within margin of best
-  const topCandidates: PartialAssignment[] = [];
-  for (const candidate of candidates) {
-    let score = scoreComposition(
-      candidate.team1,
-      candidate.team2,
-      softConstraints,
-      lossStreaks
-    );
-    score += calculateMustPlayPenalty(candidate);
-    if (score <= bestScore + SCORE_MARGIN) {
-      topCandidates.push(candidate);
-    }
-  }
-
-  // Randomly pick one of the top candidates for variety
-  const bestCandidate = topCandidates[Math.floor(Math.random() * topCandidates.length)];
-
   // Calculate final score breakdown
-  const teamScore = calculateTeamScore(bestCandidate.team1, bestCandidate.team2);
+  const teamScore = calculateTeamScore(bestCandidate.team1, bestCandidate.team2, mode);
 
   // Generate warnings for the selected composition
   

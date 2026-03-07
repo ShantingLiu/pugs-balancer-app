@@ -1,8 +1,9 @@
-import type { Role, LobbyPlayer } from "@engine/types";
+import type { Role, LobbyPlayer, GameMode } from "@engine/types";
+import { getModeConfig } from "@engine/modeConfig";
 import ranksConfig from "@config/ranks.json";
 
 // =============================================================================
-// Rank → SR Conversion for Stadium PUGs Balancer
+// Rank → SR Conversion for PUGs Balancer
 // =============================================================================
 
 type StadiumRankTier = keyof typeof ranksConfig.stadium;
@@ -74,9 +75,11 @@ export function competitiveRankToSR(rank: string): number {
 
 /**
  * Get the SR for a player's rank in a specific role
+ * Mode-aware: Stadium mode uses stadium ranks first, Regular mode uses comp ranks first
  *
  * @param player - Player or LobbyPlayer
  * @param role - Role to get SR for
+ * @param mode - Game mode (defaults to stadium_5v5 for backward compatibility)
  * @returns SR value or null if no rank available
  */
 export function getRoleRankSR(
@@ -89,41 +92,64 @@ export function getRoleRankSR(
     supportCompRank?: string | null;
     regularCompRank: string | null;
   },
-  role: Role
+  role: Role,
+  mode: GameMode = "stadium_5v5"
 ): number | null {
-  // Get role-specific Stadium rank
-  const roleRank =
+  const modeConfig = getModeConfig(mode);
+  
+  // Get role-specific ranks
+  const stadiumRank =
     role === "Tank"
       ? player.tankRank
       : role === "DPS"
         ? player.dpsRank
         : player.supportRank;
 
-  if (roleRank) {
-    try {
-      return rankToSR(roleRank);
-    } catch {
-      // Invalid rank format, fall through to fallback
-    }
-  }
-
-  // Try role-specific comp rank as first fallback
-  const roleCompRank =
+  const compRank =
     role === "Tank"
       ? player.tankCompRank
       : role === "DPS"
         ? player.dpsCompRank
         : player.supportCompRank;
 
-  if (roleCompRank) {
-    try {
-      return competitiveRankToSR(roleCompRank);
-    } catch {
-      // Invalid rank format, fall through
+  if (modeConfig.useStadiumRanks) {
+    // Stadium mode: Stadium rank → comp rank → global fallback
+    if (stadiumRank) {
+      try {
+        return rankToSR(stadiumRank);
+      } catch {
+        // Invalid rank format, fall through
+      }
+    }
+
+    if (compRank) {
+      try {
+        return competitiveRankToSR(compRank);
+      } catch {
+        // Invalid rank format, fall through
+      }
+    }
+  } else {
+    // Regular mode: Comp rank → Stadium rank (as fallback) → global fallback
+    if (compRank) {
+      try {
+        return competitiveRankToSR(compRank);
+      } catch {
+        // Invalid rank format, fall through
+      }
+    }
+
+    // Use Stadium rank as fallback in regular mode (better than nothing)
+    if (stadiumRank) {
+      try {
+        return rankToSR(stadiumRank);
+      } catch {
+        // Invalid rank format, fall through
+      }
     }
   }
 
-  // Try global regular comp rank as final fallback
+  // Global regular comp rank as final fallback
   if (player.regularCompRank) {
     try {
       return competitiveRankToSR(player.regularCompRank);
@@ -136,16 +162,65 @@ export function getRoleRankSR(
 }
 
 /**
+ * Get the rank display string for a player in a specific role (mode-aware)
+ * Returns the appropriate rank string based on game mode preferences.
+ *
+ * @param player - Player object
+ * @param role - Role to get rank for
+ * @param mode - Game mode (defaults to stadium_5v5)
+ * @returns Rank string or null if not available
+ */
+export function getRoleRankDisplay(
+  player: { 
+    tankRank: string | null; 
+    dpsRank: string | null; 
+    supportRank: string | null; 
+    tankCompRank?: string | null;
+    dpsCompRank?: string | null;
+    supportCompRank?: string | null;
+    regularCompRank: string | null;
+  },
+  role: Role,
+  mode: GameMode = "stadium_5v5"
+): string | null {
+  const modeConfig = getModeConfig(mode);
+  
+  // Get role-specific ranks
+  const stadiumRank =
+    role === "Tank"
+      ? player.tankRank
+      : role === "DPS"
+        ? player.dpsRank
+        : player.supportRank;
+
+  const compRank =
+    role === "Tank"
+      ? player.tankCompRank
+      : role === "DPS"
+        ? player.dpsCompRank
+        : player.supportCompRank;
+
+  if (modeConfig.useStadiumRanks) {
+    // Stadium mode: Stadium rank → comp rank → global fallback
+    return stadiumRank || compRank || player.regularCompRank || null;
+  } else {
+    // Regular mode: comp rank → global fallback → stadium rank
+    return compRank || player.regularCompRank || stadiumRank || null;
+  }
+}
+
+/**
  * Get the effective SR for a player in a specific role
  * Includes weight modifier and temporary overrides
  *
  * @param player - LobbyPlayer with session state
  * @param role - Role to calculate SR for
+ * @param mode - Game mode (defaults to stadium_5v5 for backward compatibility)
  * @returns Effective SR value (with modifiers applied)
  */
-export function getEffectiveSR(player: LobbyPlayer, role: Role): number {
-  // Get base SR from rank
-  const baseSR = getRoleRankSR(player, role);
+export function getEffectiveSR(player: LobbyPlayer, role: Role, mode: GameMode = "stadium_5v5"): number {
+  // Get base SR from rank (mode-aware)
+  const baseSR = getRoleRankSR(player, role, mode);
 
   // Use default SR if no rank available
   const sr = baseSR ?? ranksConfig.defaultSR;
@@ -161,6 +236,9 @@ export function getEffectiveSR(player: LobbyPlayer, role: Role): number {
 
 /**
  * Get display-friendly SR for a player (uses their preferred role)
+ * 
+ * @param player - Player with rank data
+ * @param mode - Game mode (defaults to stadium_5v5)
  */
 export function getDisplaySR(
   player: { 
@@ -172,11 +250,12 @@ export function getDisplaySR(
     supportCompRank?: string | null;
     regularCompRank: string | null; 
     rolePreference: Role[];
-  }
+  },
+  mode: GameMode = "stadium_5v5"
 ): number {
   // Use first preferred role
   const preferredRole = player.rolePreference[0] || "DPS";
-  const sr = getRoleRankSR(player, preferredRole);
+  const sr = getRoleRankSR(player, preferredRole, mode);
   return sr ?? ranksConfig.defaultSR;
 }
 
@@ -191,6 +270,20 @@ const STADIUM_TIERS: StadiumRankTier[] = [
   "Pro",
   "All-Star",
   "Legend",
+];
+
+/**
+ * Competitive rank tiers in order from lowest to highest
+ */
+const COMPETITIVE_TIERS: CompetitiveRankTier[] = [
+  "Bronze",
+  "Silver",
+  "Gold",
+  "Platinum",
+  "Diamond",
+  "Master",
+  "Grandmaster",
+  "Champion",
 ];
 
 /**
@@ -222,21 +315,65 @@ export function srToRank(sr: number): string {
 }
 
 /**
+ * Convert an SR value back to a Competitive rank display string
+ * 
+ * @param sr - SR value (e.g., 3200)
+ * @returns Rank string (e.g., "Diamond 3")
+ */
+export function srToCompetitiveRank(sr: number): string {
+  // Clamp SR to valid range
+  const clampedSR = Math.max(1000, Math.min(4900, sr));
+  
+  // Find the appropriate tier
+  let tier: CompetitiveRankTier = "Bronze";
+  for (const t of COMPETITIVE_TIERS) {
+    if (clampedSR >= ranksConfig.competitive[t]) {
+      tier = t;
+    }
+  }
+  
+  const baseSR = ranksConfig.competitive[tier];
+  const srAboveBase = clampedSR - baseSR;
+  
+  // Sub-rank: 5 = base, 4 = +100, 3 = +200, 2 = +300, 1 = +400
+  // Formula: subRank = 5 - floor(srAboveBase / 100)
+  const subRank = Math.max(1, 5 - Math.floor(srAboveBase / ranksConfig.subRankMultiplier));
+  
+  return `${tier} ${subRank}`;
+}
+
+/**
+ * Convert an SR value to a rank string for the specified game mode
+ * 
+ * @param sr - SR value
+ * @param mode - Game mode (stadium_5v5 uses Stadium ranks, others use Competitive)
+ * @returns Rank string appropriate for the mode
+ */
+export function srToRankForMode(sr: number, mode: GameMode = "stadium_5v5"): string {
+  if (mode === "stadium_5v5") {
+    return srToRank(sr);
+  }
+  return srToCompetitiveRank(sr);
+}
+
+/**
  * Format SR for display - shows both rank and SR
  * 
  * @param sr - SR value
- * @returns Display string like "Pro 3 (3200)"
+ * @param mode - Optional game mode for rank system selection
+ * @returns Display string like "Pro 3 (3200)" or "Diamond 3 (3200)"
  */
-export function formatSRDisplay(sr: number): string {
-  return `${srToRank(sr)} (${sr.toLocaleString()})`;
+export function formatSRDisplay(sr: number, mode: GameMode = "stadium_5v5"): string {
+  return `${srToRankForMode(sr, mode)} (${sr.toLocaleString()})`;
 }
 
 /**
  * Get just the rank display without SR number
  * 
  * @param sr - SR value
- * @returns Rank string like "Pro 3"
+ * @param mode - Optional game mode for rank system selection
+ * @returns Rank string like "Pro 3" or "Diamond 3"
  */
-export function formatRankOnly(sr: number): string {
-  return srToRank(sr);
+export function formatRankOnly(sr: number, mode: GameMode = "stadium_5v5"): string {
+  return srToRankForMode(sr, mode);
 }

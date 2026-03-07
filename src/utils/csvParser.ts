@@ -8,7 +8,7 @@ import type {
 import heroesConfig from "@config/heroes.json";
 
 // =============================================================================
-// CSV Parser for Stadium PUGs Balancer
+// CSV Parser for PUGs Balancer
 // =============================================================================
 
 /**
@@ -33,7 +33,11 @@ interface RawCsvRow {
   regular_comp_rank?: string;
   weight_modifier?: string;
   notes?: string;
+  /** @deprecated Use mode-specific wins columns instead */
   all_time_wins?: string;
+  stadium_wins?: string;
+  regular_5v5_wins?: string;
+  regular_6v6_wins?: string;
 }
 
 /**
@@ -51,22 +55,24 @@ function detectDelimiter(csv: string): string {
  */
 function parseCSV(csv: string): RawCsvRow[] {
   const delimiter = detectDelimiter(csv);
-  const lines = csv.trim().split("\n");
+  
+  // Join multi-line quoted fields before splitting into rows
+  const logicalLines = splitCSVLines(csv.trim());
 
-  if (lines.length < 2) {
+  if (logicalLines.length < 2) {
     return [];
   }
 
   // Parse header row (case-insensitive)
-  const headerLine = lines[0];
+  const headerLine = logicalLines[0];
   const headers = parseCSVLine(headerLine, delimiter).map((h) =>
     h.toLowerCase().trim()
   );
 
   // Parse data rows
   const rows: RawCsvRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (let i = 1; i < logicalLines.length; i++) {
+    const line = logicalLines[i].trim();
     if (!line) continue;
 
     const values = parseCSVLine(line, delimiter);
@@ -85,6 +91,42 @@ function parseCSV(csv: string): RawCsvRow[] {
   }
 
   return rows;
+}
+
+/**
+ * Split CSV text into logical lines, merging lines that are inside quoted fields.
+ * Handles multi-line values like notes with newlines.
+ */
+function splitCSVLines(csv: string): string[] {
+  const lines: string[] = [];
+  const rawLines = csv.split("\n");
+  let current = "";
+  let inQuotes = false;
+
+  for (const rawLine of rawLines) {
+    if (current) {
+      current += "\n" + rawLine;
+    } else {
+      current = rawLine;
+    }
+
+    // Count unescaped quotes to determine if we're inside a quoted field
+    for (const char of rawLine) {
+      if (char === '"') inQuotes = !inQuotes;
+    }
+
+    if (!inQuotes) {
+      lines.push(current);
+      current = "";
+    }
+  }
+
+  // Push remaining content if any
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
 }
 
 /**
@@ -110,7 +152,10 @@ function isValidHeader(header: string): boolean {
     "regular_comp_rank",
     "weight_modifier",
     "notes",
-    "all_time_wins",
+    "all_time_wins", // deprecated - kept for backwards compatibility
+    "stadium_wins",
+    "regular_5v5_wins",
+    "regular_6v6_wins",
   ];
   return validHeaders.includes(header);
 }
@@ -218,7 +263,7 @@ function parseOptionalString(value: string | undefined): string | null {
 }
 
 // =============================================================================
-// Validation Functions
+// Validation Functions (exported for reuse by sheetParser)
 // =============================================================================
 
 /**
@@ -244,6 +289,22 @@ function isValidRankFormat(rank: string): boolean {
  */
 function isKnownHero(hero: string): boolean {
   return hero in heroesConfig.heroes;
+}
+
+/** Validate a single role string (case-insensitive) */
+export function validateRoles(role: string): boolean {
+  const normalized = role.toLowerCase().trim();
+  return normalized === "tank" || normalized === "dps" || normalized === "support";
+}
+
+/** Validate rank format */
+export function validateRank(rank: string): boolean {
+  return isValidRankFormat(rank);
+}
+
+/** Check if hero name exists in heroes config */
+export function validateHeroes(hero: string): boolean {
+  return isKnownHero(hero);
 }
 
 /**
@@ -385,8 +446,14 @@ function validateRow(
     });
   }
 
-  // All-time wins (for leaderboard display)
-  const allTimeWins = parseInteger(row.all_time_wins, 0);
+  // Mode-specific wins (for leaderboard display)
+  // Backwards compatibility: if all_time_wins exists but mode-specific don't, use it for stadium
+  const legacyAllTimeWins = parseInteger(row.all_time_wins, 0);
+  const stadiumWins = parseInteger(row.stadium_wins, legacyAllTimeWins);
+  const regular5v5Wins = parseInteger(row.regular_5v5_wins, 0);
+  const regular6v6Wins = parseInteger(row.regular_6v6_wins, 0);
+  // Deprecated field kept for compatibility
+  const allTimeWins = legacyAllTimeWins;
 
   // If there are errors, don't create a player
   if (errors.length > 0) {
@@ -419,7 +486,10 @@ function validateRow(
     regularCompRank,
     weightModifier,
     notes: parseOptionalString(row.notes),
-    allTimeWins,
+    stadiumWins,
+    regular5v5Wins,
+    regular6v6Wins,
+    allTimeWins, // deprecated
   };
 
   return { player, errors, warnings };

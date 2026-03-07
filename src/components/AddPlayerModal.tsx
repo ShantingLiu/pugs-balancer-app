@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Player, Role } from "@engine/types";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
-import heroesConfig from "@config/heroes.json";
+import { getHeroesForRoleAndMode } from "@utils/heroUtils";
 
 // =============================================================================
 // AddPlayerModal - Add or edit players in-app
@@ -16,18 +16,6 @@ interface AddPlayerModalProps {
 }
 
 const ROLES: Role[] = ["Tank", "DPS", "Support"];
-const HEROES = Object.keys(heroesConfig.heroes);
-const HEROES_BY_ROLE: Record<Role, string[]> = {
-  Tank: HEROES.filter(
-    (h) => (heroesConfig.heroes as Record<string, { role: string }>)[h].role === "Tank"
-  ),
-  DPS: HEROES.filter(
-    (h) => (heroesConfig.heroes as Record<string, { role: string }>)[h].role === "DPS"
-  ),
-  Support: HEROES.filter(
-    (h) => (heroesConfig.heroes as Record<string, { role: string }>)[h].role === "Support"
-  ),
-};
 
 // Stadium ranks for dropdowns (5 is lowest, 1 is highest within tier)
 const STADIUM_RANKS = [
@@ -70,7 +58,10 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
   regularCompRank: null,
   weightModifier: 0,
   notes: null,
-  allTimeWins: 0,
+  stadiumWins: 0,
+  regular5v5Wins: 0,
+  regular6v6Wins: 0,
+  allTimeWins: 0, // deprecated
 };
 
 export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalProps) {
@@ -79,6 +70,7 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
   const renamePlayer = usePlayerStore((state) => state.renamePlayer);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
   const renamePlayerInSession = useSessionStore((state) => state.renamePlayerInSession);
+  const gameMode = useSessionStore((state) => state.gameMode);
 
   const [battletag, setBattletag] = useState("");
   const [originalBattletag, setOriginalBattletag] = useState(""); // Track original for rename detection
@@ -87,6 +79,13 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditing = !!editPlayer;
+  
+  // Get mode-aware hero lists
+  const HEROES_BY_ROLE = useMemo<Record<Role, string[]>>(() => ({
+    Tank: getHeroesForRoleAndMode("Tank", gameMode),
+    DPS: getHeroesForRoleAndMode("DPS", gameMode),
+    Support: getHeroesForRoleAndMode("Support", gameMode),
+  }), [gameMode]);
 
   // Reset form when opening/closing or changing edit target
   useEffect(() => {

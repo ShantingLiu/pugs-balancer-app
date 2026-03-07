@@ -28,16 +28,6 @@ Player1#1234,Pro 2,Elite 3,Contender 1,"Tank,DPS","Tank,DPS","Reinhardt,D.Va",fa
       expect(result.errors[0].message).toContain("required");
     });
 
-    it("should return error for invalid battletag format", () => {
-      const csv = `battletag,tank_rank,roles_willing
-InvalidName,Pro 2,"Tank"`;
-
-      const result = parsePlayersCSV(csv);
-
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].message).toContain("Invalid battletag format");
-    });
-
     it("should return error for missing roles_willing", () => {
       const csv = `battletag,tank_rank,roles_willing
 Player1#1234,Pro 2,`;
@@ -127,13 +117,28 @@ Player3#9012,Contender 3,"Support"`;
     it("should continue parsing valid rows even with errors", () => {
       const csv = `battletag,tank_rank,roles_willing
 Player1#1234,Pro 2,"Tank"
-InvalidPlayer,Elite 1,"DPS"
+MissingRoles#5678,Elite 1,
 Player3#9012,Contender 3,"Support"`;
 
       const result = parsePlayersCSV(csv);
 
       expect(result.errors).toHaveLength(1);
       expect(result.valid).toHaveLength(2);
+    });
+
+    it("should handle multi-line quoted fields (newlines inside notes)", () => {
+      const csv = `battletag,tank_rank,roles_willing,notes
+Player1#1234,Pro 2,"Tank","Line one
+Line two"
+Player2#5678,Elite 1,"DPS",Simple note`;
+
+      const result = parsePlayersCSV(csv);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.valid).toHaveLength(2);
+      expect(result.valid[0].battletag).toBe("Player1#1234");
+      expect(result.valid[0].notes).toBe("Line one\nLine two");
+      expect(result.valid[1].battletag).toBe("Player2#5678");
     });
   });
 });

@@ -1,6 +1,6 @@
 # CSV Format Guide
 
-This document describes the CSV format for importing players into Stadium PUGs Balancer.
+This document describes the CSV format for importing players into PUGs Balancer.
 
 ## Quick Start
 
@@ -27,6 +27,23 @@ Download a template from the app by clicking **📥 Download Template** in the I
 
 **Sub-ranks**: 1 (highest) to 5 (lowest). If omitted, defaults to 3.
 
+### Regular Competitive Rank Columns
+
+| Column | Format | Example | Description |
+|--------|--------|---------|-------------|
+| `tank_comp_rank` | `Tier [1-5]` | `Master 2` | Regular comp rank for Tank role |
+| `dps_comp_rank` | `Tier [1-5]` | `Diamond 1` | Regular comp rank for DPS role |
+| `support_comp_rank` | `Tier [1-5]` | `Grandmaster 3` | Regular comp rank for Support role |
+| `regular_comp_rank` | `Tier [1-5]` | `Diamond 2` | Global fallback rank for all roles |
+
+**Valid Competitive Tiers**: Bronze, Silver, Gold, Platinum, Diamond, Master, Grandmaster, Champion
+
+**Rank Resolution (Regular 5v5 mode)**:
+1. Role-specific comp rank (e.g., `tank_comp_rank`)
+2. Global `regular_comp_rank`
+3. Stadium rank for that role
+4. Default SR (2500)
+
 ### Optional Columns
 
 | Column | Format | Example | Description |
@@ -35,23 +52,27 @@ Download a template from the app by clicking **📥 Download Template** in the I
 | `hero_pool` | Comma-separated | `Ana,Kiriko,Baptiste` | Heroes the player plays |
 | `is_one_trick` | `true`/`false` | `true` | Whether player only plays one hero |
 | `one_trick_hero` | Hero name | `Tracer` | Required if `is_one_trick` is true |
-| `regular_comp_rank` | `Tier [1-5]` | `Diamond 2` | Fallback rank from regular competitive |
 | `weight_modifier` | Integer | `-100` | SR adjustment (-1000 to +1000) |
 | `notes` | Text | `Shotcaller` | Any notes about the player |
+| `stadium_wins` | Integer | `5` | Total wins in Stadium 5v5 mode |
+| `regular_5v5_wins` | Integer | `3` | Total wins in Regular 5v5 mode |
+| `regular_6v6_wins` | Integer | `0` | Total wins in Regular 6v6 mode |
 
-### Competitive Rank Fallback
+### Rank Fallback System
 
-If a Stadium rank is not available for a role, the app uses `regular_comp_rank` as a fallback.
+**Stadium 5v5 Mode**: Uses Stadium ranks first, falls back to competitive ranks.
 
-**Valid Competitive Tiers**: Bronze, Silver, Gold, Platinum, Diamond, Master, Grandmaster, Champion
+**Regular 5v5 Mode**: Uses competitive ranks first, falls back to Stadium ranks.
+
+If no rank is available for a role, the app uses default SR (2500).
 
 ## Example CSV
 
 ```csv
-battletag,tank_rank,dps_rank,support_rank,roles_willing,role_preference,hero_pool,is_one_trick,one_trick_hero,regular_comp_rank,weight_modifier,notes
-Fury#1234,Pro 2,Pro 1,Elite 3,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya,Soldier: 76",false,,Master 2,0,Main tank player
-Aurora#5678,Elite 2,Pro 3,Pro 2,"DPS,Support","Support,DPS","Ana,Kiriko,Baptiste,Ashe",false,,Diamond 1,0,Flex support
-Pixel#7890,Contender 3,Pro 2,Novice 1,"DPS","DPS","Tracer",true,Tracer,Platinum 1,0,Tracer OTP
+battletag,tank_rank,dps_rank,support_rank,tank_comp_rank,dps_comp_rank,support_comp_rank,roles_willing,role_preference,hero_pool,tank_one_trick,dps_one_trick,support_one_trick,regular_comp_rank,weight_modifier,notes,stadium_wins,regular_5v5_wins,regular_6v6_wins
+Fury#1234,Pro 2,Pro 1,Elite 3,Grandmaster 3,Champion 1,Master 2,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya,Soldier: 76",,,Grandmaster 2,0,Main tank player,5,3,0
+Aurora#5678,Elite 2,Pro 3,Pro 2,Diamond 3,Master 2,Grandmaster 1,"DPS,Support","Support,DPS","Ana,Kiriko,Baptiste,Ashe",,,Master 1,0,Flex support,2,1,0
+Pixel#7890,Contender 3,Pro 2,Novice 1,Platinum 2,Grandmaster 2,Silver 3,"DPS","DPS","Tracer",,Tracer,,Master 1,0,Tracer OTP,0,0,0
 ```
 
 ## Delimiter Support
@@ -91,3 +112,17 @@ These don't prevent import but may affect balancing:
 | "No rank for [Role]" | Player has no rank for a willing role; uses default SR (2500) |
 | "Unknown hero: [Name]" | Hero not recognized; archetype checks may be affected |
 | "Weight modifier outside range" | Value outside -1000 to +1000; still applied |
+
+## Backwards Compatibility
+
+The following columns are still supported for backwards compatibility but are deprecated:
+
+| Old Column | Replacement |
+|------------|-------------|
+| `is_one_trick` | `tank_one_trick`, `dps_one_trick`, `support_one_trick` |
+| `one_trick_hero` | Role-specific one-trick columns |
+| `all_time_wins` | `stadium_wins`, `regular_5v5_wins`, `regular_6v6_wins` |
+
+When importing old CSVs:
+- `all_time_wins` values are migrated to `stadium_wins`
+- `one_trick_hero` is still recognized for backwards compatibility

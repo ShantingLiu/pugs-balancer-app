@@ -1,16 +1,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { LobbyPlayer, Role, RoleAssignment, SoftConstraint, TeamAssignment } from "@engine/types";
+import type { GameMode, LobbyPlayer, Role, RoleAssignment, SoftConstraint, TeamAssignment } from "@engine/types";
 import { usePlayerStore } from "./playerStore";
 import { balanceTeams } from "@engine/balancer";
 import { getEffectiveSR } from "@utils/rankMapper";
 import { calculateTeamScore } from "@engine/scoring";
+import { getModeConfig } from "@engine/modeConfig";
 
 // =============================================================================
 // Session Store - Manages current balancing session state
 // =============================================================================
 
 interface SessionState {
+  /** Current game mode */
+  gameMode: GameMode;
+
   /** Battletags of players in current lobby */
   lobbyBattletags: string[];
 
@@ -53,11 +57,11 @@ interface SessionState {
   /** Consecutive games sat out per player (battletag -> count) */
   satOutStreaks: Map<string, number>;
 
-  /** Total wins per player this session (battletag -> count) */
-  totalWins: Map<string, number>;
+  /** Total wins per player this session by mode (mode -> battletag -> count) */
+  totalWins: Record<GameMode, Map<string, number>>;
 
-  /** Total losses per player this session (battletag -> count) */
-  totalLosses: Map<string, number>;
+  /** Total losses per player this session by mode (mode -> battletag -> count) */
+  totalLosses: Record<GameMode, Map<string, number>>;
 
   /** Total games sat out per player this session (battletag -> count) */
   totalSatOut: Map<string, number>;
@@ -70,6 +74,15 @@ interface SessionState {
 
   /** Last match final cash scores (for analysis) */
   lastMatchCashScores: { team1: number; team2: number } | null;
+
+  /** Whether to show weight modifiers in team display (hide from players) */
+  showWeightModifiers: boolean;
+
+  /** Font scale for accessibility */
+  fontScale: "normal" | "large" | "x-large";
+
+  /** Whether draft mode is active (captain pick flow) */
+  draftMode: boolean;
 }
 
 interface SessionActions {
@@ -91,6 +104,15 @@ interface SessionActions {
   // Role lock management
   lockToRole: (battletag: string, role: Role | null) => void;
   clearRoleLocks: () => void;
+
+  // Draft mode
+  setDraftMode: (enabled: boolean) => void;
+  clearTeams: () => void;
+  assignToTeam: (battletag: string, team: 1 | 2, role?: Role) => void;
+  unassignFromTeam: (battletag: string) => void;
+  cycleRole: (battletag: string) => void;
+  getDraftState: () => { team1: LobbyPlayer[]; team2: LobbyPlayer[]; unassigned: LobbyPlayer[] };
+  fillRemaining: () => { error?: string };
 
   // AFK management
   toggleAfk: (battletag: string) => void;
@@ -123,14 +145,33 @@ interface SessionActions {
   clearLossStreaks: () => void;
   clearSessionStats: () => void;
 
+  // Win consolidation for sync
+  clearSessionWins: () => void;
+
   // Adaptive weight management
   setPendingMatchResult: (winningTeam: 1 | 2) => void;
-  confirmMatchScore: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number) => void;
+  confirmMatchScore: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number, winnerAdj?: number, loserAdj?: number) => void;
   cancelPendingMatch: () => void;
   getAdaptiveWeight: (battletag: string) => number;
+  clearAdaptiveWeights: () => void;
+  
+  // Auto-balance after match ends
+  autoBalanceAfterMatch: () => void;
+
+  // Balance only the drafted players (lockedTeam1 + lockedTeam2)
+  balanceDraftedPlayers: () => { error?: string };
 
   // Reset session
   resetSession: () => void;
+
+  // Game mode management
+  setGameMode: (mode: GameMode) => void;
+
+  // Toggle weight modifier visibility
+  toggleShowWeightModifiers: () => void;
+
+  // Cycle font scale for accessibility
+  cycleFontScale: () => void;
 
   // Update all references when a player is renamed
   renamePlayerInSession: (oldBattletag: string, newBattletag: string) => void;
@@ -162,8 +203,37 @@ const sessionStorage = {
         parsed.state.tempWeightOverrides = new Map(parsed.state.tempWeightOverrides || []);
         parsed.state.playerLossStreaks = new Map(parsed.state.playerLossStreaks || []);
         parsed.state.satOutStreaks = new Map(parsed.state.satOutStreaks || []);
-        parsed.state.totalWins = new Map(parsed.state.totalWins || []);
-        parsed.state.totalLosses = new Map(parsed.state.totalLosses || []);
+        // Handle migration from old flat totalWins/totalLosses to mode-keyed structure
+        if (parsed.state.totalWins instanceof Array || parsed.state.totalWins === undefined) {
+          // Old format was [["battletag", wins], ...] - migrate to stadium_5v5
+          const oldWins = new Map(parsed.state.totalWins || []);
+          parsed.state.totalWins = {
+            stadium_5v5: oldWins,
+            regular_5v5: new Map(),
+            regular_6v6: new Map(),
+          };
+        } else {
+          // New format - deserialize nested Maps
+          parsed.state.totalWins = {
+            stadium_5v5: new Map(parsed.state.totalWins.stadium_5v5 || []),
+            regular_5v5: new Map(parsed.state.totalWins.regular_5v5 || []),
+            regular_6v6: new Map(parsed.state.totalWins.regular_6v6 || []),
+          };
+        }
+        if (parsed.state.totalLosses instanceof Array || parsed.state.totalLosses === undefined) {
+          const oldLosses = new Map(parsed.state.totalLosses || []);
+          parsed.state.totalLosses = {
+            stadium_5v5: oldLosses,
+            regular_5v5: new Map(),
+            regular_6v6: new Map(),
+          };
+        } else {
+          parsed.state.totalLosses = {
+            stadium_5v5: new Map(parsed.state.totalLosses.stadium_5v5 || []),
+            regular_5v5: new Map(parsed.state.totalLosses.regular_5v5 || []),
+            regular_6v6: new Map(parsed.state.totalLosses.regular_6v6 || []),
+          };
+        }
         parsed.state.totalSatOut = new Map(parsed.state.totalSatOut || []);
         parsed.state.adaptiveWeights = new Map(parsed.state.adaptiveWeights || []);
         // Ensure softConstraints array exists
@@ -171,10 +241,27 @@ const sessionStorage = {
         parsed.state.lobbyBattletags = parsed.state.lobbyBattletags || [];
         parsed.state.pendingMatchResult = parsed.state.pendingMatchResult || null;
         parsed.state.lastMatchCashScores = parsed.state.lastMatchCashScores || null;
+        // Default gameMode for existing sessions
+        parsed.state.gameMode = parsed.state.gameMode || "stadium_5v5";
+        // Default draftMode for existing sessions
+        parsed.state.draftMode = parsed.state.draftMode ?? false;
       }
       return parsed;
     } catch (e) {
-      console.error("Failed to parse session storage, resetting:", e);
+      console.error("Failed to parse session storage:", e);
+      
+      // Backup corrupted data before clearing
+      try {
+        const rawStr = localStorage.getItem(name);
+        if (rawStr) {
+          const backupKey = `${name}_backup_${Date.now()}`;
+          localStorage.setItem(backupKey, rawStr);
+          console.warn(`Corrupted session data backed up to: ${backupKey}`);
+        }
+      } catch {
+        // Backup failed, proceed with reset
+      }
+      
       localStorage.removeItem(name);
       return null;
     }
@@ -196,8 +283,16 @@ const sessionStorage = {
         tempWeightOverrides: Array.from(toStore.state.tempWeightOverrides.entries()),
         playerLossStreaks: Array.from(toStore.state.playerLossStreaks.entries()),
         satOutStreaks: Array.from(toStore.state.satOutStreaks.entries()),
-        totalWins: Array.from(toStore.state.totalWins.entries()),
-        totalLosses: Array.from(toStore.state.totalLosses.entries()),
+        totalWins: {
+          stadium_5v5: Array.from(toStore.state.totalWins.stadium_5v5.entries()),
+          regular_5v5: Array.from(toStore.state.totalWins.regular_5v5.entries()),
+          regular_6v6: Array.from(toStore.state.totalWins.regular_6v6.entries()),
+        },
+        totalLosses: {
+          stadium_5v5: Array.from(toStore.state.totalLosses.stadium_5v5.entries()),
+          regular_5v5: Array.from(toStore.state.totalLosses.regular_5v5.entries()),
+          regular_6v6: Array.from(toStore.state.totalLosses.regular_6v6.entries()),
+        },
         totalSatOut: Array.from(toStore.state.totalSatOut.entries()),
         adaptiveWeights: Array.from(toStore.state.adaptiveWeights.entries()),
       },
@@ -207,7 +302,17 @@ const sessionStorage = {
   removeItem: (name: string) => localStorage.removeItem(name),
 };
 
+/** Helper to create empty mode-keyed wins/losses structure */
+function createEmptyModeWins(): Record<GameMode, Map<string, number>> {
+  return {
+    stadium_5v5: new Map(),
+    regular_5v5: new Map(),
+    regular_6v6: new Map(),
+  };
+}
+
 const initialState: SessionState = {
+  gameMode: "stadium_5v5",
   lobbyBattletags: [],
   mustPlay: new Set(),
   mustPlayPriority: new Map(),
@@ -222,12 +327,15 @@ const initialState: SessionState = {
   lastGamePlayers: new Set(),
   playerLossStreaks: new Map(),
   satOutStreaks: new Map(),
-  totalWins: new Map(),
-  totalLosses: new Map(),
+  totalWins: createEmptyModeWins(),
+  totalLosses: createEmptyModeWins(),
   totalSatOut: new Map(),
   adaptiveWeights: new Map(),
   pendingMatchResult: null,
   lastMatchCashScores: null,
+  showWeightModifiers: true,
+  fontScale: "normal" as const,
+  draftMode: false,
 };
 
 export const useSessionStore = create<SessionStore>()(
@@ -365,7 +473,6 @@ export const useSessionStore = create<SessionStore>()(
 
       // Team lock management
       lockToTeam: (battletag: string, team: 1 | 2 | null) => {
-        console.log(`lockToTeam called: ${battletag} -> Team ${team}`);
         set((state) => {
           const newTeam1 = new Set(state.lockedTeam1);
           const newTeam2 = new Set(state.lockedTeam2);
@@ -381,7 +488,6 @@ export const useSessionStore = create<SessionStore>()(
             newTeam2.add(battletag);
           }
 
-          console.log("New locks after update - Team 1:", Array.from(newTeam1), "Team 2:", Array.from(newTeam2));
           return { lockedTeam1: newTeam1, lockedTeam2: newTeam2 };
         });
       },
@@ -392,7 +498,6 @@ export const useSessionStore = create<SessionStore>()(
 
       // Role lock management
       lockToRole: (battletag: string, role: Role | null) => {
-        console.log(`lockToRole called: ${battletag} -> ${role}`);
         set((state) => {
           const newLockedRoles = new Map(state.lockedRoles);
           if (role === null) {
@@ -400,13 +505,110 @@ export const useSessionStore = create<SessionStore>()(
           } else {
             newLockedRoles.set(battletag, role);
           }
-          console.log("New role locks:", Array.from(newLockedRoles.entries()));
           return { lockedRoles: newLockedRoles };
         });
       },
 
       clearRoleLocks: () => {
         set({ lockedRoles: new Map() });
+      },
+
+      // Draft mode
+      setDraftMode: (enabled: boolean) => {
+        set({ draftMode: enabled });
+      },
+
+      clearTeams: () => {
+        set({
+          lastResult: null,
+          previousResult: null,
+          lockedTeam1: new Set(),
+          lockedTeam2: new Set(),
+          lockedRoles: new Map(),
+          pendingMatchResult: null,
+        });
+      },
+
+      assignToTeam: (battletag: string, team: 1 | 2, role?: Role) => {
+        const state = get();
+        if (!state.lobbyBattletags.includes(battletag)) return;
+
+        const newTeam1 = new Set(state.lockedTeam1);
+        const newTeam2 = new Set(state.lockedTeam2);
+
+        // Remove from both teams first
+        newTeam1.delete(battletag);
+        newTeam2.delete(battletag);
+
+        // Add to specified team
+        if (team === 1) {
+          newTeam1.add(battletag);
+        } else {
+          newTeam2.add(battletag);
+        }
+
+        // Use provided role, or auto-assign from preference if not already locked
+        const newLockedRoles = new Map(state.lockedRoles);
+        if (role) {
+          newLockedRoles.set(battletag, role);
+        } else if (!newLockedRoles.has(battletag)) {
+          const playerStore = usePlayerStore.getState();
+          const player = playerStore.getPlayer(battletag);
+          if (player && player.rolePreference.length > 0) {
+            newLockedRoles.set(battletag, player.rolePreference[0]);
+          }
+        }
+
+        set({ lockedTeam1: newTeam1, lockedTeam2: newTeam2, lockedRoles: newLockedRoles });
+      },
+
+      unassignFromTeam: (battletag: string) => {
+        set((state) => {
+          const newTeam1 = new Set(state.lockedTeam1);
+          const newTeam2 = new Set(state.lockedTeam2);
+          const newLockedRoles = new Map(state.lockedRoles);
+
+          newTeam1.delete(battletag);
+          newTeam2.delete(battletag);
+          newLockedRoles.delete(battletag);
+
+          return { lockedTeam1: newTeam1, lockedTeam2: newTeam2, lockedRoles: newLockedRoles };
+        });
+      },
+
+      cycleRole: (battletag: string) => {
+        const state = get();
+        const playerStore = usePlayerStore.getState();
+        const player = playerStore.getPlayer(battletag);
+        if (!player || player.rolesWilling.length <= 1) return;
+
+        const currentRole = state.lockedRoles.get(battletag);
+        const currentIndex = currentRole ? player.rolesWilling.indexOf(currentRole) : -1;
+        const nextIndex = (currentIndex + 1) % player.rolesWilling.length;
+
+        const newLockedRoles = new Map(state.lockedRoles);
+        newLockedRoles.set(battletag, player.rolesWilling[nextIndex]);
+        set({ lockedRoles: newLockedRoles });
+      },
+
+      getDraftState: () => {
+        const lobbyPlayers = get().getLobbyPlayers();
+
+        const team1: LobbyPlayer[] = [];
+        const team2: LobbyPlayer[] = [];
+        const unassigned: LobbyPlayer[] = [];
+
+        for (const player of lobbyPlayers) {
+          if (player.lockedToTeam === 1) {
+            team1.push(player);
+          } else if (player.lockedToTeam === 2) {
+            team2.push(player);
+          } else if (!player.isAfk) {
+            unassigned.push(player);
+          }
+        }
+
+        return { team1, team2, unassigned };
       },
 
       // AFK management
@@ -442,10 +644,12 @@ export const useSessionStore = create<SessionStore>()(
             try {
               const updatedState = get();
               const lobbyPlayers = updatedState.getLobbyPlayers();
-              if (lobbyPlayers.length >= 10) {
+              const modeConfig = getModeConfig(updatedState.gameMode);
+              const requiredPlayers = modeConfig.teamSize * 2;
+              if (lobbyPlayers.length >= requiredPlayers) {
                 // Clear must-play for reshuffle - those are for next match only
                 const playersForBalance = lobbyPlayers.map((p) => ({ ...p, mustPlay: false }));
-                const result = balanceTeams(playersForBalance, updatedState.softConstraints);
+                const result = balanceTeams(playersForBalance, updatedState.softConstraints, updatedState.gameMode);
                 // Use the setLastResult action to properly handle lock cleanup
                 get().setLastResult(result);
               }
@@ -514,7 +718,6 @@ export const useSessionStore = create<SessionStore>()(
 
       // Results management
       setLastResult: (result: TeamAssignment | null) => {
-        console.log("setLastResult called with:", result ? `team1: ${result.team1.length}, team2: ${result.team2.length}` : "null");
         const state = get();
         
         // Save current result as previous (for visual diff on reshuffle)
@@ -533,44 +736,26 @@ export const useSessionStore = create<SessionStore>()(
 
         // Clear locks for players who ended up on a different team
         // This handles cases where the balancer couldn't honor a lock
-        console.log("Current locks - Team 1:", Array.from(state.lockedTeam1), "Team 2:", Array.from(state.lockedTeam2));
         
         const team1Battletags = new Set(result.team1.map((ra) => ra.player.battletag));
         const team2Battletags = new Set(result.team2.map((ra) => ra.player.battletag));
-        console.log("Result - Team 1:", Array.from(team1Battletags), "Team 2:", Array.from(team2Battletags));
 
-        // Only keep locks that match where players actually ended up
-        // BUT: preserve locks for players who sat out (not on either team)
+        // Only keep locks for players who actually ended up on their locked team.
+        // Drop locks for players who sat out or ended up on the wrong team.
         const newLockedTeam1 = new Set<string>();
         const newLockedTeam2 = new Set<string>();
 
         for (const bt of state.lockedTeam1) {
-          // Keep lock if player is on Team 1, OR if player sat out (not on either team)
           if (team1Battletags.has(bt)) {
             newLockedTeam1.add(bt);
-          } else if (!team2Battletags.has(bt)) {
-            // Player sat out - keep their lock for next game
-            newLockedTeam1.add(bt);
-            console.log(`${bt} locked to Team 1 sat out, preserving lock`);
-          } else {
-            console.log(`WARNING: ${bt} was locked to Team 1 but ended up on Team 2!`);
           }
         }
 
         for (const bt of state.lockedTeam2) {
-          // Keep lock if player is on Team 2, OR if player sat out (not on either team)
           if (team2Battletags.has(bt)) {
             newLockedTeam2.add(bt);
-          } else if (!team1Battletags.has(bt)) {
-            // Player sat out - keep their lock for next game
-            newLockedTeam2.add(bt);
-            console.log(`${bt} locked to Team 2 sat out, preserving lock`);
-          } else {
-            console.log(`WARNING: ${bt} was locked to Team 2 but ended up on Team 1!`);
           }
         }
-        
-        console.log("New locks - Team 1:", Array.from(newLockedTeam1), "Team 2:", Array.from(newLockedTeam2));
 
         // Mark players sitting out as must-play for next round (priority 2 = sat out waiting)
         const playingBattletags = new Set([...team1Battletags, ...team2Battletags]);
@@ -593,23 +778,15 @@ export const useSessionStore = create<SessionStore>()(
           newMustPlayPriority.delete(bt);
         }
 
-        // Preserve role locks for locked players who are in their correct role or sat out
+        // Only preserve role locks for players who are playing in their locked role
         const allAssignments = [...result.team1, ...result.team2];
         const newLockedRoles = new Map<string, Role>();
         for (const [bt, role] of state.lockedRoles.entries()) {
           const assignment = allAssignments.find((a) => a.player.battletag === bt);
-          if (!assignment) {
-            // Player sat out - keep their role lock
+          if (assignment && assignment.assignedRole === role) {
             newLockedRoles.set(bt, role);
-            console.log(`${bt} role-locked to ${role} sat out, preserving lock`);
-          } else if (assignment.assignedRole === role) {
-            // Player is in correct role - keep lock
-            newLockedRoles.set(bt, role);
-          } else {
-            console.log(`WARNING: ${bt} was role-locked to ${role} but assigned ${assignment.assignedRole}!`);
           }
         }
-        console.log("New role locks:", Array.from(newLockedRoles.entries()));
 
         set({
           lastResult: result,
@@ -657,13 +834,30 @@ export const useSessionStore = create<SessionStore>()(
           return;
         }
 
-        // Swap their roles
+        // Swap their roles and recalculate effectiveSR for the new role
         const teamArray = player1Team === 1 ? team1Array : team2Array;
         const role1 = teamArray[player1Index].assignedRole;
         const role2 = teamArray[player2Index].assignedRole;
 
-        teamArray[player1Index] = { ...teamArray[player1Index], assignedRole: role2 };
-        teamArray[player2Index] = { ...teamArray[player2Index], assignedRole: role1 };
+        const lobbyPlayers = state.getLobbyPlayers();
+        const lp1 = lobbyPlayers.find((p) => p.battletag === battletag1);
+        const lp2 = lobbyPlayers.find((p) => p.battletag === battletag2);
+
+        if (lp1 && lp2) {
+          teamArray[player1Index] = {
+            ...teamArray[player1Index],
+            assignedRole: role2,
+            effectiveSR: getEffectiveSR(lp1, role2, state.gameMode),
+          };
+          teamArray[player2Index] = {
+            ...teamArray[player2Index],
+            assignedRole: role1,
+            effectiveSR: getEffectiveSR(lp2, role1, state.gameMode),
+          };
+        } else {
+          teamArray[player1Index] = { ...teamArray[player1Index], assignedRole: role2 };
+          teamArray[player2Index] = { ...teamArray[player2Index], assignedRole: role1 };
+        }
 
         // Update locked roles if either player was role-locked
         const newLockedRoles = new Map(state.lockedRoles);
@@ -674,24 +868,17 @@ export const useSessionStore = create<SessionStore>()(
           newLockedRoles.set(battletag2, role1);
         }
 
-        // Recalculate team SR scores
-        const calcTeamSR = (team: typeof team1Array) =>
-          team.reduce((sum, ra) => sum + ra.effectiveSR, 0) / team.length;
-
-        const newTeam1SR = calcTeamSR(player1Team === 1 ? teamArray : team1Array);
-        const newTeam2SR = calcTeamSR(player1Team === 2 ? teamArray : team2Array);
+        // Recalculate team scores
+        const finalTeam1 = player1Team === 1 ? teamArray : team1Array;
+        const finalTeam2 = player1Team === 2 ? teamArray : team2Array;
+        const score = calculateTeamScore(finalTeam1, finalTeam2, state.gameMode);
 
         set({
           lastResult: {
-            team1: player1Team === 1 ? teamArray : team1Array,
-            team2: player1Team === 2 ? teamArray : team2Array,
+            team1: finalTeam1,
+            team2: finalTeam2,
             warnings: state.lastResult.warnings,
-            score: {
-              ...state.lastResult.score,
-              team1SR: newTeam1SR,
-              team2SR: newTeam2SR,
-              srDifference: Math.abs(newTeam1SR - newTeam2SR),
-            },
+            score,
           },
           lockedRoles: newLockedRoles,
         });
@@ -823,40 +1010,60 @@ export const useSessionStore = create<SessionStore>()(
       // Loss streak management AND sat-out tracking
       recordMatchResult: (winningTeam: 1 | 2) => {
         const state = get();
-        if (!state.lastResult) return;
+        
+        // Get battletags for each team — from lastResult or from draft locks
+        let team1Bts: string[];
+        let team2Bts: string[];
+        if (state.lastResult) {
+          team1Bts = state.lastResult.team1.map((ra) => ra.player.battletag);
+          team2Bts = state.lastResult.team2.map((ra) => ra.player.battletag);
+        } else if (state.lockedTeam1.size > 0 || state.lockedTeam2.size > 0) {
+          team1Bts = [...state.lockedTeam1];
+          team2Bts = [...state.lockedTeam2];
+        } else {
+          return;
+        }
 
-        const playedBattletags = new Set<string>([
-          ...state.lastResult.team1.map((ra) => ra.player.battletag),
-          ...state.lastResult.team2.map((ra) => ra.player.battletag),
-        ]);
+        const playedBattletags = new Set<string>([...team1Bts, ...team2Bts]);
 
         // Update loss streaks
         const newLossStreaks = new Map(state.playerLossStreaks);
-        const winners = winningTeam === 1 ? state.lastResult.team1 : state.lastResult.team2;
-        const losers = winningTeam === 1 ? state.lastResult.team2 : state.lastResult.team1;
+        const winnerBts = winningTeam === 1 ? team1Bts : team2Bts;
+        const loserBts = winningTeam === 1 ? team2Bts : team1Bts;
 
-        // Track total wins/losses
-        const newTotalWins = new Map(state.totalWins);
-        const newTotalLosses = new Map(state.totalLosses);
+        // Track total wins/losses for current mode
+        const currentMode = state.gameMode;
+        const newModeWins = new Map(state.totalWins[currentMode]);
+        const newModeLosses = new Map(state.totalLosses[currentMode]);
 
-        // Reset winners' loss streaks and increment total wins
-        for (const ra of winners) {
-          newLossStreaks.delete(ra.player.battletag);
-          const currentWins = newTotalWins.get(ra.player.battletag) || 0;
-          newTotalWins.set(ra.player.battletag, currentWins + 1);
+        // Reset winners' loss streaks and increment total wins for current mode
+        for (const bt of winnerBts) {
+          newLossStreaks.delete(bt);
+          const currentWins = newModeWins.get(bt) || 0;
+          newModeWins.set(bt, currentWins + 1);
         }
 
-        // Note: allTimeWins in playerStore stays immutable (CSV baseline)
-        // Session wins are tracked in totalWins Map
-        // Leaderboard shows: allTimeWins + totalWins
+        // Note: mode-specific wins in playerStore stays immutable (CSV baseline)
+        // Session wins are tracked in totalWins[mode] Map
+        // Leaderboard shows: playerModeWins + totalWins[mode]
 
-        // Increment losers' loss streaks and total losses
-        for (const ra of losers) {
-          const current = newLossStreaks.get(ra.player.battletag) || 0;
-          newLossStreaks.set(ra.player.battletag, current + 1);
-          const currentLosses = newTotalLosses.get(ra.player.battletag) || 0;
-          newTotalLosses.set(ra.player.battletag, currentLosses + 1);
+        // Increment losers' loss streaks and total losses for current mode
+        for (const bt of loserBts) {
+          const current = newLossStreaks.get(bt) || 0;
+          newLossStreaks.set(bt, current + 1);
+          const currentLosses = newModeLosses.get(bt) || 0;
+          newModeLosses.set(bt, currentLosses + 1);
         }
+
+        // Build updated mode wins/losses objects
+        const newTotalWins = {
+          ...state.totalWins,
+          [currentMode]: newModeWins,
+        };
+        const newTotalLosses = {
+          ...state.totalLosses,
+          [currentMode]: newModeLosses,
+        };
 
         // Track sat-out streaks and totals
         const newSatOutStreaks = new Map(state.satOutStreaks);
@@ -879,9 +1086,6 @@ export const useSessionStore = create<SessionStore>()(
           }
         }
 
-        console.log("recordMatchResult: satOutPlayers =", satOutPlayers);
-        console.log("recordMatchResult: clearing all locks and lastResult");
-
         set({ 
           playerLossStreaks: newLossStreaks,
           satOutStreaks: newSatOutStreaks,
@@ -903,8 +1107,8 @@ export const useSessionStore = create<SessionStore>()(
 
       clearSessionStats: () => {
         set({
-          totalWins: new Map(),
-          totalLosses: new Map(),
+          totalWins: createEmptyModeWins(),
+          totalLosses: createEmptyModeWins(),
           totalSatOut: new Map(),
           playerLossStreaks: new Map(),
           satOutStreaks: new Map(),
@@ -912,14 +1116,36 @@ export const useSessionStore = create<SessionStore>()(
         });
       },
 
+      clearSessionWins: () => {
+        set({ totalWins: createEmptyModeWins() });
+      },
+
       // Adaptive weight management
+      clearAdaptiveWeights: () => {
+        set({ adaptiveWeights: new Map() });
+      },
+
       setPendingMatchResult: (winningTeam: 1 | 2) => {
         set({ pendingMatchResult: { winningTeam } });
       },
 
-      confirmMatchScore: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number) => {
+      confirmMatchScore: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number, winnerAdj?: number, loserAdj?: number) => {
         const state = get();
-        if (!state.pendingMatchResult || !state.lastResult) {
+        if (!state.pendingMatchResult) {
+          set({ pendingMatchResult: null });
+          return;
+        }
+
+        // Get battletags for each team — from lastResult or from draft locks
+        let team1Bts: string[];
+        let team2Bts: string[];
+        if (state.lastResult) {
+          team1Bts = state.lastResult.team1.map((ra) => ra.player.battletag);
+          team2Bts = state.lastResult.team2.map((ra) => ra.player.battletag);
+        } else if (state.lockedTeam1.size > 0 || state.lockedTeam2.size > 0) {
+          team1Bts = [...state.lockedTeam1];
+          team2Bts = [...state.lockedTeam2];
+        } else {
           set({ pendingMatchResult: null });
           return;
         }
@@ -933,43 +1159,37 @@ export const useSessionStore = create<SessionStore>()(
           : null;
 
         // Calculate roll factor: how dominant was the win?
-        // Score difference normalized. E.g., 4-0 out of first-to-4 is max roll
-        // Roll factor ranges from 0 (close game like 4-3) to 1 (stomp like 4-0)
         const scoreDiff = winnerScore - loserScore;
-        const maxPossibleDiff = winnerScore; // If loser got 0, diff equals winnerScore
+        const maxPossibleDiff = winnerScore;
         const rollFactor = maxPossibleDiff > 0 ? scoreDiff / maxPossibleDiff : 0;
 
-        // Base SR adjustment: ±50 SR, scaled by roll factor
-        // Close games (rollFactor ~0) = minimal adjustment
-        // Stomps (rollFactor ~1) = full ±50 adjustment
-        const baseAdjustment = Math.round(50 * rollFactor);
+        const autoAdjustment = Math.round(50 * rollFactor);
+        const winnerAdjustment = winnerAdj ?? autoAdjustment;
+        const loserAdjustment = loserAdj ?? autoAdjustment;
 
-        // Get players on each team
-        const winners = state.lastResult[winningTeam === 1 ? "team1" : "team2"];
-        const losers = state.lastResult[losingTeam === 1 ? "team1" : "team2"];
+        const winnerBts = winningTeam === 1 ? team1Bts : team2Bts;
+        const loserBts = losingTeam === 1 ? team1Bts : team2Bts;
 
         // First, decay existing adaptive weights by 50%
         const newAdaptiveWeights = new Map<string, number>();
         for (const [bt, weight] of state.adaptiveWeights) {
           const decayed = Math.round(weight / 2);
-          if (Math.abs(decayed) >= 5) { // Only keep if still significant
+          if (Math.abs(decayed) >= 5) {
             newAdaptiveWeights.set(bt, decayed);
           }
         }
 
         // Apply new adjustment to winners (increase SR = harder matchmaking)
-        for (const ra of winners) {
-          const bt = ra.player.battletag;
+        for (const bt of winnerBts) {
           const current = newAdaptiveWeights.get(bt) ?? 0;
-          const newWeight = Math.max(-200, Math.min(200, current + baseAdjustment));
+          const newWeight = Math.max(-200, Math.min(200, current + winnerAdjustment));
           newAdaptiveWeights.set(bt, newWeight);
         }
 
         // Apply new adjustment to losers (decrease SR = easier matchmaking)
-        for (const ra of losers) {
-          const bt = ra.player.battletag;
+        for (const bt of loserBts) {
           const current = newAdaptiveWeights.get(bt) ?? 0;
-          const newWeight = Math.max(-200, Math.min(200, current - baseAdjustment));
+          const newWeight = Math.max(-200, Math.min(200, current - loserAdjustment));
           newAdaptiveWeights.set(bt, newWeight);
         }
 
@@ -992,9 +1212,134 @@ export const useSessionStore = create<SessionStore>()(
         return get().adaptiveWeights.get(battletag) ?? 0;
       },
 
+      autoBalanceAfterMatch: () => {
+        const state = get();
+        const lobbyPlayers = state.getLobbyPlayers();
+        const modeConfig = getModeConfig(state.gameMode);
+        const requiredPlayers = modeConfig.teamSize * 2;
+        
+        if (lobbyPlayers.length >= requiredPlayers) {
+          const newResult = balanceTeams(lobbyPlayers, state.softConstraints, state.gameMode);
+          set({ lastResult: newResult });
+        }
+      },
+
+      balanceDraftedPlayers: () => {
+        const state = get();
+        const modeConfig = getModeConfig(state.gameMode);
+        const requiredPlayers = modeConfig.teamSize * 2;
+        const draftedBattletags = new Set([...state.lockedTeam1, ...state.lockedTeam2]);
+
+        if (draftedBattletags.size < requiredPlayers) {
+          return { error: `Need ${requiredPlayers} drafted players, have ${draftedBattletags.size}` };
+        }
+
+        // Get lobby players for only the drafted subset, with locks cleared so balancer can freely assign
+        const lobbyPlayers = state.getLobbyPlayers()
+          .filter((p) => draftedBattletags.has(p.battletag))
+          .map((p) => ({ ...p, lockedToTeam: null as (1 | 2 | null) }));
+
+        const newResult = balanceTeams(lobbyPlayers, state.softConstraints, state.gameMode);
+
+        // Re-assign drafted players to their balanced teams, staying in draft mode
+        const newLockedTeam1 = new Set<string>();
+        const newLockedTeam2 = new Set<string>();
+        const newLockedRoles = new Map<string, Role>();
+
+        for (const assignment of newResult.team1) {
+          newLockedTeam1.add(assignment.player.battletag);
+          newLockedRoles.set(assignment.player.battletag, assignment.assignedRole);
+        }
+        for (const assignment of newResult.team2) {
+          newLockedTeam2.add(assignment.player.battletag);
+          newLockedRoles.set(assignment.player.battletag, assignment.assignedRole);
+        }
+
+        set({
+          lockedTeam1: newLockedTeam1,
+          lockedTeam2: newLockedTeam2,
+          lockedRoles: newLockedRoles,
+        });
+
+        return {};
+      },
+
+      fillRemaining: () => {
+        const state = get();
+        const lobbyPlayers = state.getLobbyPlayers();
+        const modeConfig = getModeConfig(state.gameMode);
+        const requiredPlayers = modeConfig.teamSize * 2;
+
+        // Count non-AFK available players
+        const availablePlayers = lobbyPlayers.filter((p) => !p.isAfk);
+        if (availablePlayers.length < requiredPlayers) {
+          return { error: `Need ${requiredPlayers} players but only ${availablePlayers.length} available (${lobbyPlayers.length - availablePlayers.length} AFK)` };
+        }
+
+        // Run balancer — assigned players already have lockedToTeam/lockedToRole set,
+        // so the balancer respects them natively
+        const result = balanceTeams(lobbyPlayers, state.softConstraints, state.gameMode);
+
+        if (result.team1.length === 0 || result.team2.length === 0) {
+          return { error: "Could not form valid teams. Check role composition — assigned players may conflict with available roles." };
+        }
+
+        // Store result and switch to balance view
+        get().setLastResult(result);
+        set({ draftMode: false });
+        return {};
+      },
+
       // Reset session
       resetSession: () => {
         set({ ...initialState });
+      },
+
+      // Game mode management
+      setGameMode: (mode: GameMode) => {
+        // Switching modes preserves session stats (mode-specific wins/losses are separate)
+        // but resets balancing state (result, locks, etc.)
+        set((state) => ({
+          gameMode: mode,
+          // Reset balancing state
+          lastResult: null,
+          previousResult: null,
+          lastGamePlayers: new Set<string>(),
+          playerLossStreaks: new Map<string, number>(),
+          satOutStreaks: new Map<string, number>(),
+          // Preserve mode-specific wins/losses
+          totalWins: state.totalWins,
+          totalLosses: state.totalLosses,
+          totalSatOut: new Map<string, number>(),
+          adaptiveWeights: new Map<string, number>(),
+          pendingMatchResult: null,
+          lastMatchCashScores: null,
+          // Preserve lobby and constraints, but clear team/role locks
+          // (slot counts differ between modes so stale locks would be invalid)
+          lobbyBattletags: state.lobbyBattletags,
+          mustPlay: state.mustPlay,
+          mustPlayPriority: state.mustPlayPriority,
+          lockedTeam1: new Set<string>(),
+          lockedTeam2: new Set<string>(),
+          lockedRoles: new Map<string, Role>(),
+          tempWeightOverrides: state.tempWeightOverrides,
+          afkPlayers: state.afkPlayers,
+          softConstraints: state.softConstraints,
+        }));
+      },
+
+      // Toggle weight modifier visibility
+      toggleShowWeightModifiers: () => {
+        set((state) => ({ showWeightModifiers: !state.showWeightModifiers }));
+      },
+
+      // Cycle font scale for accessibility
+      cycleFontScale: () => {
+        set((state) => {
+          const order = ["normal", "large", "x-large"] as const;
+          const idx = order.indexOf(state.fontScale);
+          return { fontScale: order[(idx + 1) % order.length] };
+        });
       },
 
       // Update all references when a player is renamed
@@ -1018,6 +1363,13 @@ export const useSessionStore = create<SessionStore>()(
             newMap.set(newBattletag, value);
             return newMap;
           };
+
+          // Helper to rename in mode-keyed wins/losses structure
+          const renameInModeWins = (record: Record<GameMode, Map<string, number>>): Record<GameMode, Map<string, number>> => ({
+            stadium_5v5: renameInMap(record.stadium_5v5),
+            regular_5v5: renameInMap(record.regular_5v5),
+            regular_6v6: renameInMap(record.regular_6v6),
+          });
 
           // Update lobbyBattletags array
           const newLobbyBattletags = state.lobbyBattletags.map((bt) =>
@@ -1046,8 +1398,8 @@ export const useSessionStore = create<SessionStore>()(
             lastGamePlayers: renameInSet(state.lastGamePlayers),
             playerLossStreaks: renameInMap(state.playerLossStreaks),
             satOutStreaks: renameInMap(state.satOutStreaks),
-            totalWins: renameInMap(state.totalWins),
-            totalLosses: renameInMap(state.totalLosses),
+            totalWins: renameInModeWins(state.totalWins),
+            totalLosses: renameInModeWins(state.totalLosses),
             totalSatOut: renameInMap(state.totalSatOut),
             adaptiveWeights: renameInMap(state.adaptiveWeights),
           };

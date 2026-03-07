@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { parsePlayersCSV } from "@utils/csvParser";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
-import type { Player } from "@engine/types";
+import type { Player, GameMode } from "@engine/types";
 
 // =============================================================================
 // CsvImporter - Import/Export players via CSV
@@ -18,8 +18,11 @@ function escapeCSVField(value: string | null | undefined): string {
   return str;
 }
 
-/** Convert players to CSV content */
-function playersToCSV(players: Player[], sessionWins: Map<string, number>): string {
+/** Convert players to CSV content with mode-specific wins */
+function playersToCSV(
+  players: Player[],
+  sessionWins: Record<GameMode, Map<string, number>>
+): string {
   const headers = [
     "battletag",
     "tank_rank",
@@ -37,14 +40,16 @@ function playersToCSV(players: Player[], sessionWins: Map<string, number>): stri
     "regular_comp_rank",
     "weight_modifier",
     "notes",
-    "all_time_wins",
+    "stadium_wins",
+    "regular_5v5_wins",
+    "regular_6v6_wins",
   ];
 
   const rows = players.map((p) => {
-    // Total wins = CSV baseline + session wins
-    const baselineWins = p.allTimeWins ?? 0;
-    const sessionWinsForPlayer = sessionWins.get(p.battletag) ?? 0;
-    const totalWins = baselineWins + sessionWinsForPlayer;
+    // Calculate total wins per mode = CSV baseline + session wins
+    const stadiumTotal = (p.stadiumWins ?? 0) + (sessionWins.stadium_5v5.get(p.battletag) ?? 0);
+    const regular5v5Total = (p.regular5v5Wins ?? 0) + (sessionWins.regular_5v5.get(p.battletag) ?? 0);
+    const regular6v6Total = (p.regular6v6Wins ?? 0) + (sessionWins.regular_6v6.get(p.battletag) ?? 0);
 
     return [
       escapeCSVField(p.battletag),
@@ -63,7 +68,9 @@ function playersToCSV(players: Player[], sessionWins: Map<string, number>): stri
       escapeCSVField(p.regularCompRank),
       String(p.weightModifier || 0),
       escapeCSVField(p.notes),
-      String(totalWins),
+      String(stadiumTotal),
+      String(regular5v5Total),
+      String(regular6v6Total),
     ].join(",");
   });
 
@@ -74,6 +81,8 @@ export function CsvImporter() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successDetails, setSuccessDetails] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const setPlayers = usePlayerStore((state) => state.setPlayers);
@@ -81,13 +90,16 @@ export function CsvImporter() {
   const players = usePlayerStore((state) => state.players);
   const sessionWins = useSessionStore((state) => state.totalWins);
   const clearSessionStats = useSessionStore((state) => state.clearSessionStats);
+  const clearLobby = useSessionStore((state) => state.clearLobby);
   const setLastResult = useSessionStore((state) => state.setLastResult);
   const lastResult = useSessionStore((state) => state.lastResult);
+  const gameMode = useSessionStore((state) => state.gameMode);
 
   // Clear success message when teams are generated (Balance/Reshuffle clicked)
   useEffect(() => {
     if (lastResult) {
       setSuccessMessage(null);
+      setSuccessDetails(null);
     }
   }, [lastResult]);
 
@@ -95,6 +107,7 @@ export function CsvImporter() {
     (csvContent: string) => {
       setError(null);
       setSuccessMessage(null);
+      setSuccessDetails(null);
 
       if (!csvContent.trim()) {
         setError("No content to import");
@@ -133,6 +146,7 @@ export function CsvImporter() {
 
       // Clear session state when importing new CSV
       clearSessionStats();
+      clearLobby();
       setLastResult(null);
 
       setPlayers(result.valid);
@@ -141,10 +155,10 @@ export function CsvImporter() {
           result.warnings.length > 0
             ? ` (${result.warnings.length} warnings)`
             : ""
-        }. Session stats cleared.`
+        }. Session stats and lobby cleared.`
       );
     },
-    [setPlayers, playerCount, clearSessionStats, setLastResult]
+    [setPlayers, playerCount, clearSessionStats, clearLobby, setLastResult]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -200,9 +214,9 @@ export function CsvImporter() {
   );
 
   const handleDownloadTemplate = useCallback(() => {
-    const templateContent = `battletag,tank_rank,dps_rank,support_rank,tank_comp_rank,dps_comp_rank,support_comp_rank,roles_willing,role_preference,hero_pool,tank_one_trick,dps_one_trick,support_one_trick,regular_comp_rank,weight_modifier,notes
-Player1#1234,Pro 2,,Elite 3,,,,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya",,,,0,Example player
-Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mercy,,0,Support one-trick`;
+    const templateContent = `battletag,tank_rank,dps_rank,support_rank,tank_comp_rank,dps_comp_rank,support_comp_rank,roles_willing,role_preference,hero_pool,tank_one_trick,dps_one_trick,support_one_trick,regular_comp_rank,weight_modifier,notes,stadium_wins,regular_5v5_wins,regular_6v6_wins
+Player1#1234,Pro 2,,Elite 3,,,,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya",,,,0,Example player,0,0,0
+Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mercy,,0,Support one-trick,0,0,0`;
 
     const blob = new Blob([templateContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -218,6 +232,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
   const handleLoadSampleData = useCallback(async () => {
     setError(null);
     setSuccessMessage(null);
+    setSuccessDetails(null);
     
     try {
       const response = await fetch("/sample-players.csv");
@@ -239,7 +254,9 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     const csvContent = playersToCSV(playerArray, sessionWins);
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const filename = `pugs-players-${new Date().toISOString().split("T")[0]}.csv`;
+    // Include mode in filename (e.g., "pugs-players-stadium-2026-03-06.csv")
+    const modeSlug = gameMode.replace("_", "-");
+    const filename = `pugs-players-${modeSlug}-${new Date().toISOString().split("T")[0]}.csv`;
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
@@ -248,13 +265,19 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Count how many players have session wins
-    const playersWithSessionWins = playerArray.filter(p => sessionWins.get(p.battletag)).length;
+    // Count how many players have session wins (across all modes)
+    const hasAnySessionWins = (bt: string) => 
+      sessionWins.stadium_5v5.has(bt) || 
+      sessionWins.regular_5v5.has(bt) || 
+      sessionWins.regular_6v6.has(bt);
+    const playersWithSessionWins = playerArray.filter(p => hasAnySessionWins(p.battletag)).length;
     const sessionWinsMsg = playersWithSessionWins > 0 
-      ? ` (including session wins for ${playersWithSessionWins} players)`
+      ? ` (${playersWithSessionWins} with session wins)`
       : "";
-    setSuccessMessage(`Exported ${playerArray.length} players${sessionWinsMsg}. File "${filename}" downloaded. Check your browser's Downloads folder (usually C:\\Users\\[YourName]\\Downloads).`);
-  }, [players, sessionWins]);
+    setSuccessMessage(`Exported ${playerArray.length} players${sessionWinsMsg}`);
+    setSuccessDetails(`File: ${filename}\nLocation: Downloads folder`);
+    setShowDetails(false);
+  }, [players, sessionWins, gameMode]);
 
   return (
     <div className="space-y-3">
@@ -337,7 +360,23 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
       {/* Success message */}
       {successMessage && (
         <div className="p-3 bg-green-900/50 border border-green-700 rounded-lg text-sm text-green-300">
-          {successMessage}
+          <div className="flex items-center justify-between">
+            <span>{successMessage}</span>
+            {successDetails && (
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="ml-2 text-green-400 hover:text-green-200 transition-colors"
+                title={showDetails ? "Hide details" : "Show details"}
+              >
+                {showDetails ? "▲" : "ℹ️"}
+              </button>
+            )}
+          </div>
+          {showDetails && successDetails && (
+            <div className="mt-2 pt-2 border-t border-green-700/50 text-xs text-green-400 whitespace-pre-wrap">
+              {successDetails}
+            </div>
+          )}
         </div>
       )}
     </div>

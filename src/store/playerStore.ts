@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Player } from "@engine/types";
+import { useSheetStore } from "@store/sheetStore";
+
+/** Notify sheetStore of local mutations when connected (§9.2) */
+function notifyUnsynced(): void {
+  const { spreadsheetId, markUnsynced } = useSheetStore.getState();
+  if (spreadsheetId) markUnsynced();
+}
 
 // =============================================================================
 // Player Store - Manages imported player roster
@@ -57,10 +64,23 @@ const mapStorage = {
       // Convert players array back to Map
       if (parsed.state?.players) {
         const playersMap = new Map(parsed.state.players);
-        // Migration: ensure allTimeWins exists for all players
+        // Migration: ensure all wins fields exist for all players
         for (const [bt, player] of playersMap) {
-          if ((player as Player).allTimeWins === undefined || (player as Player).allTimeWins === null) {
-            playersMap.set(bt, { ...(player as Player), allTimeWins: 0 });
+          const p = player as Player;
+          const needsMigration = 
+            p.stadiumWins === undefined || 
+            p.regular5v5Wins === undefined || 
+            p.regular6v6Wins === undefined;
+          if (needsMigration) {
+            // Migrate legacy allTimeWins to stadiumWins
+            const legacyWins = p.allTimeWins ?? 0;
+            playersMap.set(bt, { 
+              ...p, 
+              stadiumWins: p.stadiumWins ?? legacyWins,
+              regular5v5Wins: p.regular5v5Wins ?? 0,
+              regular6v6Wins: p.regular6v6Wins ?? 0,
+              allTimeWins: legacyWins,
+            });
           }
         }
         parsed.state.players = playersMap;
@@ -69,7 +89,53 @@ const mapStorage = {
       }
       return parsed;
     } catch (e) {
-      console.error("Failed to parse player storage, resetting:", e);
+      // Attempt to recover partial data before clearing
+      console.error("Failed to parse player storage:", e);
+      
+      try {
+        const rawStr = localStorage.getItem(name);
+        if (rawStr) {
+          // Backup corrupted data for potential manual recovery
+          const backupKey = `${name}_backup_${Date.now()}`;
+          localStorage.setItem(backupKey, rawStr);
+          console.warn(`Corrupted data backed up to localStorage key: ${backupKey}`);
+          
+          // Try to salvage player array if it's partially valid JSON
+          const partialMatch = rawStr.match(/"players":\s*\[([\s\S]*?)\]\s*[,}]/);
+          if (partialMatch) {
+            try {
+              const playersArray = JSON.parse(`[${partialMatch[1]}]`);
+              const recoveredPlayers = new Map<string, Player>();
+              for (const entry of playersArray) {
+                // Each entry should be [battletag, playerObj]
+                if (Array.isArray(entry) && entry.length === 2 && entry[0] && entry[1]) {
+                  const [bt, player] = entry;
+                  if (typeof bt === 'string' && player && typeof player === 'object') {
+                    recoveredPlayers.set(bt, player as Player);
+                  }
+                }
+              }
+              
+              if (recoveredPlayers.size > 0) {
+                console.warn(`Recovered ${recoveredPlayers.size} players from corrupted data`);
+                localStorage.removeItem(name);
+                return {
+                  state: {
+                    players: recoveredPlayers,
+                    lastImportedAt: Date.now(),
+                  },
+                  version: 0,
+                };
+              }
+            } catch {
+              // Partial recovery also failed
+            }
+          }
+        }
+      } catch {
+        // Recovery attempt failed, proceed with reset
+      }
+      
       localStorage.removeItem(name);
       return null;
     }
@@ -106,6 +172,7 @@ export const usePlayerStore = create<PlayerStore>()(
           players: playerMap,
           lastImportedAt: Date.now(),
         });
+        notifyUnsynced();
       },
 
       upsertPlayer: (player: Player) => {
@@ -114,6 +181,7 @@ export const usePlayerStore = create<PlayerStore>()(
           newPlayers.set(player.battletag, player);
           return { players: newPlayers };
         });
+        notifyUnsynced();
       },
 
       updatePlayer: (battletag: string, updates: Partial<Player>) => {
@@ -125,6 +193,7 @@ export const usePlayerStore = create<PlayerStore>()(
           newPlayers.set(battletag, { ...existing, ...updates });
           return { players: newPlayers };
         });
+        notifyUnsynced();
       },
 
       renamePlayer: (oldBattletag: string, newBattletag: string) => {
@@ -139,6 +208,7 @@ export const usePlayerStore = create<PlayerStore>()(
         newPlayers.delete(oldBattletag);
         newPlayers.set(newBattletag, renamedPlayer);
         set({ players: newPlayers });
+        notifyUnsynced();
         return true;
       },
 
@@ -148,10 +218,10 @@ export const usePlayerStore = create<PlayerStore>()(
           newPlayers.delete(battletag);
           return { players: newPlayers };
         });
+        notifyUnsynced();
       },
 
       incrementAllTimeWins: (battletags: string[]) => {
-        console.log("incrementAllTimeWins called with:", battletags);
         set((state) => {
           const newPlayers = new Map(state.players);
           for (const bt of battletags) {
@@ -159,14 +229,12 @@ export const usePlayerStore = create<PlayerStore>()(
             if (player) {
               const currentWins = player.allTimeWins ?? 0;
               const newWins = currentWins + 1;
-              console.log(`  ${bt}: ${currentWins} -> ${newWins}`);
               newPlayers.set(bt, { ...player, allTimeWins: newWins });
-            } else {
-              console.log(`  ${bt}: player not found in store`);
             }
           }
           return { players: newPlayers };
         });
+        notifyUnsynced();
       },
 
       clearPlayers: () => {
@@ -174,6 +242,7 @@ export const usePlayerStore = create<PlayerStore>()(
           players: new Map(),
           lastImportedAt: null,
         });
+        notifyUnsynced();
       },
 
       getPlayer: (battletag: string) => {
