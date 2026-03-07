@@ -12,7 +12,9 @@ export default defineConfig({
       '@engine': path.resolve(__dirname, './src/engine'),
       '@config': path.resolve(__dirname, './src/config'),
       '@store': path.resolve(__dirname, './src/store'),
+      '@services': path.resolve(__dirname, './src/services'),
       '@utils': path.resolve(__dirname, './src/utils'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
     },
   },
 })

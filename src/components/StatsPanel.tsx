@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { useSessionStore } from "@store/sessionStore";
 
 // =============================================================================
-// StatsPanel - Shows win/loss/sat-out stats for lobby players
+// StatsPanel - Shows win/loss/sat-out stats for lobby players (current mode)
 // =============================================================================
 
 interface PlayerStats {
@@ -17,10 +17,13 @@ interface PlayerStats {
 
 export function StatsPanel() {
   const lobbyBattletags = useSessionStore((state) => state.lobbyBattletags);
+  const gameMode = useSessionStore((state) => state.gameMode);
   const totalWins = useSessionStore((state) => state.totalWins);
   const totalLosses = useSessionStore((state) => state.totalLosses);
   const totalSatOut = useSessionStore((state) => state.totalSatOut);
   const clearSessionStats = useSessionStore((state) => state.clearSessionStats);
+  const adaptiveWeights = useSessionStore((state) => state.adaptiveWeights);
+  const clearAdaptiveWeights = useSessionStore((state) => state.clearAdaptiveWeights);
 
   const handleClear = useCallback(() => {
     if (confirm("Clear all session stats? This cannot be undone.")) {
@@ -28,10 +31,19 @@ export function StatsPanel() {
     }
   }, [clearSessionStats]);
 
+  const handleClearAdaptive = useCallback(() => {
+    if (confirm("Reset all Auto-SR adjustments? Players will return to their base SR.")) {
+      clearAdaptiveWeights();
+    }
+  }, [clearAdaptiveWeights]);
+
   const stats = useMemo((): PlayerStats[] => {
+    const modeWins = totalWins[gameMode];
+    const modeLosses = totalLosses[gameMode];
+    
     return lobbyBattletags.map((battletag) => {
-      const wins = totalWins.get(battletag) || 0;
-      const losses = totalLosses.get(battletag) || 0;
+      const wins = modeWins.get(battletag) || 0;
+      const losses = modeLosses.get(battletag) || 0;
       const satOut = totalSatOut.get(battletag) || 0;
       const gamesPlayed = wins + losses;
       const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
@@ -46,7 +58,7 @@ export function StatsPanel() {
         winRate,
       };
     });
-  }, [lobbyBattletags, totalWins, totalLosses, totalSatOut]);
+  }, [lobbyBattletags, gameMode, totalWins, totalLosses, totalSatOut]);
 
   // Sort by most wins first, then by fewest losses as tiebreaker
   const sortedStats = useMemo(() => {
@@ -78,12 +90,23 @@ export function StatsPanel() {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300">Session Stats</h3>
-        <button
-          onClick={handleClear}
-          className="text-xs text-gray-400 hover:text-red-400 transition-colors"
-        >
-          Clear
-        </button>
+        <div className="flex gap-2">
+          {adaptiveWeights.size > 0 && (
+            <button
+              onClick={handleClearAdaptive}
+              className="text-xs text-gray-400 hover:text-orange-400 transition-colors"
+              title="Reset Auto-SR adjustments only"
+            >
+              Reset Auto-SR
+            </button>
+          )}
+          <button
+            onClick={handleClear}
+            className="text-xs text-gray-400 hover:text-red-400 transition-colors"
+          >
+            Clear
+          </button>
+        </div>
       </div>
       
       <div className="max-h-48 overflow-y-auto">

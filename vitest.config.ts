@@ -16,6 +16,7 @@ export default defineConfig({
       "@engine": resolve(__dirname, "./src/engine"),
       "@config": resolve(__dirname, "./src/config"),
       "@store": resolve(__dirname, "./src/store"),
+      "@services": resolve(__dirname, "./src/services"),
       "@utils": resolve(__dirname, "./src/utils"),
     },
   },

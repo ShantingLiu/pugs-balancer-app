@@ -32,7 +32,9 @@
       "@engine/*": ["src/engine/*"],
       "@config/*": ["src/config/*"],
       "@store/*": ["src/store/*"],
-      "@utils/*": ["src/utils/*"]
+      "@services/*": ["src/services/*"],
+      "@utils/*": ["src/utils/*"],
+      "@hooks/*": ["src/hooks/*"]
     },
     "resolveJsonModule": true
   },

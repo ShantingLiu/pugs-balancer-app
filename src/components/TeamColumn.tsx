@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { RoleAssignment, Role, LobbyPlayer } from "@engine/types";
+import type { RoleAssignment, Role, LobbyPlayer, GameMode } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { formatRankOnly, getEffectiveSR } from "@utils/rankMapper";
 
@@ -32,17 +32,20 @@ function getAdaptiveWeight(lobbyPlayer: LobbyPlayer | undefined): number {
 }
 
 /** Format rank with modifier display (shows manual and adaptive separately) */
-function formatRankWithModifier(effectiveSR: number, modifier: number, adaptiveWeight: number): ReactNode {
-  const baseRank = formatRankOnly(effectiveSR - modifier);
+function formatRankWithModifier(effectiveSR: number, modifier: number, adaptiveWeight: number, mode: GameMode, showManualModifier: boolean = true): ReactNode {
+  const baseRank = formatRankOnly(effectiveSR - modifier, mode);
   
-  if (modifier === 0) {
+  const manualMod = modifier - adaptiveWeight;
+  const showManual = showManualModifier && manualMod !== 0;
+  const showAdaptive = adaptiveWeight !== 0;
+  
+  // Nothing to show
+  if (!showManual && !showAdaptive) {
     return <>{baseRank}</>;
   }
   
-  const manualMod = modifier - adaptiveWeight;
-  
-  // Show both types if both exist
-  if (manualMod !== 0 && adaptiveWeight !== 0) {
+  // Show both types if both should be shown
+  if (showManual && showAdaptive) {
     const manualSign = manualMod > 0 ? "+" : "";
     const adaptiveSign = adaptiveWeight > 0 ? "+" : "";
     return (
@@ -58,8 +61,8 @@ function formatRankWithModifier(effectiveSR: number, modifier: number, adaptiveW
     );
   }
   
-  // Only adaptive
-  if (adaptiveWeight !== 0) {
+  // Only adaptive (always shown when non-zero)
+  if (showAdaptive) {
     const sign = adaptiveWeight > 0 ? "+" : "";
     return (
       <>
@@ -71,7 +74,7 @@ function formatRankWithModifier(effectiveSR: number, modifier: number, adaptiveW
     );
   }
   
-  // Only manual
+  // Only manual (when toggle is on)
   const sign = manualMod > 0 ? "+" : "";
   return (
     <>
@@ -111,12 +114,14 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }:
   const [substituteOpen, setSubstituteOpen] = useState<string | null>(null);
   const [swapSource, setSwapSource] = useState<string | null>(null); // battletag of first player in swap
   
+  const gameMode = useSessionStore((state) => state.gameMode);
   const lockToTeam = useSessionStore((state) => state.lockToTeam);
   const lockToRole = useSessionStore((state) => state.lockToRole);
   const substitutePlayer = useSessionStore((state) => state.substitutePlayer);
   const swapPlayerRoles = useSessionStore((state) => state.swapPlayerRoles);
   const getLobbyPlayers = useSessionStore((state) => state.getLobbyPlayers);
   const lastResult = useSessionStore((state) => state.lastResult);
+  const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
   // Subscribe to lock changes for re-renders
   useSessionStore((state) => state.lockedTeam1);
   useSessionStore((state) => state.lockedTeam2);
@@ -171,7 +176,7 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }:
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold">Team {teamNumber}</h3>
         <div className="text-lg font-semibold text-blue-400" title={`${averageSR.toFixed(0)} SR`}>
-          {formatRankOnly(averageSR)}
+          {formatRankOnly(averageSR, gameMode)}
         </div>
       </div>
 
@@ -196,125 +201,132 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }:
                   <div
                     key={assignment.player.battletag}
                     className={`
-                      flex items-center gap-2 p-2 rounded-lg bg-gray-700 group transition-all
+                      px-3 py-2 rounded-lg bg-gray-700 group transition-all flex gap-3
                       ${isLocked ? "ring-1 ring-purple-500" : ""}
                       ${isSwapSource ? "ring-2 ring-cyan-400 bg-cyan-900/30" : ""}
                     `}
                   >
+                    {/* Role badge - centered vertically across both rows */}
                     <span
                       className={`
-                        px-2 py-0.5 text-xs font-bold rounded flex-shrink-0
+                        px-2 py-1 text-xs font-bold rounded flex-shrink-0 self-center
                         ${getRoleBadgeColor(assignment.assignedRole)}
                       `}
                     >
                       {assignment.assignedRole.charAt(0)}
                     </span>
-                    <span className="flex-1 font-medium min-w-0">
-                      {assignment.player.battletag.split("#")[0]}
-                    </span>
-                    {assignment.effectiveSR !== undefined && (
-                      <span 
-                        className="text-sm text-gray-400 flex-shrink-0"
-                        title={`${assignment.effectiveSR.toLocaleString()} SR (manual: ${modifier - adaptive >= 0 ? "+" : ""}${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})`}
-                      >
-                        {formatRankWithModifier(assignment.effectiveSR, modifier, adaptive)}
+                    {/* Right side: name/buttons row + rank row */}
+                    <div className="flex-1 min-w-0">
+                      {/* Top row: name, buttons */}
+                      <div className="flex items-center gap-3">
+                      <span className="flex-1 font-medium flex items-center gap-1">
+                        {assignment.player.battletag.split("#")[0]}
                       </span>
-                    )}
-                    {/* Swap button */}
-                    <button
-                      onClick={() => handleSwapClick(battletag)}
-                      className={`
-                        px-2 py-1 text-xs rounded transition-colors flex-shrink-0
-                        ${isSwapSource
-                          ? "bg-cyan-600 hover:bg-cyan-700"
-                          : swapSource
-                          ? "bg-cyan-600/50 hover:bg-cyan-600 animate-pulse"
-                          : "bg-gray-600 hover:bg-cyan-600 opacity-0 group-hover:opacity-100"
-                        }
-                      `}
-                      title={isSwapSource ? "Click to cancel" : swapSource ? "Click to swap with selected player" : "Swap roles with another player"}
-                    >
-                      ⇄
-                    </button>
-                    {/* Lock button */}
-                    <button
-                      onClick={() => {
-                        console.log(`Lock button clicked for ${assignment.player.battletag}, isLocked: ${isLocked}, assignedRole: ${assignment.assignedRole}`);
-                        if (isLocked) {
-                          // Unlock: remove team AND role lock
-                          lockToTeam(assignment.player.battletag, null);
-                          lockToRole(assignment.player.battletag, null);
-                        } else {
-                          // Lock: set team AND role lock
-                          lockToTeam(assignment.player.battletag, teamNumber);
-                          lockToRole(assignment.player.battletag, assignment.assignedRole);
-                        }
-                      }}
-                      className={`
-                        px-2 py-1 text-xs rounded transition-colors flex-shrink-0
-                        ${isLocked
-                          ? "bg-purple-600 hover:bg-purple-700"
-                          : "bg-gray-600 hover:bg-gray-500"
-                        }
-                      `}
-                      title={isLocked ? "Unlock player" : `Lock to Team ${teamNumber}`}
-                    >
-                      {isLocked ? "🔒" : "🔓"}
-                    </button>
-                    {/* Substitute button */}
-                    <div className="relative">
+                      {/* Swap button */}
                       <button
-                        onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
-                        className="px-2 py-1 text-xs bg-gray-600 hover:bg-orange-600 rounded transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
-                        title="Substitute player"
+                        onClick={() => handleSwapClick(battletag)}
+                        className={`
+                          px-2 py-1 text-xs rounded transition-colors flex-shrink-0
+                          ${isSwapSource
+                            ? "bg-cyan-600 hover:bg-cyan-700"
+                            : swapSource
+                            ? "bg-cyan-600/50 hover:bg-cyan-600 animate-pulse"
+                            : "bg-gray-600 hover:bg-cyan-600 opacity-0 group-hover:opacity-100"
+                          }
+                        `}
+                        title={isSwapSource ? "Click to cancel" : swapSource ? "Click to swap with selected player" : "Swap roles with another player"}
                       >
-                        🔄
+                        ⇄
                       </button>
-                      {substituteOpen === battletag && (
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-gray-900 rounded-lg shadow-xl border border-gray-700 min-w-[200px] max-h-[300px] overflow-y-auto">
-                          <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
-                            Sub for {assignment.player.battletag.split("#")[0]}
-                          </div>
-                          {getEligibleSubstitutes(assignment.assignedRole).length === 0 ? (
-                            <div className="p-3 text-sm text-gray-500 italic">
-                              No eligible {assignment.assignedRole} subs
+                      {/* Substitute button */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
+                          className="px-2 py-1 text-xs bg-gray-600 hover:bg-orange-600 rounded transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                          title="Substitute player"
+                        >
+                          🔄
+                        </button>
+                        {substituteOpen === battletag && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-gray-900 rounded-lg shadow-xl border border-gray-700 min-w-[200px] max-h-[300px] overflow-y-auto">
+                            <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
+                              Sub for {assignment.player.battletag.split("#")[0]}
                             </div>
-                          ) : (
-                            getEligibleSubstitutes(assignment.assignedRole).map((sub) => (
-                              <button
-                                key={sub.battletag}
-                                onClick={() => {
-                                  substitutePlayer(battletag, sub.battletag, true);
-                                  setSubstituteOpen(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 flex items-center justify-between"
-                              >
-                                <span>{sub.battletag.split("#")[0]}</span>
-                                <span className="text-gray-400 text-xs">
-                                  {formatRankOnly(getEffectiveSR(sub, assignment.assignedRole))}
-                                </span>
-                              </button>
-                            ))
-                          )}
-                          <button
-                            onClick={() => setSubstituteOpen(null)}
-                            className="w-full px-3 py-2 text-left text-xs text-gray-500 hover:bg-gray-700 border-t border-gray-700"
-                          >
-                            Cancel
-                          </button>
+                            {getEligibleSubstitutes(assignment.assignedRole).length === 0 ? (
+                              <div className="p-3 text-sm text-gray-500 italic">
+                                No eligible {assignment.assignedRole} subs
+                              </div>
+                            ) : (
+                              getEligibleSubstitutes(assignment.assignedRole).map((sub) => (
+                                <button
+                                  key={sub.battletag}
+                                  onClick={() => {
+                                    substitutePlayer(battletag, sub.battletag, true);
+                                    setSubstituteOpen(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 flex items-center justify-between"
+                                >
+                                  <span>{sub.battletag.split("#")[0]}</span>
+                                  <span className="text-gray-400 text-xs">
+                                    {formatRankOnly(getEffectiveSR(sub, assignment.assignedRole), gameMode)}
+                                  </span>
+                                </button>
+                              ))
+                            )}
+                            <button
+                              onClick={() => setSubstituteOpen(null)}
+                              className="w-full px-3 py-2 text-left text-xs text-gray-500 hover:bg-gray-700 border-t border-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Edit button (appears on hover) */}
+                      {onEditPlayer && (
+                        <button
+                          onClick={() => onEditPlayer(battletag)}
+                          className="px-2 py-1 text-xs bg-gray-600 hover:bg-blue-600 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                          title="Edit player"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {/* Lock button - always visible, rightmost */}
+                      <button
+                        onClick={() => {
+                          if (isLocked) {
+                            // Unlock: remove team AND role lock
+                            lockToTeam(assignment.player.battletag, null);
+                            lockToRole(assignment.player.battletag, null);
+                          } else {
+                            // Lock: set team AND role lock
+                            lockToTeam(assignment.player.battletag, teamNumber);
+                            lockToRole(assignment.player.battletag, assignment.assignedRole);
+                          }
+                        }}
+                        className={`
+                          px-2 py-1 text-xs rounded transition-colors flex-shrink-0
+                          ${isLocked
+                            ? "bg-purple-600 hover:bg-purple-700"
+                            : "bg-gray-600 hover:bg-gray-500"
+                          }
+                        `}
+                        title={isLocked ? "Unlock player" : `Lock to Team ${teamNumber}`}
+                      >
+                        {isLocked ? "🔒" : "🔓"}
+                      </button>
+                      </div>
+                      {/* Bottom row: rank display */}
+                      {assignment.effectiveSR !== undefined && (
+                        <div 
+                          className="text-sm text-gray-400 mt-1"
+                          title={showWeightModifiers ? `${assignment.effectiveSR.toLocaleString()} SR (manual: ${modifier - adaptive >= 0 ? "+" : ""}${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})` : `${(assignment.effectiveSR - (modifier)).toLocaleString()} SR`}
+                        >
+                          {formatRankWithModifier(assignment.effectiveSR, modifier, adaptive, gameMode, showWeightModifiers)}
                         </div>
                       )}
                     </div>
-                    {/* Edit button (appears on hover) */}
-                    {onEditPlayer && (
-                      <button
-                        onClick={() => onEditPlayer(battletag)}
-                        className="px-2 py-1 text-xs bg-gray-600 hover:bg-blue-600 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                        title="Edit player"
-                      >
-                        ✏️
-                      </button>
-                    )}
                   </div>
                 );
               })}

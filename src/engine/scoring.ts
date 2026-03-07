@@ -1,8 +1,9 @@
-import type { RoleAssignment, TeamScore, SoftConstraint } from "@engine/types";
+import type { RoleAssignment, TeamScore, SoftConstraint, GameMode, Role } from "@engine/types";
+import { getModeConfig } from "@engine/modeConfig";
 import archetypesConfig from "@config/archetypes.json";
 
 // =============================================================================
-// Team Scoring Functions for Stadium PUGs Balancer
+// Team Scoring Functions for PUGs Balancer
 // =============================================================================
 
 // Archetype data from config
@@ -57,20 +58,17 @@ export function checkArchetypeParity(
 }
 
 /**
- * Calculate role preference penalty for a team
- * Players assigned to non-preferred roles get penalized
+ * Calculate role preference penalty for a team (raw metric).
+ * Only penalizes 3rd-choice or worse roles (index >= 2).
+ * 2nd-choice is acceptable in PUGs and not penalized.
  */
 export function calculateRolePreferencePenalty(team: RoleAssignment[]): number {
   let penalty = 0;
 
   for (const ra of team) {
     const prefIndex = ra.player.rolePreference.indexOf(ra.assignedRole);
-    if (prefIndex === -1) {
-      // Role not in preference list at all - high penalty
-      penalty += 100;
-    } else if (prefIndex > 0) {
-      // Playing non-first-choice role - scaled penalty
-      penalty += prefIndex * 50;
+    if (prefIndex >= 2) {
+      penalty += prefIndex;
     }
   }
 
@@ -228,95 +226,143 @@ export function getSoftConstraintViolations(
 }
 
 /**
- * Calculate loss streak penalty for team composition
- * We want players on loss streaks to be placed on the higher-SR team.
- * If a player with losses is on the lower-SR team, add penalty.
+ * Calculate standard deviation of SR values
  */
-export function calculateLossStreakPenalty(
+function calculateSRStdDev(team: RoleAssignment[]): number {
+  if (team.length <= 1) return 0;
+  const avg = team.reduce((sum, ra) => sum + ra.effectiveSR, 0) / team.length;
+  const variance = team.reduce((sum, ra) => sum + (ra.effectiveSR - avg) ** 2, 0) / team.length;
+  return Math.sqrt(variance);
+}
+
+/**
+ * Calculate SR variance disparity between teams.
+ * Teams should have similar internal skill spread.
+ */
+export function calculateVariancePenalty(
   team1: RoleAssignment[],
-  team2: RoleAssignment[],
-  lossStreaks: Map<string, number>
+  team2: RoleAssignment[]
 ): number {
-  const team1SR = calculateTeamAverageSR(team1);
-  const team2SR = calculateTeamAverageSR(team2);
+  const stdDev1 = calculateSRStdDev(team1);
+  const stdDev2 = calculateSRStdDev(team2);
+  return Math.abs(stdDev1 - stdDev2);
+}
 
-  // Determine which team is "weaker"
-  const lowerSRTeam = team1SR >= team2SR ? team2 : team1;
+/**
+ * Calculate per-role SR gap penalty.
+ * Compares average SR for each role across teams (Tank vs Tank, DPS vs DPS, etc.).
+ */
+export function calculateRoleMatchupPenalty(
+  team1: RoleAssignment[],
+  team2: RoleAssignment[]
+): number {
+  const roles: Role[] = ["Tank", "DPS", "Support"];
+  let totalGap = 0;
 
-  let penalty = 0;
+  for (const role of roles) {
+    const t1Players = team1.filter((ra) => ra.assignedRole === role);
+    const t2Players = team2.filter((ra) => ra.assignedRole === role);
 
-  // Penalty for loss-streak players NOT on higher-SR team
-  for (const ra of lowerSRTeam) {
-    const losses = lossStreaks.get(ra.player.battletag) || 0;
-    if (losses > 0) {
-      // Each loss streak level adds 75 penalty for being on the weaker team
-      penalty += losses * 75;
-    }
+    if (t1Players.length === 0 || t2Players.length === 0) continue;
+
+    const t1Avg = t1Players.reduce((sum, ra) => sum + ra.effectiveSR, 0) / t1Players.length;
+    const t2Avg = t2Players.reduce((sum, ra) => sum + ra.effectiveSR, 0) / t2Players.length;
+    totalGap += Math.abs(t1Avg - t2Avg);
   }
 
-  return penalty;
+  return totalGap;
 }
 
 /**
  * Calculate team score breakdown
+ * 
+ * @param team1 - First team's role assignments
+ * @param team2 - Second team's role assignments
+ * @param mode - Game mode (determines whether archetype parity is checked)
  */
 export function calculateTeamScore(
   team1: RoleAssignment[],
-  team2: RoleAssignment[]
+  team2: RoleAssignment[],
+  mode: GameMode = "stadium_5v5"
 ): TeamScore {
   const team1SR = calculateTeamAverageSR(team1);
   const team2SR = calculateTeamAverageSR(team2);
-  const { parityMet } = checkArchetypeParity(team1, team2);
+  
+  // Only check archetype parity if mode requires it
+  const modeConfig = getModeConfig(mode);
+  const archetypeParityMet = modeConfig.checkArchetypes 
+    ? checkArchetypeParity(team1, team2).parityMet 
+    : true;
 
   return {
     team1SR,
     team2SR,
     srDifference: Math.abs(team1SR - team2SR),
-    archetypeParityMet: parityMet,
+    archetypeParityMet,
   };
 }
 
 /**
- * Score a team composition (lower is better)
+ * Score a team composition (lower is better).
  *
- * Scoring weights (from design doc):
- * - SR Balance: weight 1.0 (primary)
- * - Role preference: weight 50 per non-preferred role level
- * - One-trick conflicts: weight 500 per conflict
- * - Archetype parity: weight 200 if violated
- * - Soft constraints: weight 100 per violation
- * - Loss streak: weight 75 per loss level (penalty for losers on weaker team)
+ * All metrics are soft-normalized to (0, 1) using x/(x+k) then multiplied by
+ * importance weights. Unlike hard clipping (min(x/k,1)), this always provides
+ * gradient — the optimizer can always distinguish worse from better, even in
+ * extreme cases.
+ *
+ * Soft normalization half-points (value of k where output = 0.5):
+ *   Role pref:      20    (all 10 players on 3rd-choice role; 2nd-choice not penalized)
+ *   One-trick:      4     (2 conflicts per team)
+ *   Archetype:      1     (binary)
+ *   Soft constr:    5     (reasonable max constraints)
+ *   Variance:       800   (large stdev disparity)
+ *   Role matchup:   4000  (3 roles × ~1300 SR gap each)
+ *
+ * Importance weights (higher = more important):
+ *   Role Matchup:   500
+ *   One-Trick:      200   (Stadium only)
+ *   Archetype:      150   (Stadium only)
+ *   Soft Constr:    120
+ *   Variance:       100
+ *   Role Pref:       50
  */
 export function scoreComposition(
   team1: RoleAssignment[],
   team2: RoleAssignment[],
   softConstraints: SoftConstraint[] = [],
-  lossStreaks: Map<string, number> = new Map()
+  mode: GameMode = "stadium_5v5"
 ): number {
   let score = 0;
+  const modeConfig = getModeConfig(mode);
 
-  // 1. SR Balance (primary) — weight: 1.0
-  const teamScore = calculateTeamScore(team1, team2);
-  score += teamScore.srDifference * 1.0;
+  const teamScore = calculateTeamScore(team1, team2, mode);
 
-  // 2. Role preference penalty — weight: 50 per preference level
-  score += calculateRolePreferencePenalty(team1);
-  score += calculateRolePreferencePenalty(team2);
+  // 1. Role preference — soft-normalized (half-point at 20)
+  const rawPref = calculateRolePreferencePenalty(team1) + calculateRolePreferencePenalty(team2);
+  score += (rawPref / (rawPref + 20)) * 50;
 
-  // 3. One-trick conflicts — weight: 500 per conflict
-  score += countOneTrickConflicts(team1) * 500;
-  score += countOneTrickConflicts(team2) * 500;
-
-  // 4. Archetype parity — weight: 200 if violated
-  if (!teamScore.archetypeParityMet) {
-    score += 200;
+  // 2. One-trick conflicts (Stadium only) — soft-normalized (half-point at 4)
+  if (modeConfig.checkOneTricks) {
+    const rawOTC = countOneTrickConflicts(team1) + countOneTrickConflicts(team2);
+    score += (rawOTC / (rawOTC + 4)) * 200;
   }
 
-  // 5. Soft constraints — weight: 100 per violation
-  score += countSoftConstraintViolations(team1, team2, softConstraints) * 100;
+  // 3. Archetype parity (Stadium only) — binary
+  if (modeConfig.checkArchetypes && !teamScore.archetypeParityMet) {
+    score += 150;
+  }
 
-  // 6. Loss streak — weight: 75 per loss level for losers on weaker team
-  score += calculateLossStreakPenalty(team1, team2, lossStreaks);
+  // 4. Soft constraints — soft-normalized (half-point at 5)
+  const rawConstraints = countSoftConstraintViolations(team1, team2, softConstraints);
+  score += (rawConstraints / (rawConstraints + 5)) * 120;
+
+  // 5. SR variance disparity — soft-normalized (half-point at 800)
+  const rawVariance = calculateVariancePenalty(team1, team2);
+  score += (rawVariance / (rawVariance + 800)) * 100;
+
+  // 6. Per-role SR matchup — soft-normalized (half-point at 4000)
+  const rawMatchup = calculateRoleMatchupPenalty(team1, team2);
+  score += (rawMatchup / (rawMatchup + 4000)) * 500;
 
   return score;
 }

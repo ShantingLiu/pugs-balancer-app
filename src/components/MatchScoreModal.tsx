@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSessionStore } from "@store/sessionStore";
 
 // =============================================================================
 // MatchScoreModal - Input match score for adaptive weight calculation
@@ -7,15 +8,20 @@ import { useState } from "react";
 interface MatchScoreModalProps {
   isOpen: boolean;
   winningTeam: 1 | 2;
-  onConfirm: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number) => void;
+  onConfirm: (winnerScore: number, loserScore: number, team1Cash?: number, team2Cash?: number, winnerAdj?: number, loserAdj?: number) => void;
   onCancel: () => void;
 }
 
 export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: MatchScoreModalProps) {
+  const gameMode = useSessionStore((state) => state.gameMode);
+  const isStadium = gameMode === "stadium_5v5";
   const [winnerScore, setWinnerScore] = useState(4);
   const [loserScore, setLoserScore] = useState(0);
   const [team1Cash, setTeam1Cash] = useState<string>("");
   const [team2Cash, setTeam2Cash] = useState<string>("");
+  const [customAdj, setCustomAdj] = useState(false);
+  const [winnerAdj, setWinnerAdj] = useState(50);
+  const [loserAdj, setLoserAdj] = useState(50);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -35,12 +41,15 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
     const t1Cash = team1Cash.trim() ? parseInt(team1Cash) : undefined;
     const t2Cash = team2Cash.trim() ? parseInt(team2Cash) : undefined;
     
-    onConfirm(winnerScore, loserScore, t1Cash, t2Cash);
+    onConfirm(winnerScore, loserScore, t1Cash, t2Cash, customAdj ? winnerAdj : undefined, customAdj ? loserAdj : undefined);
     // Reset for next time
     setWinnerScore(4);
     setLoserScore(0);
     setTeam1Cash("");
     setTeam2Cash("");
+    setCustomAdj(false);
+    setWinnerAdj(50);
+    setLoserAdj(50);
     setError(null);
   };
 
@@ -51,6 +60,9 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
     setLoserScore(0);
     setTeam1Cash("");
     setTeam2Cash("");
+    setCustomAdj(false);
+    setWinnerAdj(50);
+    setLoserAdj(50);
     setError(null);
   };
 
@@ -99,24 +111,77 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
           </div>
         </div>
 
-        {/* Roll factor preview */}
+        {/* Roll factor preview + custom adjustment */}
         {winnerScore > loserScore && (
-          <div className="mb-4 p-3 bg-gray-700/50 rounded-lg text-center">
-            <div className="text-sm text-gray-400">
+          <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
+            <div className="text-sm text-gray-400 text-center">
               {(() => {
                 const diff = winnerScore - loserScore;
                 const factor = winnerScore > 0 ? diff / winnerScore : 0;
                 const adjustment = Math.round(50 * factor);
-                if (factor >= 0.75) return `Stomp! Winners +${adjustment} SR, Losers -${adjustment} SR`;
-                if (factor >= 0.5) return `Solid win: Winners +${adjustment} SR, Losers -${adjustment} SR`;
-                if (factor >= 0.25) return `Close game: Winners +${adjustment} SR, Losers -${adjustment} SR`;
-                return `Very close: Minimal SR adjustment (±${adjustment})`;
+                if (factor >= 0.75) return `Stomp! Auto: ±${adjustment} SR`;
+                if (factor >= 0.5) return `Solid win: ±${adjustment} SR`;
+                if (factor >= 0.25) return `Close game: ±${adjustment} SR`;
+                return `Very close: ±${adjustment} SR`;
               })()}
             </div>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              <label className="text-xs text-gray-400 flex items-center gap-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={customAdj}
+                  onChange={(e) => {
+                    setCustomAdj(e.target.checked);
+                    if (e.target.checked) {
+                      const diff = winnerScore - loserScore;
+                      const factor = winnerScore > 0 ? diff / winnerScore : 0;
+                      const auto = Math.round(50 * factor);
+                      setWinnerAdj(auto);
+                      setLoserAdj(auto);
+                    }
+                  }}
+                  className="accent-blue-500"
+                />
+                Custom SR
+              </label>
+            </div>
+            {customAdj && (
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-green-400 mb-1">Winners</div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-green-400 text-sm">+</span>
+                    <input
+                      type="number"
+                      value={winnerAdj}
+                      onChange={(e) => setWinnerAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                      min={0}
+                      max={100}
+                      className="w-14 h-8 text-sm text-center bg-gray-600 rounded border border-green-500/50 text-green-400"
+                    />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-red-400 mb-1">Losers</div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-red-400 text-sm">−</span>
+                    <input
+                      type="number"
+                      value={loserAdj}
+                      onChange={(e) => setLoserAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                      min={0}
+                      max={100}
+                      className="w-14 h-8 text-sm text-center bg-gray-600 rounded border border-red-500/50 text-red-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Cash score input (optional) */}
+        {/* Cash score input (Stadium only) */}
+        {isStadium && (
         <div className="mb-4 p-3 bg-gray-700/30 rounded-lg">
           <div className="text-sm text-gray-400 mb-2 text-center">Final Cash (optional)</div>
           <div className="flex items-center justify-center gap-4">
@@ -143,6 +208,7 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
             </div>
           </div>
         </div>
+        )}
 
         <div className="flex gap-3">
           <button

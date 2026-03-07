@@ -147,6 +147,34 @@ npm run tauri:dev
 
 ---
 
+## Game Mode Issues
+
+### Wrong ranks being used
+
+The app uses different ranks based on game mode:
+- **Stadium 5v5**: Uses Stadium ranks (`tank_rank`, `dps_rank`, `support_rank`)
+- **Regular 5v5**: Uses competitive ranks (`tank_comp_rank`, `dps_comp_rank`, `support_comp_rank`, or `regular_comp_rank`)
+
+**Check**: Make sure you're in the correct mode for your players' rank data.
+
+### Heroes not showing in hero pool dropdown
+
+In Stadium 5v5 mode, only 31 Stadium-eligible heroes are available.
+
+**Solution**: Switch to Regular 5v5 mode to access all 52 heroes.
+
+### Mode switch resets my stats
+
+This is expected behavior. Session stats (wins, losses, adaptive weights) are mode-specific.
+
+**Tip**: Export your CSV before switching modes to save session wins.
+
+### Can't see the mode selector
+
+The mode selector is in the top-right corner of the header, next to the mode badge.
+
+---
+
 ## Common Questions
 
 ### How do I update player data?
@@ -161,7 +189,10 @@ npm run tauri:dev
 
 ### Can I export my player data?
 
-Not currently - players are stored in browser localStorage. Feature may be added in future updates.
+Yes! Click "📤 Export CSV" in the Player Data section. The export includes:
+- All player data
+- Session wins (added to all_time_wins)
+- Current game mode in filename
 
 ### Does this work offline?
 

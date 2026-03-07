@@ -6,6 +6,16 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "shell:allow-open",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://accounts.google.com/**" },
+        { "url": "https://oauth2.googleapis.com/**" },
+        { "url": "https://sheets.googleapis.com/**" },
+        { "url": "https://www.googleapis.com/**" }
+      ]
+    }
   ]
 }

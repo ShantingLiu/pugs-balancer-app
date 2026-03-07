@@ -1,6 +1,9 @@
 // =============================================================================
-// Core Types for Stadium PUGs Balancer
+// Core Types for PUGs Balancer
 // =============================================================================
+
+// Re-export mode types for convenience
+export type { GameMode, ModeConfig, CompositionRule } from "./modeConfig";
 
 /**
  * Player roles in Overwatch
@@ -90,7 +93,12 @@ export interface Player {
   /** Free text notes for pugmaster reference */
   notes: string | null;
 
-  /** All-time wins from CSV (for leaderboard display) */
+  /** All-time wins by mode */
+  stadiumWins: number;
+  regular5v5Wins: number;
+  regular6v6Wins: number;
+
+  /** @deprecated Use mode-specific wins instead */
   allTimeWins: number;
 }
 

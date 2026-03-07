@@ -1,6 +1,7 @@
 import type { LobbyPlayer, Player, Role } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { parseBattletag } from "@utils/heroUtils";
+import { getRoleRankDisplay } from "@utils/rankMapper";
 
 // =============================================================================
 // PlayerCard - Displays a player's information
@@ -62,6 +63,8 @@ export function PlayerCard({
   const lobbyPlayer = isLobbyPlayer(player) ? player : null;
   
   // Store actions
+  const gameMode = useSessionStore((state) => state.gameMode);
+  const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
   const toggleMustPlay = useSessionStore((state) => state.toggleMustPlay);
   const toggleAfk = useSessionStore((state) => state.toggleAfk);
   const lockToTeam = useSessionStore((state) => state.lockToTeam);
@@ -174,28 +177,37 @@ export function PlayerCard({
 
       {/* Ranks - only show for roles they're willing to play */}
       <div className="text-xs text-gray-400 space-y-0.5">
-        {player.tankRank && player.rolesWilling.includes("Tank") && (
-          <div className="flex justify-between">
-            <span>Tank:</span>
-            <span className="text-yellow-400">{player.tankRank}</span>
-          </div>
-        )}
-        {player.dpsRank && player.rolesWilling.includes("DPS") && (
-          <div className="flex justify-between">
-            <span>DPS:</span>
-            <span className="text-red-400">{player.dpsRank}</span>
-          </div>
-        )}
-        {player.supportRank && player.rolesWilling.includes("Support") && (
-          <div className="flex justify-between">
-            <span>Support:</span>
-            <span className="text-green-400">{player.supportRank}</span>
-          </div>
-        )}
+        {player.rolesWilling.includes("Tank") && (() => {
+          const tankRank = getRoleRankDisplay(player, "Tank", gameMode);
+          return tankRank ? (
+            <div className="flex justify-between">
+              <span>Tank:</span>
+              <span className="text-yellow-400">{tankRank}</span>
+            </div>
+          ) : null;
+        })()}
+        {player.rolesWilling.includes("DPS") && (() => {
+          const dpsRank = getRoleRankDisplay(player, "DPS", gameMode);
+          return dpsRank ? (
+            <div className="flex justify-between">
+              <span>DPS:</span>
+              <span className="text-red-400">{dpsRank}</span>
+            </div>
+          ) : null;
+        })()}
+        {player.rolesWilling.includes("Support") && (() => {
+          const supportRank = getRoleRankDisplay(player, "Support", gameMode);
+          return supportRank ? (
+            <div className="flex justify-between">
+              <span>Support:</span>
+              <span className="text-green-400">{supportRank}</span>
+            </div>
+          ) : null;
+        })()}
       </div>
 
       {/* Weight modifier if non-zero */}
-      {(player.weightModifier !== 0 || lobbyPlayer?.tempWeightOverride) && (
+      {showWeightModifiers && (player.weightModifier !== 0 || lobbyPlayer?.tempWeightOverride) && (
         <div className="mt-2 text-xs">
           {player.weightModifier !== 0 && (
             <span className="text-blue-400">

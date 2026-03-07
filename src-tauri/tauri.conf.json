@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Swoos Stadium PUGs Balancer",
+  "productName": "Swoos PUGs Balancer",
   "version": "1.0.0",
   "identifier": "com.stadiumbalancer.pugs",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Swoos Stadium PUGs Balancer",
+        "title": "Swoos PUGs Balancer",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -37,6 +37,9 @@
       "icons/icon.ico"
     ],
     "windows": {
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
+      },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       }
