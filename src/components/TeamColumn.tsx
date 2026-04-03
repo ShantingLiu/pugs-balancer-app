@@ -12,6 +12,10 @@ interface TeamColumnProps {
   assignments: RoleAssignment[];
   averageSR: number;
   onEditPlayer?: (battletag: string) => void;
+  /** Current swap source battletag (lifted to parent for cross-team swaps) */
+  swapSource: string | null;
+  /** Handler for swap button clicks */
+  onSwapClick: (battletag: string) => void;
 }
 
 /** Role order for display */
@@ -110,15 +114,13 @@ function getRoleBadgeColor(role: Role): string {
   }
 }
 
-export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }: TeamColumnProps) {
+export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer, swapSource, onSwapClick }: TeamColumnProps) {
   const [substituteOpen, setSubstituteOpen] = useState<string | null>(null);
-  const [swapSource, setSwapSource] = useState<string | null>(null); // battletag of first player in swap
   
   const gameMode = useSessionStore((state) => state.gameMode);
   const lockToTeam = useSessionStore((state) => state.lockToTeam);
   const lockToRole = useSessionStore((state) => state.lockToRole);
   const substitutePlayer = useSessionStore((state) => state.substitutePlayer);
-  const swapPlayerRoles = useSessionStore((state) => state.swapPlayerRoles);
   const getLobbyPlayers = useSessionStore((state) => state.getLobbyPlayers);
   const lastResult = useSessionStore((state) => state.lastResult);
   const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
@@ -147,21 +149,6 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }:
       !lp.isAfk &&
       lp.rolesWilling.includes(role)
     ).sort((a, b) => getEffectiveSR(b, role) - getEffectiveSR(a, role));
-  };
-
-  // Handle swap button click
-  const handleSwapClick = (battletag: string) => {
-    if (!swapSource) {
-      // First click - set as swap source
-      setSwapSource(battletag);
-    } else if (swapSource === battletag) {
-      // Clicked same player - cancel
-      setSwapSource(null);
-    } else {
-      // Second click - perform swap
-      swapPlayerRoles(swapSource, battletag);
-      setSwapSource(null);
-    }
   };
 
   // Group assignments by role
@@ -219,12 +206,12 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer }:
                     <div className="flex-1 min-w-0">
                       {/* Top row: name, buttons */}
                       <div className="flex items-center gap-3">
-                      <span className="flex-1 font-medium flex items-center gap-1">
+                      <span className="flex-1 font-medium truncate min-w-0" title={assignment.player.battletag}>
                         {assignment.player.battletag.split("#")[0]}
                       </span>
                       {/* Swap button */}
                       <button
-                        onClick={() => handleSwapClick(battletag)}
+                        onClick={() => onSwapClick(battletag)}
                         className={`
                           px-2 py-1 text-xs rounded transition-colors flex-shrink-0
                           ${isSwapSource

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef } from "react";
+import { useCallback, useMemo, useState, useRef, useLayoutEffect } from "react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { PlayerCard } from "./PlayerCard";
@@ -26,6 +26,10 @@ export function LobbySelector() {
   const playerCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const playerListRef = useRef<HTMLDivElement>(null);
   
+  // Bug #8 fix: Track scroll position to restore after state changes
+  const scrollPositionRef = useRef<number>(0);
+  const shouldRestoreScrollRef = useRef<boolean>(false);
+  
   // Get stable references - don't call functions in selectors
   const players = usePlayerStore((state) => state.players);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
@@ -40,7 +44,6 @@ export function LobbySelector() {
   const satOutStreaks = useSessionStore((state) => state.satOutStreaks);
   const adaptiveWeights = useSessionStore((state) => state.adaptiveWeights);
   const mustPlayPriority = useSessionStore((state) => state.mustPlayPriority);
-  const lastResult = useSessionStore((state) => state.lastResult);
   const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
   const toggleShowWeightModifiers = useSessionStore((state) => state.toggleShowWeightModifiers);
   const addToLobby = useSessionStore((state) => state.addToLobby);
@@ -51,15 +54,22 @@ export function LobbySelector() {
   const allPlayers = useMemo(() => Array.from(players.values()), [players]);
 
   const lobbySet = useMemo(() => new Set(lobbyBattletags), [lobbyBattletags]);
-
-  // Get battletags of players currently in teams
-  const playingBattletags = useMemo(() => {
-    if (!lastResult || lastResult.team1.length === 0) return new Set<string>();
-    return new Set([
-      ...lastResult.team1.map((ra) => ra.player.battletag),
-      ...lastResult.team2.map((ra) => ra.player.battletag),
-    ]);
-  }, [lastResult]);
+  
+  // Bug #8 fix: Restore scroll position after lobby changes
+  useLayoutEffect(() => {
+    if (shouldRestoreScrollRef.current && playerListRef.current) {
+      playerListRef.current.scrollTop = scrollPositionRef.current;
+      shouldRestoreScrollRef.current = false;
+    }
+  }, [lobbyBattletags]);
+  
+  // Helper to save scroll position before state changes
+  const saveScrollPosition = useCallback(() => {
+    if (playerListRef.current) {
+      scrollPositionRef.current = playerListRef.current.scrollTop;
+      shouldRestoreScrollRef.current = true;
+    }
+  }, []);
   
   // Get lobby players with session state - derive from primitive state
   const lobbyPlayersMap = useMemo(() => {
@@ -235,9 +245,8 @@ export function LobbySelector() {
           <div className="flex flex-wrap gap-1">
             {lobbyBattletags.map((bt) => {
               const isAfk = afkPlayers.has(bt);
-              const isPlaying = playingBattletags.has(bt);
-              // Only show must-play for players NOT currently in teams
-              const isMustPlay = !isPlaying && mustPlay.has(bt);
+              // Show must-play highlight if player has mustPlay status (even if currently on proposed teams)
+              const isMustPlay = mustPlay.has(bt);
               const isSelected = selectedBattletag === bt;
               const name = getDisplayName(bt);
               return (
@@ -265,7 +274,7 @@ export function LobbySelector() {
                       : isAfk 
                         ? "bg-gray-600 text-gray-400 hover:bg-gray-500" 
                         : isMustPlay
-                          ? "bg-yellow-600/30 text-yellow-300 ring-1 ring-yellow-500 hover:bg-yellow-600/50"
+                          ? "bg-yellow-600/40 text-yellow-200 ring-2 ring-yellow-500 hover:bg-yellow-600/60"
                           : "bg-blue-600/30 text-blue-300 hover:bg-blue-600/50"
                     }
                   `}
@@ -370,6 +379,7 @@ export function LobbySelector() {
                     handleEditPlayer(player.battletag);
                   } else {
                     // If not in lobby, clicking adds them
+                    saveScrollPosition();
                     addToLobby(player.battletag);
                   }
                 }}
@@ -381,13 +391,15 @@ export function LobbySelector() {
                 }
               />
               {/* Remove from lobby button (appears on hover when in lobby) */}
+              {/* Bug #12 fix: Use transition-opacity only to prevent layout shifts */}
               {inLobby && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    saveScrollPosition();
                     removeFromLobby(player.battletag);
                   }}
-                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-xs bg-gray-600 hover:bg-red-600 text-gray-400 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-xs bg-gray-600 hover:bg-red-600 text-gray-400 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   title="Remove from lobby"
                 >
                   ✕

@@ -255,4 +255,47 @@ describe("AddPlayerModal", () => {
       expect(addedPlayer?.rolesWilling).toContain("Tank");
     });
   });
+
+  describe("rename functionality", () => {
+    it("playerStore.renamePlayer deletes old entry correctly", () => {
+      // First verify the store function works in isolation
+      const player = createMockPlayer({ battletag: "OldName#1234" });
+      usePlayerStore.getState().upsertPlayer(player);
+      
+      expect(usePlayerStore.getState().getPlayer("OldName#1234")).toBeDefined();
+      
+      const success = usePlayerStore.getState().renamePlayer("OldName#1234", "NewName#5678");
+      
+      expect(success).toBe(true);
+      expect(usePlayerStore.getState().getPlayer("OldName#1234")).toBeUndefined();
+      expect(usePlayerStore.getState().getPlayer("NewName#5678")).toBeDefined();
+    });
+
+    it("should prevent rename to existing battletag", async () => {
+      // Set up existing players
+      const player1 = createMockPlayer({ battletag: "Player1#1111" });
+      const player2 = createMockPlayer({ battletag: "Player2#2222" });
+      usePlayerStore.getState().upsertPlayer(player1);
+      usePlayerStore.getState().upsertPlayer(player2);
+
+      render(<AddPlayerModal isOpen={true} onClose={mockOnClose} editPlayer={player1} />);
+
+      // Try to rename to existing battletag
+      const input = screen.getByDisplayValue("Player1#1111");
+      fireEvent.change(input, { target: { value: "Player2#2222" } });
+
+      // Submit
+      fireEvent.click(screen.getByText("Save Changes"));
+
+      // Should show error
+      expect(screen.getByText("A player with this battletag already exists")).toBeInTheDocument();
+
+      // Modal should NOT close
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      // Both players should still exist (no duplicates/overwrites)
+      expect(usePlayerStore.getState().getPlayer("Player1#1111")).toBeDefined();
+      expect(usePlayerStore.getState().getPlayer("Player2#2222")).toBeDefined();
+    });
+  });
 });

@@ -202,12 +202,14 @@ export const usePlayerStore = create<PlayerStore>()(
         if (!existing) return false;
         if (state.players.has(newBattletag)) return false; // New name already taken
 
-        // Update the player's battletag and add under new key
+        // ATOMIC operation: delete old and add new in single set() call
         const renamedPlayer: Player = { ...existing, battletag: newBattletag };
-        const newPlayers = new Map(state.players);
-        newPlayers.delete(oldBattletag);
-        newPlayers.set(newBattletag, renamedPlayer);
-        set({ players: newPlayers });
+        set((currentState) => {
+          const newPlayers = new Map(currentState.players);
+          newPlayers.delete(oldBattletag);
+          newPlayers.set(newBattletag, renamedPlayer);
+          return { players: newPlayers };
+        });
         notifyUnsynced();
         return true;
       },

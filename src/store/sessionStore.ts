@@ -346,16 +346,19 @@ export const useSessionStore = create<SessionStore>()(
 
       // Lobby management
       setLobby: (battletags: string[]) => {
+        // Bug #9 fix: Deduplicate battletags to prevent duplicate entries
+        const uniqueBattletags = [...new Set(battletags)];
+        
         // When setting lobby, clear must-play for players no longer in lobby
         // and reset must-play entirely if lobby is being cleared
-        if (battletags.length === 0) {
+        if (uniqueBattletags.length === 0) {
           set({ 
-            lobbyBattletags: battletags,
+            lobbyBattletags: uniqueBattletags,
             mustPlay: new Set(),
             lastResult: null,
           });
         } else {
-          const newBattletagSet = new Set(battletags);
+          const newBattletagSet = new Set(uniqueBattletags);
           set((state) => {
             // Keep only must-play for players still in lobby
             const newMustPlay = new Set<string>();
@@ -365,7 +368,7 @@ export const useSessionStore = create<SessionStore>()(
               }
             }
             return { 
-              lobbyBattletags: battletags,
+              lobbyBattletags: uniqueBattletags,
               mustPlay: newMustPlay,
             };
           });
@@ -757,27 +760,6 @@ export const useSessionStore = create<SessionStore>()(
           }
         }
 
-        // Mark players sitting out as must-play for next round (priority 2 = sat out waiting)
-        const playingBattletags = new Set([...team1Battletags, ...team2Battletags]);
-        const newMustPlay = new Set(state.mustPlay);
-        const newMustPlayPriority = new Map(state.mustPlayPriority);
-        for (const bt of state.lobbyBattletags) {
-          // If not AFK and not playing, they should be must-play
-          if (!state.afkPlayers.has(bt) && !playingBattletags.has(bt)) {
-            newMustPlay.add(bt);
-            // Set priority 2 (sat out) unless they already have a lower priority (joined mid-match)
-            if (!newMustPlayPriority.has(bt)) {
-              newMustPlayPriority.set(bt, 2);
-            }
-          }
-        }
-
-        // Clear must-play status for players who are actually playing
-        for (const bt of playingBattletags) {
-          newMustPlay.delete(bt);
-          newMustPlayPriority.delete(bt);
-        }
-
         // Only preserve role locks for players who are playing in their locked role
         const allAssignments = [...result.team1, ...result.team2];
         const newLockedRoles = new Map<string, Role>();
@@ -788,18 +770,22 @@ export const useSessionStore = create<SessionStore>()(
           }
         }
 
+        // Note: mustPlay is NOT modified here. It should only be updated by:
+        // - recordMatchResult (after a match is confirmed)
+        // - addToLobby (for mid-match joins)
+        // - toggleMustPlay (manual toggle)
+        // This ensures sat-out players keep their must-play status across reshuffles.
+
         set({
           lastResult: result,
           previousResult,
           lockedTeam1: newLockedTeam1,
           lockedTeam2: newLockedTeam2,
           lockedRoles: newLockedRoles,
-          mustPlay: newMustPlay,
-          mustPlayPriority: newMustPlayPriority,
         });
       },
 
-      // Swap roles of two players on the same team
+      // Swap two players (same team = swap roles, different teams = swap positions)
       swapPlayerRoles: (battletag1: string, battletag2: string) => {
         const state = get();
         if (!state.lastResult) return;
@@ -824,13 +810,92 @@ export const useSessionStore = create<SessionStore>()(
           player2Team = 2;
         }
 
-        // Both players must be found and on the same team
+        // Both players must be found
         if (player1Index === -1 || player2Index === -1) {
           console.warn("Cannot swap: one or both players not found");
           return;
         }
+
+        // Cross-team swap: swap players between teams, keeping their roles
         if (player1Team !== player2Team) {
-          console.warn("Cannot swap roles between players on different teams");
+          const player1Assignment = player1Team === 1 ? team1Array[player1Index] : team2Array[player1Index];
+          const player2Assignment = player2Team === 1 ? team1Array[player2Index] : team2Array[player2Index];
+          
+          // Get lobby players for effectiveSR recalculation
+          const lobbyPlayers = state.getLobbyPlayers();
+          const lp1 = lobbyPlayers.find((p) => p.battletag === battletag1);
+          const lp2 = lobbyPlayers.find((p) => p.battletag === battletag2);
+          
+          // Create new assignments: player1 takes player2's role on player2's team, and vice versa
+          const newPlayer1Assignment: RoleAssignment = {
+            player: player1Assignment.player,
+            assignedRole: player2Assignment.assignedRole,
+            effectiveSR: lp1 ? getEffectiveSR(lp1, player2Assignment.assignedRole, state.gameMode) : player1Assignment.effectiveSR,
+          };
+          const newPlayer2Assignment: RoleAssignment = {
+            player: player2Assignment.player,
+            assignedRole: player1Assignment.assignedRole,
+            effectiveSR: lp2 ? getEffectiveSR(lp2, player1Assignment.assignedRole, state.gameMode) : player2Assignment.effectiveSR,
+          };
+          
+          // Place each player on the other's team
+          if (player1Team === 1) {
+            team1Array[player1Index] = newPlayer2Assignment;
+            team2Array[player2Index] = newPlayer1Assignment;
+          } else {
+            team2Array[player1Index] = newPlayer2Assignment;
+            team1Array[player2Index] = newPlayer1Assignment;
+          }
+          
+          // Update locked teams if either player was team-locked
+          const newLockedTeam1 = new Set(state.lockedTeam1);
+          const newLockedTeam2 = new Set(state.lockedTeam2);
+          const newLockedRoles = new Map(state.lockedRoles);
+          
+          // Swap team locks
+          const p1WasLocked1 = newLockedTeam1.has(battletag1);
+          const p1WasLocked2 = newLockedTeam2.has(battletag1);
+          const p2WasLocked1 = newLockedTeam1.has(battletag2);
+          const p2WasLocked2 = newLockedTeam2.has(battletag2);
+          
+          newLockedTeam1.delete(battletag1);
+          newLockedTeam2.delete(battletag1);
+          newLockedTeam1.delete(battletag2);
+          newLockedTeam2.delete(battletag2);
+          
+          if (p1WasLocked1 || p1WasLocked2) {
+            // Player 1 was locked, lock them to their new team
+            if (player2Team === 1) newLockedTeam1.add(battletag1);
+            else newLockedTeam2.add(battletag1);
+          }
+          if (p2WasLocked1 || p2WasLocked2) {
+            // Player 2 was locked, lock them to their new team
+            if (player1Team === 1) newLockedTeam1.add(battletag2);
+            else newLockedTeam2.add(battletag2);
+          }
+          
+          // Update role locks to new roles
+          if (newLockedRoles.has(battletag1)) {
+            newLockedRoles.set(battletag1, player2Assignment.assignedRole);
+          }
+          if (newLockedRoles.has(battletag2)) {
+            newLockedRoles.set(battletag2, player1Assignment.assignedRole);
+          }
+          
+          // Recalculate team scores
+          const score = calculateTeamScore(team1Array, team2Array, state.gameMode);
+          
+          set({
+            lastResult: {
+              team1: team1Array,
+              team2: team2Array,
+              warnings: state.lastResult.warnings,
+              score,
+            },
+            lockedTeam1: newLockedTeam1,
+            lockedTeam2: newLockedTeam2,
+            lockedRoles: newLockedRoles,
+          });
           return;
         }
 

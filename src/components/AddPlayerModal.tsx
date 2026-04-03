@@ -67,7 +67,6 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
 export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalProps) {
   const upsertPlayer = usePlayerStore((state) => state.upsertPlayer);
   const removePlayer = usePlayerStore((state) => state.removePlayer);
-  const renamePlayer = usePlayerStore((state) => state.renamePlayer);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
   const renamePlayerInSession = useSessionStore((state) => state.renamePlayerInSession);
   const gameMode = useSessionStore((state) => state.gameMode);
@@ -163,8 +162,8 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
     const derivedOneTrickHero = oneTrickHeroes[0] || null;
 
     const player: Player = {
-      battletag,
       ...form,
+      battletag,  // Must come AFTER spread to use the new name on rename
       // Derive legacy fields for backward compatibility
       isOneTrick: derivedIsOneTrick,
       oneTrickHero: derivedOneTrickHero,
@@ -179,11 +178,30 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
 
     // Handle rename: if battletag changed, update all references
     const isRenaming = isEditing && battletag !== originalBattletag;
+    
     if (isRenaming) {
-      renamePlayer(originalBattletag, battletag);
+      // Check if new name already exists (would cause duplicate)
+      if (getPlayer(battletag)) {
+        setErrors(["A player with this battletag already exists"]);
+        return;
+      }
+      
+      // ATOMIC rename: remove old + add new in single setState with functional updater
+      // This ensures we read from current state and persist middleware works correctly
+      usePlayerStore.setState((state) => {
+        const newPlayers = new Map(state.players);
+        newPlayers.delete(originalBattletag);
+        newPlayers.set(battletag, player);  // player already has updated battletag
+        return { players: newPlayers };
+      });
+      
+      // Update session references to use the new battletag
       renamePlayerInSession(originalBattletag, battletag);
+      onClose();
+      return;
     }
 
+    // Regular upsert (not a rename)
     upsertPlayer(player);
     onClose();
   };

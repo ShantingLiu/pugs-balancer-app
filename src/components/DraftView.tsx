@@ -46,17 +46,26 @@ function getRoleLabel(role: Role): string {
 function RoleBadges({ roles, player, gameMode }: { roles: Role[]; player?: LobbyPlayer; gameMode?: import("@engine/types").GameMode }) {
   return (
     <span className="flex gap-1">
-      {roles.map((role) => (
-        <span
-          key={role}
-          className={`px-1.5 py-0.5 text-xs font-bold rounded flex items-center gap-1 ${getRoleBadgeColor(role)}`}
-        >
-          {getRoleLabel(role)}
-          {player && gameMode && (
-            <span className="font-normal opacity-80 text-[11px]">{getEffectiveSR(player, role, gameMode).toLocaleString()}</span>
-          )}
-        </span>
-      ))}
+      {roles.map((role) => {
+        // Calculate rank display for this role
+        let rankDisplay: string | null = null;
+        if (player && gameMode) {
+          const effectiveSR = getEffectiveSR(player, role, gameMode);
+          const modifier = (player.adaptiveWeight ?? 0) + (player.tempWeightOverride ?? 0) + (player.weightModifier ?? 0);
+          rankDisplay = formatRankOnly(effectiveSR - modifier, gameMode);
+        }
+        return (
+          <span
+            key={role}
+            className={`px-1.5 py-0.5 text-xs font-bold rounded flex items-center gap-1 ${getRoleBadgeColor(role)}`}
+          >
+            {getRoleLabel(role)}
+            {rankDisplay && (
+              <span className="font-normal opacity-80 text-[11px]">{rankDisplay}</span>
+            )}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -142,11 +151,54 @@ function DraftPlayerCard({
   onDragStart,
 }: DraftPlayerCardProps) {
   const gameMode = useSessionStore((state) => state.gameMode);
+  const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
   const { name } = parseBattletag(player.battletag);
   const displayRole = assignedRole ?? player.lockedToRole;
   const sr = displayRole
     ? getEffectiveSR(player, displayRole, gameMode)
     : null;
+  
+  // Calculate modifier breakdown for display
+  const adaptiveWeight = player.adaptiveWeight ?? 0;
+  const manualMod = (player.tempWeightOverride ?? 0) + (player.weightModifier ?? 0);
+  const totalModifier = adaptiveWeight + manualMod;
+
+  // Format SR display with rank name and modifiers
+  const formatSRDisplay = () => {
+    if (sr === null) return null;
+    
+    // Get base rank name (SR without modifiers)
+    const baseRank = formatRankOnly(sr - totalModifier, gameMode);
+    
+    // If no modifiers, just show rank
+    if (totalModifier === 0) {
+      return <span className="text-sm text-gray-400">{baseRank}</span>;
+    }
+    
+    // Show manual modifier only if toggle is on
+    const showManual = showWeightModifiers && manualMod !== 0;
+    const showAdaptive = adaptiveWeight !== 0;
+    
+    if (!showManual && !showAdaptive) {
+      return <span className="text-sm text-gray-400">{baseRank}</span>;
+    }
+    
+    return (
+      <span className="text-sm text-gray-400">
+        {baseRank}
+        {showManual && (
+          <span className={manualMod > 0 ? "text-green-400" : "text-red-400"}>
+            {" "}{manualMod > 0 ? "+" : ""}{manualMod}
+          </span>
+        )}
+        {showAdaptive && (
+          <span className={adaptiveWeight > 0 ? "text-cyan-400" : "text-orange-400"}>
+            {" "}{adaptiveWeight > 0 ? "+" : ""}{adaptiveWeight}
+          </span>
+        )}
+      </span>
+    );
+  };
 
   return (
     <div
@@ -186,14 +238,12 @@ function DraftPlayerCard({
             {getRoleLabel(displayRole)}
             {canCycleRole && <span className="ml-0.5 text-[8px]">⟳</span>}
           </button>
-          <span className="flex-1 truncate font-medium">{name}</span>
-          {sr !== null && (
-            <span className="text-sm text-gray-400 tabular-nums">{sr.toLocaleString()}</span>
-          )}
+          <span className="flex-1 font-medium">{name}</span>
+          {formatSRDisplay()}
         </>
       ) : (
         <>
-          <span className="truncate font-medium">{name}</span>
+          <span className="font-medium">{name}</span>
           <RoleBadges roles={player.rolesWilling} player={player} gameMode={gameMode} />
         </>
       )}
@@ -754,7 +804,7 @@ export function DraftView() {
       )}
 
       {/* Team Won / Post-Match buttons */}
-      {hasAssigned && (
+      {(hasAssigned || postMatchPending) && (
         <div className="text-center">
           {postMatchPending ? (
             <div className="flex gap-4 justify-center">
