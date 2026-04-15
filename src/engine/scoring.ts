@@ -226,6 +226,48 @@ export function getSoftConstraintViolations(
 }
 
 /**
+ * Check for HARD constraint violations (must be enforced, balance fails if violated)
+ * Returns array of violation messages for hard constraints only
+ */
+export function getHardConstraintViolations(
+  team1: RoleAssignment[],
+  team2: RoleAssignment[],
+  constraints: SoftConstraint[]
+): string[] {
+  const violations: string[] = [];
+
+  const team1Tags = new Set(team1.map((ra) => ra.player.battletag));
+  const team2Tags = new Set(team2.map((ra) => ra.player.battletag));
+
+  for (const constraint of constraints) {
+    // Only check hard constraints
+    if (!constraint.hard) continue;
+
+    const [playerA, playerB] = constraint.players;
+    const aInTeam1 = team1Tags.has(playerA);
+    const aInTeam2 = team2Tags.has(playerA);
+    const bInTeam1 = team1Tags.has(playerB);
+    const bInTeam2 = team2Tags.has(playerB);
+
+    const aPlaying = aInTeam1 || aInTeam2;
+    const bPlaying = bInTeam1 || bInTeam2;
+    if (!aPlaying || !bPlaying) continue;
+
+    const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
+    const nameA = playerA.split("#")[0];
+    const nameB = playerB.split("#")[0];
+
+    if (constraint.type === "together" && !sameTeam) {
+      violations.push(`${nameA} and ${nameB} MUST be together but are on different teams`);
+    } else if (constraint.type === "apart" && sameTeam) {
+      violations.push(`${nameA} and ${nameB} MUST be apart but are on the same team`);
+    }
+  }
+
+  return violations;
+}
+
+/**
  * Calculate standard deviation of SR values
  */
 function calculateSRStdDev(team: RoleAssignment[]): number {

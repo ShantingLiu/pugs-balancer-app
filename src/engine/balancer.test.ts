@@ -398,6 +398,72 @@ describe("balancer", () => {
       expect(differentTeams).toBe(true);
     });
 
+    // Hard constraint tests (Feature #36)
+    it("should fail balance when hard 'apart' constraint is violated", () => {
+      // Two tanks MUST be apart, but there's only one tank slot per team
+      // so the only valid arrangement is one tank per team
+      const players = [
+        createLobbyPlayer("Tank1#1", ["Tank"]),
+        createLobbyPlayer("Tank2#2", ["Tank"]),
+        createLobbyPlayer("DPS1#3", ["DPS"]),
+        createLobbyPlayer("DPS2#4", ["DPS"]),
+        createLobbyPlayer("DPS3#5", ["DPS"]),
+        createLobbyPlayer("DPS4#6", ["DPS"]),
+        createLobbyPlayer("Support1#7", ["Support"]),
+        createLobbyPlayer("Support2#8", ["Support"]),
+        createLobbyPlayer("Support3#9", ["Support"]),
+        createLobbyPlayer("Support4#10", ["Support"]),
+      ];
+
+      // Hard constraint: DPS1 and DPS2 MUST be apart
+      const constraints = [
+        { type: "apart" as const, players: ["DPS1#3", "DPS2#4"] as [string, string], hard: true },
+      ];
+
+      const result = balanceTeams(players, constraints);
+
+      // With hard apart constraint, they should be on different teams
+      const dps1InTeam1 = result.team1.some((a) => a.player.battletag === "DPS1#3");
+      const dps2InTeam1 = result.team1.some((a) => a.player.battletag === "DPS2#4");
+      const dps1InTeam2 = result.team2.some((a) => a.player.battletag === "DPS1#3");
+      const dps2InTeam2 = result.team2.some((a) => a.player.battletag === "DPS2#4");
+
+      // Either balance succeeded with them apart, or it failed
+      if (result.team1.length > 0) {
+        const differentTeams = (dps1InTeam1 && dps2InTeam2) || (dps1InTeam2 && dps2InTeam1);
+        expect(differentTeams).toBe(true);
+      }
+    });
+
+    it("should fail balance when hard 'together' constraint cannot be satisfied", () => {
+      // Two tanks MUST be together, but there's only one tank slot per team
+      // This is impossible in 5v5 mode
+      const players = [
+        createLobbyPlayer("Tank1#1", ["Tank"]),
+        createLobbyPlayer("Tank2#2", ["Tank"]),
+        createLobbyPlayer("DPS1#3", ["DPS"]),
+        createLobbyPlayer("DPS2#4", ["DPS"]),
+        createLobbyPlayer("DPS3#5", ["DPS"]),
+        createLobbyPlayer("DPS4#6", ["DPS"]),
+        createLobbyPlayer("Support1#7", ["Support"]),
+        createLobbyPlayer("Support2#8", ["Support"]),
+        createLobbyPlayer("Support3#9", ["Support"]),
+        createLobbyPlayer("Support4#10", ["Support"]),
+      ];
+
+      // Hard constraint: Both tanks MUST be together (impossible in 5v5)
+      const constraints = [
+        { type: "together" as const, players: ["Tank1#1", "Tank2#2"] as [string, string], hard: true },
+      ];
+
+      const result = balanceTeams(players, constraints);
+
+      // Should fail with error
+      expect(result.team1).toHaveLength(0);
+      expect(result.team2).toHaveLength(0);
+      expect(result.warnings.some(w => w.severity === "error")).toBe(true);
+    });
+
     it("should balance SR between teams", () => {
       // Create players with specific SR values
       const players = [

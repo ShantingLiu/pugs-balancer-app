@@ -4,12 +4,13 @@ import { usePlayerStore } from "@store/playerStore";
 import type { SoftConstraint } from "@engine/types";
 
 // =============================================================================
-// ConstraintsPanel - Add/remove soft constraints (together/apart)
+// ConstraintsPanel - Add/remove constraints (together/apart, soft/hard)
 // =============================================================================
 
 export function ConstraintsPanel() {
   const [isAdding, setIsAdding] = useState(false);
   const [constraintType, setConstraintType] = useState<"together" | "apart">("together");
+  const [isHard, setIsHard] = useState(false);
   const [playerA, setPlayerA] = useState("");
   const [playerB, setPlayerB] = useState("");
 
@@ -32,13 +33,15 @@ export function ConstraintsPanel() {
     const constraint: SoftConstraint = {
       type: constraintType,
       players: [playerA, playerB],
+      hard: isHard,
     };
 
     addSoftConstraint(constraint);
     setPlayerA("");
     setPlayerB("");
+    setIsHard(false);
     setIsAdding(false);
-  }, [playerA, playerB, constraintType, addSoftConstraint]);
+  }, [playerA, playerB, constraintType, isHard, addSoftConstraint]);
 
   const handleRemove = useCallback(
     (players: [string, string]) => {
@@ -49,10 +52,23 @@ export function ConstraintsPanel() {
 
   const formatPlayerName = (battletag: string) => battletag.split("#")[0];
 
+  // Count hard vs soft constraints
+  const hardCount = softConstraints.filter(c => c.hard).length;
+  const softCount = softConstraints.length - hardCount;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-300">Soft Constraints</h3>
+        <h3 className="text-sm font-semibold text-gray-300">
+          Constraints
+          {softConstraints.length > 0 && (
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              ({hardCount > 0 && <span className="text-yellow-400">{hardCount} hard</span>}
+              {hardCount > 0 && softCount > 0 && ", "}
+              {softCount > 0 && <span>{softCount} soft</span>})
+            </span>
+          )}
+        </h3>
         <div className="flex gap-2">
           {softConstraints.length > 0 && (
             <button
@@ -74,7 +90,7 @@ export function ConstraintsPanel() {
       {/* Existing constraints */}
       {softConstraints.length === 0 && !isAdding && (
         <p className="text-xs text-gray-500">
-          No constraints set. Add "prefer together" or "prefer apart" pairs.
+          No constraints set. Add "together" or "apart" pairs (soft = prefer, hard = must).
         </p>
       )}
 
@@ -82,9 +98,18 @@ export function ConstraintsPanel() {
         {softConstraints.map((constraint, idx) => (
           <div
             key={idx}
-            className="flex items-center justify-between p-2 bg-gray-800 rounded-lg text-sm"
+            className={`flex items-center justify-between p-2 rounded-lg text-sm ${
+              constraint.hard 
+                ? "bg-yellow-900/30 border border-yellow-600/50" 
+                : "bg-gray-800"
+            }`}
           >
             <div className="flex items-center gap-2">
+              {constraint.hard && (
+                <span className="text-xs px-1 py-0.5 bg-yellow-600/50 text-yellow-200 rounded font-bold">
+                  MUST
+                </span>
+              )}
               <span className="font-medium">
                 {formatPlayerName(constraint.players[0])}
               </span>
@@ -168,10 +193,31 @@ export function ConstraintsPanel() {
               ))}
           </select>
 
+          {/* Hard/Soft toggle */}
+          <div className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
+            <label className="flex items-center gap-2 cursor-pointer flex-1">
+              <input
+                type="checkbox"
+                checked={isHard}
+                onChange={(e) => setIsHard(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-gray-800"
+              />
+              <span className={`text-sm ${isHard ? "text-yellow-300 font-semibold" : "text-gray-400"}`}>
+                Hard constraint
+              </span>
+            </label>
+            <span className="text-xs text-gray-500">
+              {isHard ? "Balance fails if violated" : "Prefer but may violate"}
+            </span>
+          </div>
+
           {/* Actions */}
           <div className="flex gap-2">
             <button
-              onClick={() => setIsAdding(false)}
+              onClick={() => {
+                setIsAdding(false);
+                setIsHard(false);
+              }}
               className="flex-1 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
             >
               Cancel
@@ -179,9 +225,13 @@ export function ConstraintsPanel() {
             <button
               onClick={handleAdd}
               disabled={!playerA || !playerB || playerA === playerB}
-              className="flex-1 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex-1 py-1.5 text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                isHard 
+                  ? "bg-yellow-600 hover:bg-yellow-700" 
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              Add Constraint
+              Add {isHard ? "Hard" : "Soft"} Constraint
             </button>
           </div>
         </div>

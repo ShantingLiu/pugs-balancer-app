@@ -14,6 +14,7 @@ import {
   checkArchetypeParity,
   getOneTrickConflicts,
   getSoftConstraintViolations,
+  getHardConstraintViolations,
 } from "@engine/scoring";
 import { getModeConfig, getValidCompositions } from "@engine/modeConfig";
 
@@ -831,7 +832,30 @@ export function balanceTeams(
     });
   }
 
-  // Add soft constraint violation warnings
+  // Check HARD constraint violations - fail if any violated
+  const hardConstraintViolations = getHardConstraintViolations(
+    bestCandidate.team1,
+    bestCandidate.team2,
+    softConstraints
+  );
+  if (hardConstraintViolations.length > 0) {
+    // Hard constraints violated - return error result
+    for (const violation of hardConstraintViolations) {
+      warnings.push({
+        type: "impossible_composition",
+        message: violation,
+        severity: "error",
+      });
+    }
+    return {
+      team1: [],
+      team2: [],
+      warnings,
+      score: { team1SR: 0, team2SR: 0, srDifference: 0, archetypeParityMet: false },
+    };
+  }
+
+  // Add soft constraint violation warnings (preferences that couldn't be honored)
   const constraintViolations = getSoftConstraintViolations(
     bestCandidate.team1,
     bestCandidate.team2,

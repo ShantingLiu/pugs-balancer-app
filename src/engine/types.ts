@@ -206,6 +206,7 @@ export interface TeamAssignment {
 
 /**
  * Soft constraint between two players
+ * Can be "soft" (prefer, may be violated for better balance) or "hard" (must be enforced)
  */
 export interface SoftConstraint {
   /** Type of constraint */
@@ -213,6 +214,9 @@ export interface SoftConstraint {
 
   /** Battletag pair */
   players: [string, string];
+
+  /** If true, constraint MUST be enforced (balance fails if violated) */
+  hard?: boolean;
 }
 
 /**
