@@ -164,6 +164,9 @@ export function countSoftConstraintViolations(
   const team2Tags = new Set(team2.map((ra) => ra.player.battletag));
 
   for (const constraint of constraints) {
+    // Only count SOFT constraints here (hard constraints handled separately)
+    if (constraint.hard) continue;
+
     const [playerA, playerB] = constraint.players;
     const aInTeam1 = team1Tags.has(playerA);
     const aInTeam2 = team2Tags.has(playerA);
@@ -181,6 +184,55 @@ export function countSoftConstraintViolations(
       violations++;
     } else if (constraint.type === "apart" && sameTeam) {
       violations++;
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Count HARD constraint violations (for scoring penalty)
+ * Returns count of violated hard constraints
+ */
+export function countHardConstraintViolations(
+  team1: RoleAssignment[],
+  team2: RoleAssignment[],
+  constraints: SoftConstraint[]
+): number {
+  let violations = 0;
+
+  const team1Tags = new Set(team1.map((ra) => ra.player.battletag));
+  const team2Tags = new Set(team2.map((ra) => ra.player.battletag));
+
+  for (const constraint of constraints) {
+    // Only count HARD constraints
+    if (!constraint.hard) continue;
+
+    const [playerA, playerB] = constraint.players;
+    const aInTeam1 = team1Tags.has(playerA);
+    const aInTeam2 = team2Tags.has(playerA);
+    const bInTeam1 = team1Tags.has(playerB);
+    const bInTeam2 = team2Tags.has(playerB);
+
+    const aPlaying = aInTeam1 || aInTeam2;
+    const bPlaying = bInTeam1 || bInTeam2;
+
+    if (constraint.type === "together") {
+      // "Together" means BOTH must play on same team, or BOTH sit out
+      // If one is playing and one is benched, that's a violation
+      if (aPlaying !== bPlaying) {
+        violations++;
+      } else if (aPlaying && bPlaying) {
+        // Both playing - must be on same team
+        const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
+        if (!sameTeam) violations++;
+      }
+      // Both benched is fine for "together"
+    } else if (constraint.type === "apart") {
+      // "Apart" constraint - only violated if both playing on same team
+      if (!aPlaying || !bPlaying) continue; // If one benched, they're apart - OK
+      const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
+      if (sameTeam) violations++;
     }
   }
 
@@ -251,16 +303,27 @@ export function getHardConstraintViolations(
 
     const aPlaying = aInTeam1 || aInTeam2;
     const bPlaying = bInTeam1 || bInTeam2;
-    if (!aPlaying || !bPlaying) continue;
-
-    const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
     const nameA = playerA.split("#")[0];
     const nameB = playerB.split("#")[0];
 
-    if (constraint.type === "together" && !sameTeam) {
-      violations.push(`${nameA} and ${nameB} MUST be together but are on different teams`);
-    } else if (constraint.type === "apart" && sameTeam) {
-      violations.push(`${nameA} and ${nameB} MUST be apart but are on the same team`);
+    if (constraint.type === "together") {
+      // "Together" means BOTH must play on same team, or BOTH sit out
+      if (aPlaying !== bPlaying) {
+        const playing = aPlaying ? nameA : nameB;
+        const benched = aPlaying ? nameB : nameA;
+        violations.push(`${playing} and ${benched} MUST be together but ${benched} is benched`);
+      } else if (aPlaying && bPlaying) {
+        const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
+        if (!sameTeam) {
+          violations.push(`${nameA} and ${nameB} MUST be together but are on different teams`);
+        }
+      }
+    } else if (constraint.type === "apart") {
+      if (!aPlaying || !bPlaying) continue; // If one benched, they're apart - OK
+      const sameTeam = (aInTeam1 && bInTeam1) || (aInTeam2 && bInTeam2);
+      if (sameTeam) {
+        violations.push(`${nameA} and ${nameB} MUST be apart but are on the same team`);
+      }
     }
   }
 
@@ -397,6 +460,11 @@ export function scoreComposition(
   // 4. Soft constraints — soft-normalized (half-point at 5)
   const rawConstraints = countSoftConstraintViolations(team1, team2, softConstraints);
   score += (rawConstraints / (rawConstraints + 5)) * 120;
+
+  // 4b. HARD constraints — massive penalty to make optimizer avoid them
+  // Each hard constraint violation adds 10000 to score, effectively making it impossible
+  const hardViolations = countHardConstraintViolations(team1, team2, softConstraints);
+  score += hardViolations * 10000;
 
   // 5. SR variance disparity — soft-normalized (half-point at 800)
   const rawVariance = calculateVariancePenalty(team1, team2);

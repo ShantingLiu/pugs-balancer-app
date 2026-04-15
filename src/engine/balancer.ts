@@ -15,6 +15,7 @@ import {
   getOneTrickConflicts,
   getSoftConstraintViolations,
   getHardConstraintViolations,
+  countHardConstraintViolations,
 } from "@engine/scoring";
 import { getModeConfig, getValidCompositions } from "@engine/modeConfig";
 
@@ -177,6 +178,7 @@ function generateInitialAssignment(
  * 
  * Note: Role locks are ALWAYS respected (hard constraint).
  * Team locks can be optionally relaxed via respectTeamLocks.
+ * Hard constraints (together/apart) are ALWAYS respected - swaps that violate are rejected.
  */
 function hillClimb(
   team1: RoleAssignment[],
@@ -186,7 +188,8 @@ function hillClimb(
   scorer: CompositionScorer,
   respectTeamLocks: boolean,
   mustPlayBattletags: Set<string>,
-  iterations: number
+  iterations: number,
+  hardConstraints: SoftConstraint[]
 ): number {
   let currentScore = scorer(team1, team2);
   let bestScore = currentScore;
@@ -225,6 +228,13 @@ function hillClimb(
       // Each player takes the other's slot (team + role)
       team1[i1] = createRoleAssignment(p2.player as LobbyPlayer, p1.assignedRole, mode);
       team2[i2] = createRoleAssignment(p1.player as LobbyPlayer, p2.assignedRole, mode);
+
+      // Hard constraints - ALWAYS enforced. Reject swap if it would violate.
+      if (countHardConstraintViolations(team1, team2, hardConstraints) > 0) {
+        team1[i1] = p1;
+        team2[i2] = p2;
+        continue;
+      }
 
       const newScore = scorer(team1, team2);
       const delta = newScore - currentScore;
@@ -274,6 +284,15 @@ function hillClimb(
       team1[i1b] = createRoleAssignment(p2b.player as LobbyPlayer, p1b.assignedRole, mode);
       team2[i2b] = createRoleAssignment(p1b.player as LobbyPlayer, p2b.assignedRole, mode);
 
+      // Hard constraints - ALWAYS enforced. Reject swap if it would violate.
+      if (countHardConstraintViolations(team1, team2, hardConstraints) > 0) {
+        team1[i1a] = p1a;
+        team2[i2a] = p2a;
+        team1[i1b] = p1b;
+        team2[i2b] = p2b;
+        continue;
+      }
+
       const newScore = scorer(team1, team2);
       const delta = newScore - currentScore;
       if (delta < 0 || (temperature > 0 && Math.random() < Math.exp(-delta / temperature))) {
@@ -310,6 +329,13 @@ function hillClimb(
 
       teamArr[ti] = createRoleAssignment(benched, playing.assignedRole, mode);
       bench[bi] = playing.player as LobbyPlayer;
+
+      // Hard constraints - ALWAYS enforced. Reject swap if it would violate.
+      if (countHardConstraintViolations(team1, team2, hardConstraints) > 0) {
+        bench[bi] = benched;
+        teamArr[ti] = playing;
+        continue;
+      }
 
       const newScore = scorer(team1, team2);
       const delta = newScore - currentScore;
@@ -379,13 +405,15 @@ const ITERATIONS_PER_RESTART = 1000;
  * 
  * Note: Role locks are ALWAYS respected (hard constraint).
  * Team locks can be optionally relaxed via respectTeamLocks.
+ * Hard constraints (together/apart) are ALWAYS respected.
  */
 function findBestComposition(
   players: LobbyPlayer[],
   mode: GameMode,
   scorer: CompositionScorer,
   respectTeamLocks: boolean,
-  mustPlayBattletags: Set<string>
+  mustPlayBattletags: Set<string>,
+  hardConstraints: SoftConstraint[]
 ): PartialAssignment | null {
   let globalBestScore = Infinity;
   let globalBestResult: PartialAssignment | null = null;
@@ -396,9 +424,15 @@ function findBestComposition(
 
     const { team1, team2, bench } = initial;
 
+    // Skip this restart if initial assignment violates hard constraints
+    if (countHardConstraintViolations(team1, team2, hardConstraints) > 0) {
+      continue;
+    }
+
     const finalScore = hillClimb(
       team1, team2, bench, mode, scorer,
-      respectTeamLocks, mustPlayBattletags, ITERATIONS_PER_RESTART
+      respectTeamLocks, mustPlayBattletags, ITERATIONS_PER_RESTART,
+      hardConstraints
     );
 
     if (finalScore < globalBestScore) {
@@ -700,20 +734,24 @@ export function balanceTeams(
     return scoreComposition(team1, team2, softConstraints, mode);
   };
 
+  // Extract hard constraints for explicit enforcement
+  const hardConstraints = softConstraints.filter(c => c.hard);
+
   // Multi-restart hill climbing: find best composition via iterative swap optimization
   // Note: Role locks are ALWAYS respected. Only team locks can be relaxed.
-  let bestCandidate = findBestComposition(playerPool, mode, scorer, true, mustPlayBattletags);
+  // Hard constraints are ALWAYS respected - swaps that violate are rejected.
+  let bestCandidate = findBestComposition(playerPool, mode, scorer, true, mustPlayBattletags, hardConstraints);
 
   // If no result with strict team locks, retry with relaxed team locks (role locks still enforced)
   // Bug #28 fix: Keep mustPlayBattletags to ensure must-play players aren't silently dropped
   if (!bestCandidate) {
-    bestCandidate = findBestComposition(playerPool, mode, scorer, false, mustPlayBattletags);
+    bestCandidate = findBestComposition(playerPool, mode, scorer, false, mustPlayBattletags, hardConstraints);
     constraintsRelaxed = true;
   }
   
   // Last resort: use all players if player pool failed
   if (!bestCandidate && playerPool !== activePlayers) {
-    bestCandidate = findBestComposition(activePlayers, mode, scorer, false, mustPlayBattletags);
+    bestCandidate = findBestComposition(activePlayers, mode, scorer, false, mustPlayBattletags, hardConstraints);
     constraintsRelaxed = true;
   }
 
