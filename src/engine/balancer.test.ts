@@ -308,6 +308,35 @@ describe("balancer", () => {
       expect(roleLockedPlayer?.assignedRole).toBe("Support");
     });
 
+    // Bug #28: Impossible role lock combinations should fail with clear error
+    it("should reject impossible role lock combinations with error", () => {
+      // 3 must-play players all locked to Tank in 5v5 mode (only 2 Tank slots exist)
+      // This is impossible - all 3 must play but only 2 Tank slots available
+      const players = [
+        createLobbyPlayer("Tank1#1", ["Tank"], { lockedToRole: "Tank", mustPlay: true }),
+        createLobbyPlayer("Tank2#2", ["Tank"], { lockedToRole: "Tank", mustPlay: true }),
+        createLobbyPlayer("Tank3#3", ["Tank"], { lockedToRole: "Tank", mustPlay: true }), // 3rd must-play tank lock!
+        createLobbyPlayer("DPS1#4", ["DPS"]),
+        createLobbyPlayer("DPS2#5", ["DPS"]),
+        createLobbyPlayer("DPS3#6", ["DPS"]),
+        createLobbyPlayer("DPS4#7", ["DPS"]),
+        createLobbyPlayer("Support1#8", ["Support"]),
+        createLobbyPlayer("Support2#9", ["Support"]),
+        createLobbyPlayer("Support3#10", ["Support"]),
+        createLobbyPlayer("Support4#11", ["Support"]),
+      ];
+
+      const result = balanceTeams(players);
+
+      // Should fail with error about impossible role locks
+      expect(result.team1).toHaveLength(0);
+      expect(result.team2).toHaveLength(0);
+      expect(result.warnings.some(w => 
+        w.severity === "error" && 
+        (w.message.includes("role locks") || w.message.includes("Tank"))
+      )).toBe(true);
+    });
+
     it("should try to keep together constraint players on same team", () => {
       const players = [
         createLobbyPlayer("Tank1#1", ["Tank"]),

@@ -660,6 +660,40 @@ export function balanceTeams(
   // Get all must-play player battletags
   const mustPlayBattletags = new Set(mustPlayPlayers.map((p) => p.battletag));
 
+  // Bug #28 fix: Check for impossible role lock combinations UPFRONT
+  // This detects when must-play players have role locks that can't all be satisfied
+  const roleLockConflicts = checkRoleLockConflicts(activePlayers, mode);
+  if (roleLockConflicts.length > 0) {
+    // Check if any conflicting role lock involves must-play players
+    const mustPlayWithRoleLocks = mustPlayPlayers.filter(p => p.lockedToRole !== null);
+    if (mustPlayWithRoleLocks.length > 0) {
+      // Count role-locked must-play players by role
+      const mustPlayByRole: Record<Role, number> = { Tank: 0, DPS: 0, Support: 0 };
+      for (const p of mustPlayWithRoleLocks) {
+        if (p.lockedToRole) mustPlayByRole[p.lockedToRole]++;
+      }
+      
+      // Check if must-play role locks exceed available slots
+      const teamComposition = getTeamComposition(mode);
+      for (const { role, count } of teamComposition) {
+        const totalSlots = count * 2;
+        if (mustPlayByRole[role] > totalSlots) {
+          warnings.push({
+            type: "impossible_composition",
+            message: `Cannot satisfy role locks: ${mustPlayByRole[role]} must-play players locked to ${role} but only ${totalSlots} ${role} slots exist`,
+            severity: "error",
+          });
+          return {
+            team1: [],
+            team2: [],
+            warnings,
+            score: { team1SR: 0, team2SR: 0, srDifference: 0, archetypeParityMet: false },
+          };
+        }
+      }
+    }
+  }
+
   // Scorer: evaluates complete team compositions (lower = better)
   const scorer: CompositionScorer = (team1, team2) => {
     return scoreComposition(team1, team2, softConstraints, mode);
@@ -670,24 +704,25 @@ export function balanceTeams(
   let bestCandidate = findBestComposition(playerPool, mode, scorer, true, mustPlayBattletags);
 
   // If no result with strict team locks, retry with relaxed team locks (role locks still enforced)
+  // Bug #28 fix: Keep mustPlayBattletags to ensure must-play players aren't silently dropped
   if (!bestCandidate) {
-    bestCandidate = findBestComposition(playerPool, mode, scorer, false, new Set());
+    bestCandidate = findBestComposition(playerPool, mode, scorer, false, mustPlayBattletags);
     constraintsRelaxed = true;
   }
   
   // Last resort: use all players if player pool failed
   if (!bestCandidate && playerPool !== activePlayers) {
-    bestCandidate = findBestComposition(activePlayers, mode, scorer, false, new Set());
+    bestCandidate = findBestComposition(activePlayers, mode, scorer, false, mustPlayBattletags);
     constraintsRelaxed = true;
   }
 
   if (!bestCandidate) {
     // Check if role locks are the cause of the failure
-    const roleLockConflicts = checkRoleLockConflicts(activePlayers, mode);
-    if (roleLockConflicts.length > 0) {
+    const remainingConflicts = checkRoleLockConflicts(activePlayers, mode);
+    if (remainingConflicts.length > 0) {
       warnings.push({
         type: "impossible_composition",
-        message: `Cannot balance due to role locks: ${roleLockConflicts.join(", ")}`,
+        message: `Cannot balance due to role locks: ${remainingConflicts.join(", ")}`,
         severity: "error",
       });
     } else {
