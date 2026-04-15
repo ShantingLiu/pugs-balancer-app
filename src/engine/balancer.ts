@@ -55,16 +55,17 @@ function shuffleArray<T>(arr: T[]): void {
 function tryPlacePlayer(
   player: LobbyPlayer,
   needed: Map<string, number>,
-  respectLocks: boolean,
+  respectTeamLocks: boolean,
   team1: RoleAssignment[],
   team2: RoleAssignment[],
   mode: GameMode
 ): boolean {
   const teams = Math.random() < 0.5 ? [1, 2] as const : [2, 1] as const;
   for (const team of teams) {
-    if (respectLocks && player.lockedToTeam !== null && player.lockedToTeam !== team) continue;
+    if (respectTeamLocks && player.lockedToTeam !== null && player.lockedToTeam !== team) continue;
     for (const role of player.rolesWilling) {
-      if (respectLocks && player.lockedToRole !== null && player.lockedToRole !== role) continue;
+      // Role locks are ALWAYS respected (hard constraint) - Bug #26 fix
+      if (player.lockedToRole !== null && player.lockedToRole !== role) continue;
       const key = `${team}-${role}`;
       if ((needed.get(key) || 0) > 0) {
         const ra = createRoleAssignment(player, role, mode);
@@ -81,11 +82,14 @@ function tryPlacePlayer(
  * Generate one valid random assignment of players to team slots.
  * Places locked players first, then must-play, then fills remaining slots.
  * Returns null if no valid assignment can be constructed with this shuffle.
+ * 
+ * Note: Role locks are ALWAYS respected (hard constraint).
+ * Team locks can be optionally relaxed via respectTeamLocks.
  */
 function generateInitialAssignment(
   players: LobbyPlayer[],
   mode: GameMode,
-  respectLocks: boolean,
+  respectTeamLocks: boolean,
   mustPlayBattletags: Set<string>
 ): { team1: RoleAssignment[]; team2: RoleAssignment[]; bench: LobbyPlayer[] } | null {
   const teamComposition = getTeamComposition(mode);
@@ -106,10 +110,12 @@ function generateInitialAssignment(
   const shuffled = [...players];
   shuffleArray(shuffled);
 
-  // Phase 1: Place fully locked players (team + role)
-  if (respectLocks) {
-    for (const p of shuffled) {
-      if (p.lockedToTeam !== null && p.lockedToRole !== null) {
+  // Phase 1: Place fully locked players (team + role) - always honors role locks
+  for (const p of shuffled) {
+    // Players with role locks should be placed in their locked role
+    if (p.lockedToRole !== null) {
+      // If also team-locked and we respect team locks, place on that team
+      if (respectTeamLocks && p.lockedToTeam !== null) {
         const key = `${p.lockedToTeam}-${p.lockedToRole}`;
         if ((needed.get(key) || 0) > 0 && p.rolesWilling.includes(p.lockedToRole)) {
           const ra = createRoleAssignment(p, p.lockedToRole, mode);
@@ -117,15 +123,27 @@ function generateInitialAssignment(
           used.add(p.battletag);
           needed.set(key, needed.get(key)! - 1);
         }
+      } else if (p.lockedToTeam === null || !respectTeamLocks) {
+        // Role-locked but not team-locked (or team locks relaxed): place on any team with a slot
+        for (const team of [1, 2] as const) {
+          const key = `${team}-${p.lockedToRole}`;
+          if ((needed.get(key) || 0) > 0 && p.rolesWilling.includes(p.lockedToRole)) {
+            const ra = createRoleAssignment(p, p.lockedToRole, mode);
+            (team === 1 ? team1 : team2).push(ra);
+            used.add(p.battletag);
+            needed.set(key, needed.get(key)! - 1);
+            break;
+          }
+        }
       }
     }
   }
 
-  // Phase 2: Place must-play players
+  // Phase 2: Place must-play players (respects role locks via tryPlacePlayer)
   for (const p of shuffled) {
     if (used.has(p.battletag)) continue;
     if (!mustPlayBattletags.has(p.battletag)) continue;
-    if (tryPlacePlayer(p, needed, respectLocks, team1, team2, mode)) {
+    if (tryPlacePlayer(p, needed, respectTeamLocks, team1, team2, mode)) {
       used.add(p.battletag);
     }
   }
@@ -136,7 +154,7 @@ function generateInitialAssignment(
     let anySlotLeft = false;
     for (const v of needed.values()) { if (v > 0) { anySlotLeft = true; break; } }
     if (!anySlotLeft) break;
-    if (tryPlacePlayer(p, needed, respectLocks, team1, team2, mode)) {
+    if (tryPlacePlayer(p, needed, respectTeamLocks, team1, team2, mode)) {
       used.add(p.battletag);
     }
   }
@@ -155,6 +173,9 @@ function generateInitialAssignment(
  * Early iterations accept slightly worse moves to escape shallow local minima;
  * temperature decays to zero so late iterations are strictly greedy.
  * Mutates team1/team2/bench in place, returns the final score.
+ * 
+ * Note: Role locks are ALWAYS respected (hard constraint).
+ * Team locks can be optionally relaxed via respectTeamLocks.
  */
 function hillClimb(
   team1: RoleAssignment[],
@@ -162,7 +183,7 @@ function hillClimb(
   bench: LobbyPlayer[],
   mode: GameMode,
   scorer: CompositionScorer,
-  respectLocks: boolean,
+  respectTeamLocks: boolean,
   mustPlayBattletags: Set<string>,
   iterations: number
 ): number {
@@ -189,12 +210,16 @@ function hillClimb(
       if (!p1.player.rolesWilling.includes(p2.assignedRole)) continue;
       if (!p2.player.rolesWilling.includes(p1.assignedRole)) continue;
 
-      if (respectLocks) {
-        const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
+      const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
+      
+      // Team locks - only enforced if respectTeamLocks is true
+      if (respectTeamLocks) {
         if (lp1.lockedToTeam === 1 || lp2.lockedToTeam === 2) continue;
-        if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
-        if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
       }
+      
+      // Role locks - ALWAYS enforced (Bug #26 fix)
+      if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
+      if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
 
       // Each player takes the other's slot (team + role)
       team1[i1] = createRoleAssignment(p2.player as LobbyPlayer, p1.assignedRole, mode);
@@ -228,16 +253,20 @@ function hillClimb(
       if (!p1b.player.rolesWilling.includes(p2b.assignedRole)) continue;
       if (!p2b.player.rolesWilling.includes(p1b.assignedRole)) continue;
 
-      if (respectLocks) {
-        const lp1a = p1a.player as LobbyPlayer, lp2a = p2a.player as LobbyPlayer;
-        const lp1b = p1b.player as LobbyPlayer, lp2b = p2b.player as LobbyPlayer;
+      const lp1a = p1a.player as LobbyPlayer, lp2a = p2a.player as LobbyPlayer;
+      const lp1b = p1b.player as LobbyPlayer, lp2b = p2b.player as LobbyPlayer;
+      
+      // Team locks - only enforced if respectTeamLocks is true
+      if (respectTeamLocks) {
         if (lp1a.lockedToTeam === 1 || lp2a.lockedToTeam === 2) continue;
         if (lp1b.lockedToTeam === 1 || lp2b.lockedToTeam === 2) continue;
-        if (lp1a.lockedToRole !== null && lp1a.lockedToRole !== p2a.assignedRole) continue;
-        if (lp2a.lockedToRole !== null && lp2a.lockedToRole !== p1a.assignedRole) continue;
-        if (lp1b.lockedToRole !== null && lp1b.lockedToRole !== p2b.assignedRole) continue;
-        if (lp2b.lockedToRole !== null && lp2b.lockedToRole !== p1b.assignedRole) continue;
       }
+      
+      // Role locks - ALWAYS enforced (Bug #26 fix)
+      if (lp1a.lockedToRole !== null && lp1a.lockedToRole !== p2a.assignedRole) continue;
+      if (lp2a.lockedToRole !== null && lp2a.lockedToRole !== p1a.assignedRole) continue;
+      if (lp1b.lockedToRole !== null && lp1b.lockedToRole !== p2b.assignedRole) continue;
+      if (lp2b.lockedToRole !== null && lp2b.lockedToRole !== p1b.assignedRole) continue;
 
       team1[i1a] = createRoleAssignment(p2a.player as LobbyPlayer, p1a.assignedRole, mode);
       team2[i2a] = createRoleAssignment(p1a.player as LobbyPlayer, p2a.assignedRole, mode);
@@ -269,11 +298,14 @@ function hillClimb(
       if (mustPlayBattletags.has(playing.player.battletag)) continue;
       if (!benched.rolesWilling.includes(playing.assignedRole)) continue;
 
-      if (respectLocks) {
+      // Team locks - only enforced if respectTeamLocks is true
+      if (respectTeamLocks) {
         if ((playing.player as LobbyPlayer).lockedToTeam !== null) continue;
         if (benched.lockedToTeam !== null && benched.lockedToTeam !== teamNum) continue;
-        if (benched.lockedToRole !== null && benched.lockedToRole !== playing.assignedRole) continue;
       }
+      
+      // Role locks - ALWAYS enforced (Bug #26 fix)
+      if (benched.lockedToRole !== null && benched.lockedToRole !== playing.assignedRole) continue;
 
       teamArr[ti] = createRoleAssignment(benched, playing.assignedRole, mode);
       bench[bi] = playing.player as LobbyPlayer;
@@ -302,11 +334,10 @@ function hillClimb(
       if (!p1.player.rolesWilling.includes(p2.assignedRole)) continue;
       if (!p2.player.rolesWilling.includes(p1.assignedRole)) continue;
 
-      if (respectLocks) {
-        const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
-        if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
-        if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
-      }
+      // Role locks - ALWAYS enforced (Bug #26 fix) - no team lock check needed for intra-team swap
+      const lp1 = p1.player as LobbyPlayer, lp2 = p2.player as LobbyPlayer;
+      if (lp1.lockedToRole !== null && lp1.lockedToRole !== p2.assignedRole) continue;
+      if (lp2.lockedToRole !== null && lp2.lockedToRole !== p1.assignedRole) continue;
 
       teamArr[idx1] = createRoleAssignment(p1.player as LobbyPlayer, p2.assignedRole, mode);
       teamArr[idx2] = createRoleAssignment(p2.player as LobbyPlayer, p1.assignedRole, mode);
@@ -340,25 +371,33 @@ const ITERATIONS_PER_RESTART = 1000;
  * Generates random valid assignments and iteratively improves them via swaps.
  * Scales to any lobby size — bounded by iteration count, not combinations.
  */
+/**
+ * Find the best team composition using multi-restart hill climbing.
+ * Generates random valid assignments and iteratively improves them via swaps.
+ * Scales to any lobby size — bounded by iteration count, not combinations.
+ * 
+ * Note: Role locks are ALWAYS respected (hard constraint).
+ * Team locks can be optionally relaxed via respectTeamLocks.
+ */
 function findBestComposition(
   players: LobbyPlayer[],
   mode: GameMode,
   scorer: CompositionScorer,
-  respectLocks: boolean,
+  respectTeamLocks: boolean,
   mustPlayBattletags: Set<string>
 ): PartialAssignment | null {
   let globalBestScore = Infinity;
   let globalBestResult: PartialAssignment | null = null;
 
   for (let restart = 0; restart < NUM_RESTARTS; restart++) {
-    const initial = generateInitialAssignment(players, mode, respectLocks, mustPlayBattletags);
+    const initial = generateInitialAssignment(players, mode, respectTeamLocks, mustPlayBattletags);
     if (!initial) continue;
 
     const { team1, team2, bench } = initial;
 
     const finalScore = hillClimb(
       team1, team2, bench, mode, scorer,
-      respectLocks, mustPlayBattletags, ITERATIONS_PER_RESTART
+      respectTeamLocks, mustPlayBattletags, ITERATIONS_PER_RESTART
     );
 
     if (finalScore < globalBestScore) {
@@ -424,6 +463,45 @@ export function canFormValidTeams(
     valid: missingRoles.length === 0,
     missingRoles,
   };
+}
+
+/**
+ * Check if role locks create impossible constraints
+ * Returns array of conflict descriptions
+ */
+function checkRoleLockConflicts(
+  players: LobbyPlayer[],
+  mode: GameMode = "stadium_5v5"
+): string[] {
+  const conflicts: string[] = [];
+  const teamComposition = getTeamComposition(mode);
+  
+  // Count role-locked players by role
+  const lockedByRole: Record<Role, string[]> = {
+    Tank: [],
+    DPS: [],
+    Support: [],
+  };
+  
+  for (const player of players) {
+    if (player.lockedToRole) {
+      lockedByRole[player.lockedToRole].push(player.battletag.split("#")[0]);
+    }
+  }
+  
+  // Check if any role has more locks than available slots
+  for (const { role, count } of teamComposition) {
+    const totalSlots = count * 2; // For both teams
+    const lockedCount = lockedByRole[role].length;
+    
+    if (lockedCount > totalSlots) {
+      conflicts.push(
+        `${lockedCount} players locked to ${role} but only ${totalSlots} ${role} slots available`
+      );
+    }
+  }
+  
+  return conflicts;
 }
 
 /**
@@ -588,9 +666,10 @@ export function balanceTeams(
   };
 
   // Multi-restart hill climbing: find best composition via iterative swap optimization
+  // Note: Role locks are ALWAYS respected. Only team locks can be relaxed.
   let bestCandidate = findBestComposition(playerPool, mode, scorer, true, mustPlayBattletags);
 
-  // If no result with strict constraints, retry with relaxed constraints
+  // If no result with strict team locks, retry with relaxed team locks (role locks still enforced)
   if (!bestCandidate) {
     bestCandidate = findBestComposition(playerPool, mode, scorer, false, new Set());
     constraintsRelaxed = true;
@@ -603,11 +682,21 @@ export function balanceTeams(
   }
 
   if (!bestCandidate) {
-    warnings.push({
-      type: "impossible_composition",
-      message: "Could not generate any valid team compositions - check role coverage",
-      severity: "error",
-    });
+    // Check if role locks are the cause of the failure
+    const roleLockConflicts = checkRoleLockConflicts(activePlayers, mode);
+    if (roleLockConflicts.length > 0) {
+      warnings.push({
+        type: "impossible_composition",
+        message: `Cannot balance due to role locks: ${roleLockConflicts.join(", ")}`,
+        severity: "error",
+      });
+    } else {
+      warnings.push({
+        type: "impossible_composition",
+        message: "Could not generate any valid team compositions - check role coverage",
+        severity: "error",
+      });
+    }
 
     return {
       team1: [],
@@ -636,7 +725,7 @@ export function balanceTeams(
     }
   }
   
-  // Collect lock violations (only if constraints were relaxed)
+  // Collect lock violations (only team locks can be violated - role locks are always enforced)
   const lockViolations: string[] = [];
   if (constraintsRelaxed) {
     for (const player of activePlayers) {
@@ -646,12 +735,7 @@ export function balanceTeams(
       } else if (player.lockedToTeam === 2 && !team2Battletags.has(player.battletag) && playingBattletags.has(player.battletag)) {
         lockViolations.push(`${name} moved to Team 1`);
       }
-      if (player.lockedToRole) {
-        const assignment = allAssignments.find((a) => a.player.battletag === player.battletag);
-        if (assignment && assignment.assignedRole !== player.lockedToRole) {
-          lockViolations.push(`${name} placed on ${assignment.assignedRole}`);
-        }
-      }
+      // Note: Role locks cannot be violated anymore (Bug #26 fix) - they are hard constraints
     }
   }
   

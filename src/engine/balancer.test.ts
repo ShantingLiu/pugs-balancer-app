@@ -273,6 +273,41 @@ describe("balancer", () => {
       expect(roleLockedPlayer?.assignedRole).toBe("Support");
     });
 
+    // Bug #26 regression: Role locks must ALWAYS be respected, even when team locks are relaxed
+    it("should respect role locks even when team locks need to be relaxed", () => {
+      // Create a scenario where team locks conflict but role locks must still hold
+      // All 4 tanks try to lock to team 1 - impossible to satisfy team locks
+      // But player with role lock to Support MUST still get Support
+      const players = [
+        createLobbyPlayer("Tank1#1", ["Tank"], { lockedToTeam: 1 }),
+        createLobbyPlayer("Tank2#2", ["Tank"], { lockedToTeam: 1 }),
+        createLobbyPlayer("Tank3#3", ["Tank"], { lockedToTeam: 1 }), // Extra tank
+        createLobbyPlayer("FlexRoleLocked#4", ["Tank", "DPS", "Support"], { 
+          lockedToRole: "Support",
+          lockedToTeam: 1, // Both role and team lock
+          supportRank: "Pro 3",
+        }),
+        createLobbyPlayer("DPS1#5", ["DPS"]),
+        createLobbyPlayer("DPS2#6", ["DPS"]),
+        createLobbyPlayer("DPS3#7", ["DPS"]),
+        createLobbyPlayer("DPS4#8", ["DPS"]),
+        createLobbyPlayer("Support1#9", ["Support"]),
+        createLobbyPlayer("Support2#10", ["Support"]),
+        createLobbyPlayer("Support3#11", ["Support"]),
+      ];
+
+      const result = balanceTeams(players);
+
+      // Balancer may need to relax team locks (too many on team 1)
+      // But role lock MUST always be respected
+      const allAssigned = [...result.team1, ...result.team2];
+      const roleLockedPlayer = allAssigned.find((a) => a.player.battletag === "FlexRoleLocked#4");
+      
+      // The role lock must be honored regardless of team lock relaxation
+      expect(roleLockedPlayer).toBeDefined();
+      expect(roleLockedPlayer?.assignedRole).toBe("Support");
+    });
+
     it("should try to keep together constraint players on same team", () => {
       const players = [
         createLobbyPlayer("Tank1#1", ["Tank"]),
