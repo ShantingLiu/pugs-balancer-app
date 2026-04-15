@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TeamDisplay } from "./TeamDisplay";
 import { useSessionStore } from "@store/sessionStore";
@@ -73,10 +73,8 @@ function createMockResult(): TeamAssignment {
   return {
     team1,
     team2,
-    satOut: [],
     warnings: [],
-    team1AvgSR: 3000,
-    team2AvgSR: 3000,
+    score: { team1SR: 3000, team2SR: 3000, srDifference: 0, archetypeParityMet: true },
   };
 }
 
