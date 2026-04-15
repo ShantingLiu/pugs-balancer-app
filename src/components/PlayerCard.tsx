@@ -145,7 +145,7 @@ export function PlayerCard({
 
       {/* Status badges */}
       {(lobbyPlayer?.mustPlay || lobbyPlayer?.lockedToTeam || lobbyPlayer?.isAfk || 
-        (lobbyPlayer && lobbyPlayer.consecutiveLosses > 0) || player.isOneTrick) && (
+        (showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0) || player.isOneTrick) && (
         <div className="flex gap-1 mb-2">
           {lobbyPlayer?.mustPlay && (
             <span className="px-1.5 py-0.5 text-xs bg-yellow-600 rounded">
@@ -162,7 +162,7 @@ export function PlayerCard({
               AFK
             </span>
           )}
-          {lobbyPlayer && lobbyPlayer.consecutiveLosses > 0 && (
+          {showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-red-700 rounded">
               📉L{lobbyPlayer.consecutiveLosses}
             </span>

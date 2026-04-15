@@ -339,7 +339,7 @@ export function LobbySelector() {
               ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
               : "bg-gray-800 text-gray-500 hover:bg-gray-700"
           }`}
-          title={showWeightModifiers ? "Hide manual weight modifiers (W/L adjustments still visible)" : "Show manual weight modifiers"}
+          title={showWeightModifiers ? "Hide weight modifiers and loss streaks" : "Show weight modifiers and loss streaks"}
         >
           {showWeightModifiers ? "👁️" : "👁️‍🗨️"}
         </button>
