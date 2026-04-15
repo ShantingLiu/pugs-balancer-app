@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { TeamAssignment, Player, RoleAssignment, LobbyPlayer, GameMode } from "@engine/types";
 import { TeamColumn } from "./TeamColumn";
 import { WarningsPanel } from "./WarningsPanel";
@@ -57,6 +57,19 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [postMatchPending, setPostMatchPending] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null); // Lifted state for cross-team swaps
+  
+  // Track previous result to detect reshuffles
+  const prevResultRef = useRef<TeamAssignment | null>(null);
+  
+  // Bug #27 fix: Reset postMatchPending when result changes (e.g., user clicks Reshuffle)
+  // This ensures "Team X Won" buttons reappear after a reshuffle
+  useEffect(() => {
+    if (result !== prevResultRef.current && result !== null) {
+      // Result changed to a new (non-null) value - reset post-match state
+      setPostMatchPending(false);
+    }
+    prevResultRef.current = result;
+  }, [result]);
   
   const requiredPlayers = getRequiredPlayers(gameMode);
   
