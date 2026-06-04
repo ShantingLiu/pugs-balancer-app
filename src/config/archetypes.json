@@ -2,8 +2,8 @@
   "archetypes": {
     "flyer": ["Pharah", "Echo"],
     "hitscan": ["Soldier: 76", "Cassidy", "Ashe", "Widowmaker", "Sojourn"],
-    "main_healer": ["Ana", "Kiriko", "Moira", "Baptiste"],
-    "off_healer": ["Mercy", "Lucio", "Zenyatta", "Brigitte", "Lifeweaver", "Juno", "Illari"],
+    "main_healer": ["Ana", "Kiriko", "Moira", "Baptiste", "Mercy", "Brigitte", "Lifeweaver"],
+    "off_healer": ["Lucio", "Zenyatta", "Juno", "Illari", "Jetpack Cat"],
     "dive_tank": ["Winston", "D.Va", "Wrecking Ball"],
     "anchor_tank": ["Reinhardt", "Orisa", "Sigma", "Ramattra"],
     "brawl_tank": ["Junker Queen", "Mauga", "Roadhog", "Zarya"]

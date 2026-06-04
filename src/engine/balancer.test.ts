@@ -518,6 +518,60 @@ describe("balancer", () => {
       expect(result.team2).toHaveLength(5);
       expect(result.warnings.some((w) => w.severity === "error")).toBe(false);
     });
+
+    it("should prioritize must-play players by priority first, then consecutiveSatOut, then lobby join order", () => {
+      const players = [
+        createLobbyPlayer("P1#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P2#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 2 }), // Should play (highest satOut)
+        createLobbyPlayer("P3#1", ["DPS"], { mustPlay: true, mustPlayPriority: 1, consecutiveSatOut: 2 }), // Should sit out (lower priority)
+        createLobbyPlayer("P4#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P5#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P6#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P7#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P8#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P9#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P10#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P11#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P12#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }), // P12 index 11 (lobby index) - Should sit out (joined last)
+      ];
+
+      const result = balanceTeams(players);
+      const allAssigned = [...result.team1, ...result.team2].map(ra => ra.player.battletag);
+      
+      expect(allAssigned).toContain("P2#1");
+      expect(allAssigned).not.toContain("P3#1");
+      expect(allAssigned).not.toContain("P12#1");
+    });
+
+    it("should prune must-play players by finding a valid subset when there is a role overflow", () => {
+      // 12 must-play players. 3 are Tanks (P1, P2, P3), but only 2 Tank slots exist.
+      // 5 are DPS, 4 are Supports.
+      // The balancer should successfully drop the lowest priority Tank (P3) and find a valid team composition.
+      const players = [
+        createLobbyPlayer("P1#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P2#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 2 }), // High priority Tank
+        createLobbyPlayer("P3#1", ["Tank"], { mustPlay: true, mustPlayPriority: 1, consecutiveSatOut: 1 }), // Low priority Tank (should sit out)
+        createLobbyPlayer("P4#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P5#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P6#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P7#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P8#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P9#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P10#1", ["Support"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P11#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }),
+        createLobbyPlayer("P12#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2, consecutiveSatOut: 1 }), // P12 index 11 (lobby index) - Should sit out (joined last)
+      ];
+
+      const result = balanceTeams(players);
+      const allAssigned = [...result.team1, ...result.team2].map(ra => ra.player.battletag);
+      
+      expect(result.warnings.some(w => w.severity === "error")).toBe(false);
+      expect(allAssigned).toHaveLength(10);
+      expect(allAssigned).toContain("P2#1");
+      expect(allAssigned).toContain("P1#1");
+      expect(allAssigned).not.toContain("P3#1"); // P3 Tank should be pruned
+      expect(allAssigned).not.toContain("P12#1"); // P12 DPS should be pruned (joined last)
+    });
   });
 
   describe("statistical quality", () => {

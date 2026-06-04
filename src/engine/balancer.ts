@@ -622,13 +622,71 @@ export function balanceTeams(
   const hadMustPlayOverflow = mustPlayPlayers.length > requiredPlayers;
   
   if (hadMustPlayOverflow) {
-    // Sort by priority first (sat-out waiting > joined mid-match), then by sat-out streak
+    // Sort by priority first.
+    // Note: mustPlayPriority levels are sorted 2 > 1 > 0:
+    //   2 = sat out waiting / manual must-play (highest priority)
+    //   1 = joined mid-match / returned from AFK (medium priority)
+    //   0 = normal / played last game (lowest priority)
     const sortedByPriority = [...mustPlayPlayers].sort((a, b) => {
       const priorityDiff = b.mustPlayPriority - a.mustPlayPriority;
       if (priorityDiff !== 0) return priorityDiff;
-      return b.consecutiveSatOut - a.consecutiveSatOut;
+      
+      const satOutDiff = b.consecutiveSatOut - a.consecutiveSatOut;
+      if (satOutDiff !== 0) return satOutDiff;
+      
+      // Tie-breaker: who joined the lobby first (earlier index in lobby array)
+      const indexA = lobby.findIndex((p) => p.battletag === a.battletag);
+      const indexB = lobby.findIndex((p) => p.battletag === b.battletag);
+      return indexA - indexB;
     });
-    const keepMustPlay = new Set(sortedByPriority.slice(0, requiredPlayers).map((p) => p.battletag));
+
+    // Helper to find first valid subset in lexicographical order of indices
+    const findValidSubset = (
+      players: LobbyPlayer[],
+      neededSize: number
+    ): LobbyPlayer[] | null => {
+      if (neededSize === 0) return [];
+      
+      const result: LobbyPlayer[] = [];
+      let iterations = 0;
+      const maxIterations = 5000;
+      
+      const search = (startIndex: number): boolean => {
+        iterations++;
+        if (iterations > maxIterations) return false;
+
+        if (result.length === neededSize) {
+          return canFormValidTeams(result, mode).valid;
+        }
+        
+        if (result.length + (players.length - startIndex) < neededSize) {
+          return false;
+        }
+        
+        for (let i = startIndex; i < players.length; i++) {
+          result.push(players[i]);
+          if (search(i + 1)) {
+            return true;
+          }
+          result.pop();
+        }
+        
+        return false;
+      };
+      
+      if (search(0)) return result;
+      return null;
+    };
+
+    // Find the largest valid subset of size <= requiredPlayers
+    let keepMustPlay: Set<string> = new Set();
+    for (let size = requiredPlayers; size >= 0; size--) {
+      const subset = findValidSubset(sortedByPriority, size);
+      if (subset) {
+        keepMustPlay = new Set(subset.map((p) => p.battletag));
+        break;
+      }
+    }
     
     // Update players - clear must-play for those not selected
     for (const player of activePlayers) {

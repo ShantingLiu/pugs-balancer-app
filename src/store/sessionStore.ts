@@ -457,12 +457,20 @@ export const useSessionStore = create<SessionStore>()(
       toggleMustPlay: (battletag: string) => {
         set((state) => {
           const newSet = new Set(state.mustPlay);
+          const newPriority = new Map(state.mustPlayPriority);
           if (newSet.has(battletag)) {
             newSet.delete(battletag);
+            newPriority.delete(battletag);
           } else {
             newSet.add(battletag);
+            // Manual must-play players get priority 2.
+            // Note: mustPlayPriority levels are sorted 2 > 1 > 0:
+            //   2 = sat out waiting / manual must-play (highest priority)
+            //   1 = joined mid-match / returned from AFK (medium priority)
+            //   0 = normal / played last game (lowest priority)
+            newPriority.set(battletag, 2);
           }
-          return { mustPlay: newSet };
+          return { mustPlay: newSet, mustPlayPriority: newPriority };
         });
       },
 
@@ -619,16 +627,23 @@ export const useSessionStore = create<SessionStore>()(
         const state = get();
         const newAfkPlayers = new Set(state.afkPlayers);
         const newMustPlay = new Set(state.mustPlay);
+        const newMustPlayPriority = new Map(state.mustPlayPriority);
         const isBecomingAfk = !newAfkPlayers.has(battletag);
         
         if (isBecomingAfk) {
-          // Marking as AFK - remove must-play
+          // Marking as AFK - remove must-play and priority
           newAfkPlayers.add(battletag);
           newMustPlay.delete(battletag);
+          newMustPlayPriority.delete(battletag);
         } else {
-          // Unmarking as AFK - auto-set must-play
+          // Unmarking as AFK - auto-set must-play and set priority to 1.
+          // Note: mustPlayPriority levels are sorted 2 > 1 > 0:
+          //   2 = sat out waiting / manual must-play (highest priority)
+          //   1 = joined mid-match / returned from AFK (medium priority)
+          //   0 = normal / played last game (lowest priority)
           newAfkPlayers.delete(battletag);
           newMustPlay.add(battletag);
+          newMustPlayPriority.set(battletag, 1);
         }
 
         // Check if this player is in the current result
@@ -637,8 +652,8 @@ export const useSessionStore = create<SessionStore>()(
           state.lastResult.team2.some((ra) => ra.player.battletag === battletag)
         );
 
-        // Update AFK/must-play state first
-        set({ afkPlayers: newAfkPlayers, mustPlay: newMustPlay });
+        // Update AFK/must-play/priority state first
+        set({ afkPlayers: newAfkPlayers, mustPlay: newMustPlay, mustPlayPriority: newMustPlayPriority });
 
         // If player was in result and is becoming AFK, auto-reshuffle
         if (isBecomingAfk && isInResult) {
@@ -1045,27 +1060,31 @@ export const useSessionStore = create<SessionStore>()(
             ...state.lastResult.team2.map((ra) => ra.player.battletag),
           ]);
           
-          // Track sat-out streaks
+          // Track sat-out streaks and priority
           const newSatOutStreaks = new Map(state.satOutStreaks);
+          const newMustPlayPriority = new Map(state.mustPlayPriority);
           
-          // Players who played have their sat-out streak reset
+          // Players who played have their sat-out streak reset and priority cleared
           for (const bt of playedBattletags) {
             newSatOutStreaks.delete(bt);
+            newMustPlayPriority.delete(bt);
           }
           
-          // Players in lobby but not in last game get their streak incremented
+          // Players in lobby but not in last game get their streak incremented and priority set to 2
           const satOutPlayers: string[] = [];
           for (const bt of state.lobbyBattletags) {
             if (!state.afkPlayers.has(bt) && !playedBattletags.has(bt)) {
               satOutPlayers.push(bt);
               const currentStreak = newSatOutStreaks.get(bt) ?? 0;
               newSatOutStreaks.set(bt, currentStreak + 1);
+              newMustPlayPriority.set(bt, 2);
             }
           }
 
           set({
             lastGamePlayers: playedBattletags,
             mustPlay: new Set(satOutPlayers),
+            mustPlayPriority: newMustPlayPriority,
             satOutStreaks: newSatOutStreaks,
             lastResult: null,
           });
@@ -1130,16 +1149,18 @@ export const useSessionStore = create<SessionStore>()(
           [currentMode]: newModeLosses,
         };
 
-        // Track sat-out streaks and totals
+        // Track sat-out streaks, totals, and priority
         const newSatOutStreaks = new Map(state.satOutStreaks);
         const newTotalSatOut = new Map(state.totalSatOut);
+        const newMustPlayPriority = new Map(state.mustPlayPriority);
         
-        // Players who played have their sat-out streak reset
+        // Players who played have their sat-out streak reset and priority cleared
         for (const bt of playedBattletags) {
           newSatOutStreaks.delete(bt);
+          newMustPlayPriority.delete(bt);
         }
         
-        // Players in lobby but not in last game get their streak incremented and become must-play
+        // Players in lobby but not in last game get their streak incremented, become must-play, and get priority 2
         const satOutPlayers: string[] = [];
         for (const bt of state.lobbyBattletags) {
           if (!state.afkPlayers.has(bt) && !playedBattletags.has(bt)) {
@@ -1148,6 +1169,7 @@ export const useSessionStore = create<SessionStore>()(
             newSatOutStreaks.set(bt, currentStreak + 1);
             const currentTotal = newTotalSatOut.get(bt) || 0;
             newTotalSatOut.set(bt, currentTotal + 1);
+            newMustPlayPriority.set(bt, 2);
           }
         }
 
@@ -1158,6 +1180,7 @@ export const useSessionStore = create<SessionStore>()(
           totalLosses: newTotalLosses,
           totalSatOut: newTotalSatOut,
           mustPlay: new Set(satOutPlayers),
+          mustPlayPriority: newMustPlayPriority,
           lastGamePlayers: playedBattletags,
           lastResult: null, // Clear result so UI shows lobby
           lockedTeam1: new Set(), // Clear all locks after match

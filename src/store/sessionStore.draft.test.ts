@@ -594,3 +594,82 @@ describe("addToLobby", () => {
     expect(lobby).toEqual(["A#1"]);
   });
 });
+
+describe("mustPlayPriority updates", () => {
+  it("should set priority to 2 for sat-out players and clear priority for played players in recordMatchResult", () => {
+    seedLobby(["P1#1", "P2#2", "P3#3", "P4#4", "P5#5", "P6#6", "P7#7", "P8#8", "P9#9", "P10#10", "P11#11"], [
+      ["Tank"], ["Tank"], ["DPS"], ["DPS"], ["DPS"], ["DPS"], ["Support"], ["Support"], ["Support"], ["Support"], ["Tank"]
+    ]);
+    
+    useSessionStore.setState({
+      mustPlayPriority: new Map([["P11#11", 1]]),
+    });
+
+    const mockResult = {
+      team1: [
+        { player: { battletag: "P1#1" } as any, assignedRole: "Tank" as const, effectiveSR: 3000 },
+        { player: { battletag: "P3#3" } as any, assignedRole: "DPS" as const, effectiveSR: 3000 },
+        { player: { battletag: "P5#5" } as any, assignedRole: "DPS" as const, effectiveSR: 3000 },
+        { player: { battletag: "P7#7" } as any, assignedRole: "Support" as const, effectiveSR: 3000 },
+        { player: { battletag: "P9#9" } as any, assignedRole: "Support" as const, effectiveSR: 3000 },
+      ],
+      team2: [
+        { player: { battletag: "P2#2" } as any, assignedRole: "Tank" as const, effectiveSR: 3000 },
+        { player: { battletag: "P4#4" } as any, assignedRole: "DPS" as const, effectiveSR: 3000 },
+        { player: { battletag: "P6#6" } as any, assignedRole: "DPS" as const, effectiveSR: 3000 },
+        { player: { battletag: "P8#8" } as any, assignedRole: "Support" as const, effectiveSR: 3000 },
+        { player: { battletag: "P11#11" } as any, assignedRole: "Support" as const, effectiveSR: 3000 },
+      ],
+      score: { team1SR: 3000, team2SR: 3000, srDifference: 0, archetypeParityMet: true },
+      warnings: [],
+    };
+    useSessionStore.getState().setLastResult(mockResult);
+
+    useSessionStore.getState().recordMatchResult(1);
+
+    const state = useSessionStore.getState();
+    expect(state.mustPlayPriority.get("P11#11")).toBeUndefined();
+    expect(state.mustPlayPriority.get("P10#10")).toBe(2);
+  });
+
+  it("should set priority to 2 when manually toggling mustPlay on", () => {
+    seedLobby(["A#1"]);
+    
+    useSessionStore.getState().toggleMustPlay("A#1");
+    expect(useSessionStore.getState().mustPlayPriority.get("A#1")).toBe(2);
+    
+    useSessionStore.getState().toggleMustPlay("A#1");
+    expect(useSessionStore.getState().mustPlayPriority.get("A#1")).toBeUndefined();
+  });
+
+  it("should set priority to 1 when unmarking AFK, and clear when going AFK", () => {
+    seedLobby(["A#1"]);
+    
+    useSessionStore.getState().toggleAfk("A#1");
+    expect(useSessionStore.getState().mustPlayPriority.get("A#1")).toBeUndefined();
+    
+    useSessionStore.getState().toggleAfk("A#1");
+    expect(useSessionStore.getState().mustPlayPriority.get("A#1")).toBe(1);
+    
+    useSessionStore.getState().toggleAfk("A#1");
+    expect(useSessionStore.getState().mustPlayPriority.get("A#1")).toBeUndefined();
+  });
+
+  it("should set priority to 1 and mustPlay to true when unmarking AFK, even if many players are in the lobby", () => {
+    const lobbyPlayers = ["A#1", "P1#1", "P2#2", "P3#3", "P4#4", "P5#5", "P6#6", "P7#7", "P8#8", "P9#9", "P10#10"];
+    seedLobby(lobbyPlayers);
+    
+    // Set A#1 to AFK
+    useSessionStore.setState({
+      afkPlayers: new Set(["A#1"]),
+    });
+    
+    // Now toggle A#1's AFK status back (unmarking AFK)
+    useSessionStore.getState().toggleAfk("A#1");
+    
+    // A#1 should be marked mustPlay and should have mustPlayPriority of 1
+    const state = useSessionStore.getState();
+    expect(state.mustPlay.has("A#1")).toBe(true);
+    expect(state.mustPlayPriority.get("A#1")).toBe(1);
+  });
+});
