@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 tasks-stadiumPugsBalancer.md
+
+.hallmark/

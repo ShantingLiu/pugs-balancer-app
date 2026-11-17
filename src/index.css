@@ -1,31 +1,132 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Console (deal 2/3, seed desktop-pug-team-balancer-workbench-f51b·4f012c82·2026-11-17·r0)
+ * nav: edge toolbar · signature: team workspace ledger · states: lobby, result, sync · console: graphite
+ * axes: dark/grotesk-sans/chromatic-amber · posture: restrained · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 · weakest: S, Console treated like a terminal; led with the team ledger and measured readings instead */
 @import "tailwindcss";
+@import "./tokens.css";
+@import "./base.css" layer(base);
 
-/* Base styles */
 body {
-  @apply min-h-screen bg-gray-900 text-gray-100;
+  min-height: 100vh;
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 
-/* Custom scrollbar styling */
+button,
+input,
+select,
+textarea {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: var(--dur-short);
+  transition-timing-function: var(--ease-out);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bg-gray-900 {
+  background: var(--color-paper) !important;
+}
+
+.bg-gray-800\/50,
+.bg-gray-800 {
+  background: var(--color-paper-2) !important;
+}
+
+.bg-gray-700 {
+  background: var(--color-paper-2) !important;
+}
+
+.border-gray-700,
+.border-gray-600 {
+  border-color: var(--color-rule) !important;
+}
+
+.text-gray-100,
+.text-white {
+  color: var(--color-ink) !important;
+}
+
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+  color: var(--color-muted) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--radius-card) !important;
+}
+
+.rounded-lg,
+.rounded {
+  border-radius: var(--radius-pill) !important;
+}
+
+.shadow-xl,
+.shadow-2xl,
+.shadow-lg,
+.shadow-md,
+.shadow {
+  box-shadow: none !important;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-paper);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-  border-radius: 4px;
+  background: var(--color-rule-2);
+  border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: var(--color-muted);
 }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #4b5563 transparent;
+::-webkit-scrollbar-corner {
+  background: var(--color-paper);
+}
+
+.app-toolbar {
+  background: var(--color-paper-3);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
+.app-surface {
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-card);
+}
+
+.app-surface-selected {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.app-measured {
+  font-family: var(--font-outlier);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+.app-primary {
+  background: var(--color-accent) !important;
+  border: var(--rule-hair) solid var(--color-accent) !important;
+  color: var(--color-accent-ink) !important;
+}
+
+.app-secondary {
+  background: var(--color-paper-2) !important;
+  border: var(--rule-hair) solid var(--color-rule-2) !important;
+  color: var(--color-ink) !important;
 }

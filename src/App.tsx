@@ -14,7 +14,6 @@ import { SheetSetupModal } from "@components/SheetSetupModal";
 import { DraftView } from "@components/DraftView";
 import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
-import { useTheme } from "@hooks/useTheme";
 import { performSync, applySyncResult } from "@services/sheetSync";
 import { initAuth } from "@services/googleAuth";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "@config/google";
@@ -27,7 +26,6 @@ function App() {
   const setDraftMode = useSessionStore((state) => state.setDraftMode);
   const fontScale = useSessionStore((state) => state.fontScale);
   const cycleFontScale = useSessionStore((state) => state.cycleFontScale);
-  const theme = useTheme();
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
 
   const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
@@ -92,24 +90,25 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
-      {/* Header */}
-      <header className={`${theme.header.bg} border-b ${theme.header.border} px-6 py-4 transition-colors`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            Swoo's PUGs Balancer
-          </h1>
-          <div className="flex items-center gap-4">
+      <header className="app-toolbar px-6 py-3">
+        <div className="container flex items-center justify-between gap-6 px-0">
+          <div className="min-w-0">
+            <h1 className="text-xl font-medium">
+              Swoo’s PUGs Balancer
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSheetSetup(true)}
-              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium"
+              className="app-secondary px-3 py-2 rounded-lg text-sm font-medium"
             >
-              Sheets ▼
+              Sheets
             </button>
             <SyncButton onClick={handleSync} />
             <ModeSelector />
             <button
               onClick={cycleFontScale}
-              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-bold min-w-[40px] transition-colors"
+              className="app-secondary px-3 py-2 rounded-lg text-sm font-medium min-w-10"
               title={`Font size: ${fontScale} (click to cycle)`}
             >
               {fontLabel}
@@ -120,12 +119,12 @@ function App() {
 
       {/* Sync error / info toast */}
       {syncError && (
-        <div className="max-w-7xl mx-auto px-6 pt-3">
+        <div className="container pt-3">
           <div
-            className={`p-3 rounded-lg text-sm flex items-center justify-between ${
+            className={`px-3 py-2 rounded-lg text-sm flex items-center justify-between border ${
               syncError === "Everything is up to date."
-                ? "bg-green-900/40 border border-green-600 text-green-300"
-                : "bg-red-900/40 border border-red-500 text-red-300"
+                ? "border-green-600 text-green-300 bg-green-950/30"
+                : "border-red-500 text-red-300 bg-red-950/30"
             }`}
           >
             <span>
@@ -147,6 +146,7 @@ function App() {
             <button
               onClick={() => setSyncError(null)}
               className="ml-4 text-gray-400 hover:text-gray-200"
+              aria-label="Dismiss sync message"
             >
               ✕
             </button>
@@ -169,71 +169,69 @@ function App() {
       )}
 
       {/* Main content */}
-      <main className="p-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="container py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left column: Import & Lobby (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+          <div className="lg:col-span-4 space-y-4">
+            <section className="app-surface p-4">
               <CsvImporter />
-            </div>
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+            </section>
+            <section className="app-surface p-4">
               <LobbySelector />
-            </div>
+            </section>
           </div>
 
           {/* Center/Right: Balance + Team Composition + Constraints (8 cols) */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-4">
             {/* Draft/Balance toggle */}
-            <div className="flex gap-1 bg-gray-800/50 rounded-xl p-1 border border-gray-700">
+            <nav className="app-surface flex gap-1 p-1" aria-label="Team planning mode">
               <button
                 onClick={() => setDraftMode(false)}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium ${
                   !draftMode
-                    ? "bg-gray-600 text-white"
-                    : "text-gray-400 hover:text-gray-200"
+                    ? "app-primary"
+                    : "text-muted"
                 }`}
               >
-                ⚖️ Balance
+                Balance
               </button>
               <button
                 onClick={() => setDraftMode(true)}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium ${
                   draftMode
-                    ? "bg-gray-600 text-white"
-                    : "text-gray-400 hover:text-gray-200"
+                    ? "app-primary"
+                    : "text-muted"
                 }`}
               >
-                👥 Draft
+                Draft
               </button>
-            </div>
+            </nav>
 
             {draftMode ? (
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                <h2 className="text-lg font-semibold mb-4">Captain Draft</h2>
+              <section className="app-surface p-4">
                 <DraftView />
-              </div>
+              </section>
             ) : (
               <>
-                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                <section className="app-surface p-3">
                   <BalanceButton />
-                </div>
-                <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                  <h2 className="text-lg font-semibold mb-4">Team Composition</h2>
+                </section>
+                <section className="app-surface p-4">
                   <TeamDisplay result={lastResult} />
-                </div>
+                </section>
               </>
             )}
             <SpectatorsList />
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+            <section className="app-surface p-4">
               <ConstraintsPanel />
-            </div>
+            </section>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+              <section className="app-surface p-4">
                 <StatsPanel />
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+              </section>
+              <section className="app-surface p-4">
                 <Leaderboard />
-              </div>
+              </section>
             </div>
           </div>
         </div>
