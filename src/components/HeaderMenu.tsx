@@ -85,10 +85,11 @@ export function HeaderMenu({ onOpenSheets, onSync }: HeaderMenuProps) {
           onClick={() => setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
           aria-haspopup="menu"
-          className="relative app-secondary inline-flex items-center gap-2 px-3.5 py-2 rounded-pill text-sm font-semibold"
+          aria-label="Menu"
+          className="relative app-secondary inline-flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-pill text-sm font-semibold"
         >
           <Menu className="h-4 w-4" aria-hidden="true" />
-          <span>Menu</span>
+          <span className="hidden sm:inline">Menu</span>
           {showUnsyncDot && (
             <span
               data-testid="menu-unsync-badge"

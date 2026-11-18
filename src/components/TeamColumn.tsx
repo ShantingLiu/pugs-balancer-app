@@ -109,6 +109,48 @@ function getRoleBadgeColor(role: Role): string {
   }
 }
 
+interface ExpandActionButtonProps {
+  icon: ReactNode;
+  label: string;
+  ariaLabel: string;
+  onClick: () => void;
+  className: string;
+  ariaExpanded?: boolean;
+  ariaPressed?: boolean;
+  expanded?: boolean;
+}
+
+/** Compact icon button that smoothly expands its text label on hover, focus, or active state. */
+function ExpandActionButton({
+  icon,
+  label,
+  ariaLabel,
+  onClick,
+  className,
+  ariaExpanded,
+  ariaPressed,
+  expanded,
+}: ExpandActionButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-expanded={ariaExpanded}
+      aria-pressed={ariaPressed}
+      data-expanded={expanded ? "true" : undefined}
+      className={`app-expand-btn px-2 py-1 text-xs font-semibold border rounded-pill shrink-0 ${className}`}
+    >
+      {icon}
+      <span className="app-expand-label" aria-hidden="true">
+        <span>
+          <span className="inline-block pl-1.5">{label}</span>
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function TeamColumn({
   teamNumber,
   assignments,
@@ -159,30 +201,32 @@ export function TeamColumn({
   const isTeam1 = teamNumber === 1;
 
   return (
-    <div className={`${isTeam1 ? "app-team-1" : "app-team-2"} p-4`}>
+    <div className={`${isTeam1 ? "app-team-1" : "app-team-2"} p-5`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className={`text-xl font-semibold ${isTeam1 ? "text-pink-ink" : "text-sky-ink"}`}>
-          Team {teamNumber}
+        <h3 className={`text-xl font-bold app-display flex items-center gap-2.5 ${isTeam1 ? "text-pink-ink" : "text-sky-ink"}`}>
+          <span>Team {teamNumber}</span>
+          <span
+            className={`text-xs font-bold px-2.5 py-0.5 rounded-pill border ${
+              isTeam1
+                ? "bg-team-1-pill border-team-1-edge text-pink-ink"
+                : "bg-team-2-pill border-team-2-edge text-sky-ink"
+            }`}
+            title={`${averageSR.toFixed(0)} SR`}
+          >
+            {formatRankOnly(averageSR, gameMode)}
+          </span>
         </h3>
-        <div
-          className={`text-base font-semibold px-3 py-1 rounded-pill bg-paper-2 border ${
-            isTeam1 ? "border-pink-edge text-pink-ink" : "border-sky-edge text-sky-ink"
-          }`}
-          title={`${averageSR.toFixed(0)} SR`}
-        >
-          {formatRankOnly(averageSR, gameMode)}
-        </div>
       </div>
 
       {/* Role sections */}
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {byRole.map(({ role, players }) => (
           <div key={role}>
-            <div className={`text-xs font-semibold mb-1.5 ${getRoleColor(role)}`}>
+            <div className={`text-[11px] font-bold uppercase tracking-wider mb-1.5 ${getRoleColor(role)}`}>
               {role}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {players.map((assignment) => {
                 const battletag = assignment.player.battletag;
                 const lobbyPlayer = lobbyMap.get(battletag);
@@ -194,7 +238,7 @@ export function TeamColumn({
                 return (
                   <div
                     key={assignment.player.battletag}
-                    className={`px-3 py-2 rounded-well border group flex gap-3 app-card-interactive ${
+                    className={`p-3 rounded-well border group flex gap-3 app-card-interactive ${
                       isSwapSource
                         ? "border-sky-edge ring-2 ring-focus bg-sky-soft"
                         : isLocked
@@ -204,7 +248,7 @@ export function TeamColumn({
                   >
                     {/* Role badge */}
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-pill shrink-0 self-center ${getRoleBadgeColor(
+                      className={`w-8 h-8 inline-flex items-center justify-center text-xs font-bold rounded-pill shrink-0 self-center ${getRoleBadgeColor(
                         assignment.assignedRole
                       )}`}
                     >
@@ -278,43 +322,36 @@ export function TeamColumn({
 
                         <div className="flex items-center gap-1 shrink-0">
                           {/* Swap button */}
-                          <button
-                            type="button"
+                          <ExpandActionButton
+                            icon={<ArrowLeftRight className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                            label={isSwapSource ? "Cancel" : "Swap"}
+                            ariaLabel={`Swap ${assignment.player.battletag.split("#")[0]}`}
+                            ariaPressed={isSwapSource}
+                            expanded={isSwapSource}
                             onClick={() => onSwapClick(battletag)}
-                            className={`px-2 py-1 text-xs rounded-pill border shrink-0 ${
+                            className={
                               isSwapSource
-                                ? "bg-sky border-sky-edge text-ink"
+                                ? "bg-sky border-sky-edge text-sky-btn-ink opacity-100"
                                 : swapSource
                                 ? "bg-sky-soft border-sky-edge text-sky-ink animate-pulse"
-                                : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                            }`}
-                            title={
-                              isSwapSource
-                                ? "Click to cancel"
-                                : swapSource
-                                ? "Click to swap with selected player"
-                                : "Swap roles with another player"
+                                : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                             }
-                            aria-label={`Swap ${assignment.player.battletag.split("#")[0]}`}
-                          >
-                            <ArrowLeftRight className="h-3 w-3" aria-hidden="true" />
-                          </button>
+                          />
 
                           {/* Substitute button */}
-                          <div className="relative">
-                            <button
-                              type="button"
+                          <div className="relative inline-flex items-center">
+                            <ExpandActionButton
+                              icon={<RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                              label="Substitute"
+                              ariaLabel={`Substitute ${assignment.player.battletag.split("#")[0]}`}
+                              ariaExpanded={substituteOpen === battletag}
                               onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
-                              className={`px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge rounded-pill shrink-0 ${
+                              className={
                                 substituteOpen === battletag
-                                  ? "opacity-100"
-                                  : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                              }`}
-                              title="Substitute player"
-                              aria-label={`Substitute ${assignment.player.battletag.split("#")[0]}`}
-                            >
-                              <RefreshCw className="h-3 w-3" aria-hidden="true" />
-                            </button>
+                                  ? "bg-pink-soft border-pink-edge text-pink-ink opacity-100"
+                                  : "bg-paper-3 border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge hover:text-pink-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                              }
+                            />
                             {substituteOpen === battletag && (
                               <div className="absolute right-0 top-full mt-1 z-50 app-modal min-w-[200px] max-h-[300px] overflow-y-auto">
                                 <div className="p-2.5 text-xs font-semibold text-muted border-b border-rule">
@@ -355,15 +392,13 @@ export function TeamColumn({
 
                           {/* Edit button */}
                           {onEditPlayer && (
-                            <button
-                              type="button"
+                            <ExpandActionButton
+                              icon={<Pencil className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                              label="Edit"
+                              ariaLabel={`Edit ${assignment.player.battletag.split("#")[0]}`}
                               onClick={() => onEditPlayer(battletag)}
-                              className="px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-sky-soft rounded-pill opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0"
-                              title="Edit player"
-                              aria-label={`Edit ${assignment.player.battletag.split("#")[0]}`}
-                            >
-                              <Pencil className="h-3 w-3" aria-hidden="true" />
-                            </button>
+                              className="bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                            />
                           )}
                         </div>
                       </div>

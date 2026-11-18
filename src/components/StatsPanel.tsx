@@ -73,11 +73,19 @@ export function StatsPanel() {
 
   if (!hasData) {
     return (
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-heading">Session Stats</h3>
-        <p className="text-xs text-muted">
-          Stats will appear after games are played.
-        </p>
+      <div className="flex flex-col justify-between h-full">
+        <div>
+          <h3 className="text-sm font-bold text-heading mb-1.5">Session Stats</h3>
+          <p className="text-xs text-muted">
+            Stats will appear after games are played.
+          </p>
+        </div>
+        <div className="h-28 flex items-center justify-center border border-dashed border-rule rounded-well mt-4 text-muted text-xs">
+          <span className="inline-flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-pill bg-pink-ink animate-ping" aria-hidden="true" />
+            <span>Awaiting match recording...</span>
+          </span>
+        </div>
       </div>
     );
   }

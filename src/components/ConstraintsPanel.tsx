@@ -228,7 +228,9 @@ export function ConstraintsPanel() {
               onClick={handleAdd}
               disabled={!playerA || !playerB || playerA === playerB}
               className={`flex-1 py-2 text-sm font-semibold rounded-pill ${
-                isHard
+                !playerA || !playerB || playerA === playerB
+                  ? "app-quiet"
+                  : isHard
                   ? "bg-warn-soft border border-warn-edge text-warn"
                   : "app-primary"
               }`}

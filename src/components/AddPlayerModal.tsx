@@ -613,7 +613,8 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, weightModifier: parseInt(e.target.value) }))
               }
-              className="w-full accent-focus"
+              style={{ "--range-pct": `${((form.weightModifier + 500) / 1000) * 100}%` } as React.CSSProperties}
+              className="w-full app-range"
             />
             <div className="flex justify-between text-xs text-muted app-measured">
               <span>-500 (weaker)</span>

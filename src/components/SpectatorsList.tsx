@@ -5,6 +5,24 @@ import { useSessionStore } from "@store/sessionStore";
 // SpectatorsList - Shows players sitting out / spectating the current match
 // =============================================================================
 
+const STITCH_CHIP_VARIANTS = [
+  "app-chip--sky",
+  "app-chip--slate",
+  "app-chip--purple",
+  "app-chip--slate",
+  "app-chip--amber",
+  "app-chip--pink",
+  "app-chip--emerald",
+] as const;
+
+function getSpectatorChipVariant(battletag: string, index: number): string {
+  let hash = index;
+  for (let i = 0; i < battletag.length; i++) {
+    hash = (hash * 31 + battletag.charCodeAt(i)) >>> 0;
+  }
+  return STITCH_CHIP_VARIANTS[hash % STITCH_CHIP_VARIANTS.length];
+}
+
 export function SpectatorsList() {
   const lastResult = useSessionStore((state) => state.lastResult);
   const lobbyBattletags = useSessionStore((state) => state.lobbyBattletags);
@@ -43,23 +61,27 @@ export function SpectatorsList() {
 
   return (
     <section className="app-surface p-5">
-      <h2 className="text-sm font-semibold text-ink-2 mb-3">
-        Sitting Out / Spectating ({spectators.length})
+      <h2 className="text-sm font-bold text-ink-2 mb-3 flex items-center gap-2">
+        <span>Sitting Out / Spectating</span>
+        <span className="text-xs px-2 py-0.5 rounded-pill bg-paper-3 text-muted border border-rule font-semibold">
+          ({spectators.length})
+        </span>
       </h2>
       <div className="flex flex-wrap gap-2">
-        {spectators.map((bt) => {
+        {spectators.map((bt, idx) => {
           const name = bt.split("#")[0];
           const isAfk = afkPlayers.has(bt);
           const isMustPlay = mustPlay.has(bt) || (draftMode && !isAfk);
+          const chipVariant = getSpectatorChipVariant(bt, idx);
           return (
             <span
               key={bt}
-              className={`px-3 py-1 text-sm font-semibold rounded-pill border ${
+              className={`px-3 py-1 text-xs font-semibold rounded-pill border ${
                 isAfk
                   ? "bg-paper-3 border-rule text-muted"
                   : isMustPlay
-                  ? "bg-warn-soft border-warn-edge text-warn"
-                  : "bg-sky-soft border-sky-edge text-sky-ink"
+                  ? "app-chip--amber"
+                  : chipVariant
               }`}
               title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "")}
             >

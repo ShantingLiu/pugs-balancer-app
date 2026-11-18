@@ -201,11 +201,13 @@ function DraftPlayerCard({
     );
   };
 
+  const isSubdued = Boolean(player.isAfk || dimmed);
+
   return (
     <div
-      className={`app-player-row app-card-interactive flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
-        player.isAfk ? "opacity-55" : ""
-      } ${dimmed ? "opacity-45" : ""}`}
+      className={`app-card-interactive flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
+        isSubdued ? "bg-paper-2 text-muted" : "app-player-row"
+      }`}
       onClick={(e) => onClick(e)}
       draggable={isDraggable}
       onDragStart={(e) => {
@@ -234,12 +236,12 @@ function DraftPlayerCard({
             {getRoleLabel(displayRole)}
             {canCycleRole && <RefreshCw className="h-2.5 w-2.5" aria-hidden="true" />}
           </button>
-          <span className="flex-1 min-w-0 font-semibold text-ink break-words">{name}</span>
+          <span className={`flex-1 min-w-0 font-semibold break-words ${isSubdued ? "text-muted" : "text-ink"}`}>{name}</span>
           {formatSRDisplay()}
         </>
       ) : (
         <>
-          <span className="font-semibold text-ink">{name}</span>
+          <span className={`font-semibold ${isSubdued ? "text-muted" : "text-ink"}`}>{name}</span>
           <RoleBadges roles={player.rolesWilling} player={player} gameMode={gameMode} />
         </>
       )}
@@ -647,11 +649,15 @@ export function DraftView() {
                   <span>Team 1</span>
                 </div>
               </div>
-              <div>
+              <div className="space-y-1">
                 {team1.length > 0 && team2.length > 0 ? (
                   <div
-                    className={`text-base app-display ${
-                      srDiff <= 50 ? "text-ok" : srDiff <= 100 ? "text-warn" : "text-bad"
+                    className={`inline-flex items-center px-3 py-0.5 text-sm rounded-pill border app-display ${
+                      srDiff <= 50
+                        ? "bg-ok-soft border-ok-edge text-ok"
+                        : srDiff <= 100
+                        ? "bg-warn-soft border-warn-edge text-warn"
+                        : "bg-bad-soft border-bad-edge text-bad"
                     }`}
                     title={`${srDiff} SR difference`}
                   >
@@ -850,7 +856,7 @@ export function DraftView() {
             <div className="flex flex-wrap gap-3 justify-center">
               <HoldButton
                 onConfirm={() => handleTeamWon(1)}
-                className="py-2.5 px-5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
+                className="py-2.5 px-5 app-win-1 rounded-pill font-semibold inline-flex items-center gap-2"
                 title="Hold for 1 second to confirm Team 1 won"
               >
                 <Trophy className="inline-block w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />

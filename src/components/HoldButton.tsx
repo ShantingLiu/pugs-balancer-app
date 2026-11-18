@@ -66,7 +66,7 @@ export function HoldButton({
       {/* Progress overlay using transform (no width animation) */}
       {isHolding && (
         <div
-          className="absolute inset-0 bg-ink/15 origin-left"
+          className="absolute inset-0 bg-accent-ink/20 origin-left"
           style={{ transform: `scaleX(${progress / 100})` }}
           aria-hidden="true"
         />

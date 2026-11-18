@@ -85,7 +85,8 @@ export function WeightAdjuster({ player, onClose }: WeightAdjusterProps) {
             value={weight}
             onChange={(e) => setWeight(Number(e.target.value))}
             aria-label="Temporary weight override"
-            className="w-full accent-focus"
+            style={{ "--range-pct": `${((weight + 500) / 1000) * 100}%` } as React.CSSProperties}
+            className="w-full app-range"
           />
         </div>
 

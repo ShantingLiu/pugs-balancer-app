@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useRef, useLayoutEffect } from "react";
-import { Eye, EyeOff, Pencil, X, Star } from "lucide-react";
+import { Eye, EyeOff, Pencil, Search, X, Star } from "lucide-react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { PlayerCard } from "./PlayerCard";
@@ -10,6 +10,23 @@ import { getDisplayName } from "@utils/heroUtils";
 import type { Player, LobbyPlayer, Role } from "@engine/types";
 
 type SortOption = "name" | "rank-desc" | "rank-asc" | "role";
+
+const STITCH_CHIP_VARIANTS = [
+  "app-chip--pink",
+  "app-chip--sky",
+  "app-chip--purple",
+  "app-chip--emerald",
+  "app-chip--slate",
+  "app-chip--amber",
+] as const;
+
+function getChipVariant(battletag: string, index: number): string {
+  let hash = index;
+  for (let i = 0; i < battletag.length; i++) {
+    hash = (hash * 31 + battletag.charCodeAt(i)) >>> 0;
+  }
+  return STITCH_CHIP_VARIANTS[hash % STITCH_CHIP_VARIANTS.length];
+}
 
 const ROLE_FILTER_OPTIONS: readonly SelectOption<Role | "all">[] = [
   { value: "all", label: "All Roles" },
@@ -108,6 +125,34 @@ export function LobbySelector() {
     return map;
   }, [lobbyBattletags, players, mustPlay, mustPlayPriority, lockedTeam1, lockedTeam2, lockedRoles, afkPlayers, tempWeightOverrides, adaptiveWeights, playerLossStreaks, satOutStreaks]);
 
+  const lobbySummary = useMemo(() => {
+    let tank = 0;
+    let dps = 0;
+    let support = 0;
+    let mustCount = 0;
+    let afkCount = 0;
+
+    for (const lp of lobbyPlayersMap.values()) {
+      if (lp.isAfk) {
+        afkCount++;
+        continue;
+      }
+      if (lp.mustPlay) mustCount++;
+      if (lp.rolesWilling.includes("Tank")) tank++;
+      if (lp.rolesWilling.includes("DPS")) dps++;
+      if (lp.rolesWilling.includes("Support")) support++;
+    }
+
+    return {
+      activeCount: lobbyPlayersMap.size - afkCount,
+      tank,
+      dps,
+      support,
+      mustCount,
+      afkCount,
+    };
+  }, [lobbyPlayersMap]);
+
   const filteredPlayers = useMemo(() => {
     return allPlayers.filter((p) => {
       if (roleFilter !== "all" && !p.rolesWilling.includes(roleFilter)) {
@@ -204,29 +249,35 @@ export function LobbySelector() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-heading">
-          Lobby ({lobbyBattletags.length - afkPlayers.size} active
-          {afkPlayers.size > 0 && <span className="text-muted"> / {afkPlayers.size} AFK</span>})
+        <h2 className="text-lg font-bold text-heading min-w-0 flex items-center gap-1.5 flex-wrap">
+          <span>Lobby</span>
+          <span className="text-muted text-sm font-semibold">
+            (<span className="num">{lobbySummary.activeCount}</span> active
+            {lobbySummary.afkCount > 0 && (
+              <span> / <span className="num">{lobbySummary.afkCount}</span> AFK</span>
+            )}
+            )
+          </span>
         </h2>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleAddPlayer}
-            className="app-primary px-3 py-1 text-xs font-semibold rounded-pill"
+            className="app-win-1 min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
           >
             + Add
           </button>
           <button
             type="button"
             onClick={handleSelectAll}
-            className="app-secondary px-3 py-1 text-xs font-semibold rounded-pill"
+            className="app-secondary min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
           >
             All
           </button>
           <button
             type="button"
             onClick={handleClearAll}
-            className="app-secondary px-3 py-1 text-xs font-semibold rounded-pill"
+            className="app-secondary min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
           >
             Clear
           </button>
@@ -235,9 +286,14 @@ export function LobbySelector() {
 
       {/* Quick lobby summary */}
       {lobbyBattletags.length > 0 && (
-        <div className="app-well p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-ink-2">In Lobby</span>
+        <div className="app-well p-3.5">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="inline-flex items-center gap-1.5">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">In Lobby</span>
+              <span className="px-2 py-0.5 text-xs font-bold rounded-pill bg-paper-2 text-ink-2 num">
+                {lobbyBattletags.length}
+              </span>
+            </div>
             {selectedBattletag && (
               <button
                 type="button"
@@ -248,55 +304,84 @@ export function LobbySelector() {
               </button>
             )}
           </div>
+
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 mb-2.5 text-xs">
+            <span>
+              <span className="font-semibold text-tank">Tank</span>{" "}
+              <span className="font-semibold text-ink num">{lobbySummary.tank}</span>
+            </span>
+            <span>
+              <span className="font-semibold text-dps">DPS</span>{" "}
+              <span className="font-semibold text-ink num">{lobbySummary.dps}</span>
+            </span>
+            <span>
+              <span className="font-semibold text-sup">Support</span>{" "}
+              <span className="font-semibold text-ink num">{lobbySummary.support}</span>
+            </span>
+            {lobbySummary.mustCount > 0 && (
+              <span className="font-semibold text-warn num">
+                Must {lobbySummary.mustCount}
+              </span>
+            )}
+            {lobbySummary.afkCount > 0 && (
+              <span className="font-semibold text-muted num">
+                AFK {lobbySummary.afkCount}
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
-            {lobbyBattletags.map((bt) => {
+            {lobbyBattletags.map((bt, idx) => {
               const isAfk = afkPlayers.has(bt);
               const isMustPlay = mustPlay.has(bt);
               const isSelected = selectedBattletag === bt;
               const name = getDisplayName(bt);
+              const chipVariant = getChipVariant(bt, idx);
               return (
-                <span
+                <div
                   key={bt}
-                  onClick={() => {
-                    if (selectedBattletag === bt) {
-                      setSelectedBattletag(null);
-                    } else {
-                      setSelectedBattletag(bt);
-                      const cardEl = playerCardRefs.current.get(bt);
-                      if (cardEl && playerListRef.current) {
-                        cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }
-                    }
-                  }}
-                  className={`group/badge inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-pill cursor-pointer border transition-colors duration-150 ${
+                  className={`group/badge inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-pill border transition-colors duration-150 ${
                     isSelected
                       ? isMustPlay
                         ? "bg-warn-soft text-warn border-warn-edge ring-2 ring-focus hover:bg-warn-fill hover:text-warn-btn-ink"
                         : "bg-pink-soft text-pink-ink border-pink-edge ring-2 ring-focus hover:bg-accent hover:text-accent-ink"
                       : isAfk
-                        ? "bg-paper-2 text-muted border-rule hover:bg-paper-3 hover:text-ink hover:border-rule-2"
+                        ? "bg-paper-2 text-muted border-rule-2 hover:bg-card-row hover:text-ink"
                         : isMustPlay
-                          ? "bg-warn-soft text-warn border-warn-edge hover:bg-warn-fill hover:text-warn-btn-ink"
-                          : "bg-sky-soft text-sky-ink border-sky-edge hover:bg-accent hover:text-accent-ink hover:border-pink-edge"
+                          ? "app-chip--amber hover:bg-warn-fill hover:text-warn-btn-ink"
+                          : `${chipVariant} hover:border-pink-edge`
                   }`}
-                  title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
                 >
-                  {isMustPlay && !isAfk && <Star className="h-3 w-3" aria-hidden="true" />}
-                  {name}
-                  {isAfk && <span className="text-muted"> AFK</span>}
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFromLobby(bt);
+                    onClick={() => {
+                      if (selectedBattletag === bt) {
+                        setSelectedBattletag(null);
+                      } else {
+                        setSelectedBattletag(bt);
+                        const cardEl = playerCardRefs.current.get(bt);
+                        if (cardEl && playerListRef.current) {
+                          cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                      }
                     }}
-                    className="inline-flex w-4 h-4 items-center justify-center rounded-pill bg-paper-2/80 text-ink opacity-55 group-hover/badge:opacity-100 focus-visible:opacity-100 hover:bg-bad-soft hover:text-bad transition-opacity"
+                    className="inline-flex items-center gap-1 text-left focus-visible:outline-none focus-visible:underline"
+                    title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
+                  >
+                    {isMustPlay && !isAfk && <Star className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                    <span>{name}</span>
+                    {isAfk && <span className="text-muted"> AFK</span>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeFromLobby(bt)}
+                    className="inline-flex items-center justify-center ml-0.5 text-muted hover:text-bad focus-visible:text-bad focus-visible:outline-none"
                     title="Remove from lobby"
                     aria-label={`Remove ${name} from lobby`}
                   >
-                    <X className="w-2.5 h-2.5" aria-hidden="true" />
+                    <X className="w-3 h-3" aria-hidden="true" />
                   </button>
-                </span>
+                </div>
               );
             })}
           </div>
@@ -304,17 +389,20 @@ export function LobbySelector() {
       )}
 
       {/* Search */}
-      <input
-        type="text"
-        placeholder="Search players or heroes..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        aria-label="Search players or heroes"
-        className="app-input w-full px-3 py-2 text-sm"
-      />
+      <div className="relative">
+        <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+        <input
+          type="text"
+          placeholder="Search players or heroes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Search players or heroes"
+          className="app-input w-full pl-9 pr-3.5 py-2 text-xs font-semibold"
+        />
+      </div>
 
       {/* Filters */}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 items-center min-w-0">
         <AppSelect
           value={roleFilter}
           onChange={setRoleFilter}
@@ -327,11 +415,10 @@ export function LobbySelector() {
           options={SORT_OPTIONS}
           ariaLabel="Sort players"
         />
-        <div className="flex-1" />
         <button
           type="button"
           onClick={toggleShowWeightModifiers}
-          className={`px-2.5 py-1.5 rounded-pill text-sm ${
+          className={`shrink-0 px-2.5 py-1.5 rounded-well text-sm ${
             showWeightModifiers
               ? "app-sky"
               : "app-quiet"
@@ -351,7 +438,7 @@ export function LobbySelector() {
       )}
 
       {/* Player list */}
-      <div ref={playerListRef} className="space-y-2 max-h-[600px] overflow-y-auto p-1">
+      <div ref={playerListRef} className="app-player-scroll space-y-2 max-h-[600px] overflow-y-auto py-1">
         {sortedPlayers.map((player) => {
           const inLobby = lobbySet.has(player.battletag);
           const lobbyPlayer = lobbyPlayersMap.get(player.battletag);

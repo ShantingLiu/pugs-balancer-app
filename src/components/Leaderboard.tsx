@@ -72,7 +72,7 @@ export function Leaderboard() {
     return (
       <div className="space-y-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-heading">
-          <Trophy className="h-4 w-4 text-pink-ink" aria-hidden="true" />
+          <Trophy className="h-4 w-4 text-warn" aria-hidden="true" />
           Leaderboard
         </h3>
         <p className="text-xs text-muted">No wins recorded yet.</p>
@@ -84,7 +84,7 @@ export function Leaderboard() {
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-heading">
-          <Trophy className="h-4 w-4 text-pink-ink" aria-hidden="true" />
+          <Trophy className="h-4 w-4 text-warn" aria-hidden="true" />
           {getModeName(gameMode)} Leaderboard
         </h3>
         <span className="text-xs text-muted">Top 10</span>
@@ -94,22 +94,27 @@ export function Leaderboard() {
         <table className="w-full text-xs">
           <thead className="text-muted sticky top-0 bg-paper-2 border-b border-rule">
             <tr>
-              <th className="text-center py-1.5 px-1 font-semibold w-8">#</th>
-              <th className="text-left py-1.5 px-1 font-semibold">Player</th>
-              <th className="text-center py-1.5 px-1 font-semibold text-pink-ink">Wins</th>
+              <th className="text-left py-1.5 px-1 font-bold w-8">#</th>
+              <th className="text-left py-1.5 px-1 font-bold">Player</th>
+              <th className="text-right py-1.5 px-1 font-bold text-pink-ink">Wins</th>
             </tr>
           </thead>
           <tbody className="text-ink-2 divide-y divide-rule">
             {topPlayers.map((player) => (
-              <tr key={player.battletag} className="hover:bg-pink-soft/50">
-                <td className="text-center py-1.5 px-1 text-muted app-measured">
+              <tr key={player.battletag} className="hover:bg-pink-row-hover">
+                <td className="text-left py-2 px-1 text-muted app-measured">
                   {player.rank}
                 </td>
-                <td className="py-1.5 px-1 font-semibold text-ink break-words" title={player.battletag}>
-                  {player.name}
+                <td className="py-2 px-1 font-bold text-ink break-words" title={player.battletag}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{player.name}</span>
+                    {player.rank === 1 && (
+                      <span className="w-1.5 h-1.5 rounded-pill bg-ok shrink-0" aria-hidden="true" />
+                    )}
+                  </span>
                 </td>
                 <td
-                  className="text-center py-1.5 px-1 text-pink-ink font-semibold app-measured"
+                  className="text-right py-2 px-1 text-pink-ink font-extrabold app-measured"
                   title={`CSV: ${player.baselineWins} + Session: ${player.sessionWins} = ${player.totalWins}`}
                 >
                   {player.sessionWins > 0 ? (

@@ -38,21 +38,21 @@ export function BalanceButton() {
         type="button"
         onClick={handleBalance}
         disabled={!canBalance}
-        className={`w-full pt-3.5 pb-2.5 px-6 text-lg font-semibold leading-none rounded-card ${
+        className={`w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 text-lg font-bold leading-snug rounded-card ${
           canBalance
             ? "app-primary"
             : "bg-paper-3 border border-rule text-muted"
         }`}
       >
         {canBalance ? (
-          <span className="inline-flex items-center justify-center gap-2">
+          <>
             {hasResult ? (
-              <RefreshCw className="h-5 w-5" aria-hidden="true" />
+              <RefreshCw className="h-5 w-5 shrink-0" aria-hidden="true" />
             ) : (
-              <Scale className="h-5 w-5" aria-hidden="true" />
+              <Scale className="h-5 w-5 shrink-0" aria-hidden="true" />
             )}
-            {hasResult ? "Reshuffle Teams" : "Balance Teams"}
-          </span>
+            <span>{hasResult ? "Reshuffle Teams" : "Balance Teams"}</span>
+          </>
         ) : (
           `Need ${requiredPlayers - lobbyCount} more players`
         )}
