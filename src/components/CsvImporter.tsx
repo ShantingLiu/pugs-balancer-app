@@ -284,9 +284,9 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Player Data</h2>
+        <h2 className="text-lg font-semibold text-ink">Player Data</h2>
         {playerCount > 0 && (
-          <span className="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full">
+          <span className="text-xs app-badge px-2.5 py-0.5 app-measured">
             {playerCount} players
           </span>
         )}
@@ -298,13 +298,13 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border border-dashed rounded-lg p-6 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${
+        className={`border border-dashed rounded-[var(--radius-card)] p-6 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${
           isDragging
-            ? "border-[var(--color-cool)] bg-[var(--color-cool-soft)]"
-            : "border-[var(--color-rule-2)] hover:border-[var(--color-cool)] bg-[var(--color-paper-3)]"
+            ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
+            : "border-[var(--color-rule-2)] hover:border-[var(--color-accent)] bg-[var(--color-paper-3)]"
         }`}
       >
-        <Upload className="h-6 w-6 text-cool" aria-hidden="true" />
+        <Upload className="h-6 w-6 text-accent" aria-hidden="true" />
         <div className="text-sm text-ink-2 font-medium">Drop CSV file or click to import</div>
         <input
           ref={fileInputRef}
@@ -343,20 +343,20 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
 
       {/* Error message */}
       {error && (
-        <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg text-sm text-red-300 whitespace-pre-wrap">
+        <div className="p-3 app-alert-error text-sm text-bad whitespace-pre-wrap">
           {error}
         </div>
       )}
 
       {/* Success message */}
       {successMessage && (
-        <div className="p-3 bg-green-900/50 border border-green-700 rounded-lg text-sm text-green-300">
+        <div className="p-3 app-alert-success text-sm text-ink">
           <div className="flex items-center justify-between">
             <span>{successMessage}</span>
             {successDetails && (
               <button
                 onClick={() => setShowDetails(!showDetails)}
-                className="ml-2 text-green-400 hover:text-green-200 transition-colors"
+                className="ml-2 text-ok hover:underline font-medium transition-colors"
                 title={showDetails ? "Hide details" : "Show details"}
               >
                 {showDetails ? "Hide" : "Details"}
@@ -364,7 +364,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
             )}
           </div>
           {showDetails && successDetails && (
-            <div className="mt-2 pt-2 border-t border-green-700/50 text-xs text-green-400 whitespace-pre-wrap">
+            <div className="mt-2 pt-2 border-t border-[var(--color-rule)] text-xs text-muted whitespace-pre-wrap">
               {successDetails}
             </div>
           )}

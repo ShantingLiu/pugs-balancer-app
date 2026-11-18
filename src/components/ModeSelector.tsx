@@ -22,10 +22,11 @@ export function ModeSelector() {
   const [showConfirm, setShowConfirm] = useState<GameMode | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -35,34 +36,42 @@ export function ModeSelector() {
   const hasActiveSession = lastResult && lastResult.team1.length > 0;
 
   const handleModeSelect = (mode: GameMode) => {
-    if (mode === gameMode) { setIsOpen(false); return; }
-    if (hasActiveSession) { setShowConfirm(mode); setIsOpen(false); } else { setGameMode(mode); setIsOpen(false); }
+    if (mode === gameMode) {
+      setIsOpen(false);
+      return;
+    }
+    if (hasActiveSession) {
+      setShowConfirm(mode);
+      setIsOpen(false);
+    } else {
+      setGameMode(mode);
+      setIsOpen(false);
+    }
   };
 
   return (
     <>
       <div className="flex items-center gap-3">
         {/* Mode badge/pill */}
-        <span className="px-2 py-1 text-xs font-medium rounded-[var(--radius-pill)] bg-[var(--color-cool-soft)] text-[var(--color-cool)]">
+        <span className="px-2.5 py-1 text-xs font-medium app-badge">
           {currentMode.label}
         </span>
 
         {/* Mode selector dropdown */}
         <div className="relative" ref={dropdownRef}>
-          {/* Current mode button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="
-              app-secondary flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-            "
+            className="app-secondary flex items-center gap-2 px-3 py-2 text-sm font-medium"
           >
             <span>Change Mode</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
           </button>
 
-          {/* Dropdown menu */}
           {isOpen && (
-            <div className="absolute right-0 mt-2 w-56 app-surface z-50 overflow-hidden">
+            <div className="absolute right-0 mt-2 w-56 app-modal z-50 overflow-hidden">
               {MODE_OPTIONS.map((option) => {
                 const isActive = option.id === gameMode;
                 return (
@@ -71,16 +80,18 @@ export function ModeSelector() {
                     onClick={() => handleModeSelect(option.id)}
                     className={`
                       w-full text-left px-4 py-3 border-b border-[var(--color-rule)] last:border-b-0 transition-colors
-                      ${isActive ? "bg-[var(--color-accent-soft)]" : "hover:bg-[var(--color-paper-3)]"}
+                      ${
+                        isActive
+                          ? "bg-[var(--color-accent-soft)]"
+                          : "hover:bg-[var(--color-paper-2)]"
+                      }
                     `}
                   >
                     <div className="flex items-center gap-2">
                       {isActive && <Check className="h-4 w-4 text-accent" aria-hidden="true" />}
                       <span className="font-medium text-ink">{option.label}</span>
                     </div>
-                    <p className="text-xs text-muted mt-1 ml-6">
-                      {option.description}
-                    </p>
+                    <p className="text-xs text-muted mt-1 ml-6">{option.description}</p>
                   </button>
                 );
               })}
@@ -91,11 +102,18 @@ export function ModeSelector() {
 
       {/* Confirmation modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="app-surface p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-2">Switch Game Mode?</h3>
+        <div
+          className="fixed inset-0 app-backdrop flex items-center justify-center z-50"
+          onClick={() => setShowConfirm(null)}
+        >
+          <div
+            className="app-modal p-6 max-w-md mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2 text-ink">Switch Game Mode?</h3>
             <p className="text-muted mb-4">
-              Switching to {MODE_CONFIGS[showConfirm].label} will reset your current session stats (wins, losses, adaptive weights).
+              Switching to {MODE_CONFIGS[showConfirm].label} will reset your current session stats
+              (wins, losses, adaptive weights).
             </p>
             <p className="flex items-start gap-2 text-sm text-accent mb-4">
               <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
@@ -105,10 +123,19 @@ export function ModeSelector() {
               Your lobby players and imported roster will be preserved.
             </p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowConfirm(null)} className="app-secondary px-4 py-2 rounded-lg">
+              <button
+                onClick={() => setShowConfirm(null)}
+                className="app-secondary px-4 py-2"
+              >
                 Cancel
               </button>
-              <button onClick={() => { setGameMode(showConfirm); setShowConfirm(null); }} className="app-primary px-4 py-2 rounded-lg font-medium">
+              <button
+                onClick={() => {
+                  setGameMode(showConfirm);
+                  setShowConfirm(null);
+                }}
+                className="app-primary px-4 py-2 font-medium"
+              >
                 Switch Mode
               </button>
             </div>

@@ -42,13 +42,13 @@ export class ErrorBoundary extends Component<Props, State> {
               The app encountered an error. This might be due to corrupted saved data.
             </p>
             {this.state.error && (
-              <pre className="text-left text-xs bg-[var(--color-paper-2)] p-4 rounded-lg overflow-auto max-h-48 text-bad">
+              <pre className="text-left text-xs app-card p-4 overflow-auto max-h-48 text-bad">
                 {this.state.error.message}
               </pre>
             )}
             <button
               onClick={this.handleReset}
-              className="app-primary px-6 py-3 rounded-lg font-medium"
+              className="app-primary px-6 py-3 font-medium"
             >
               Clear Data &amp; Reload
             </button>

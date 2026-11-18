@@ -1,3 +1,4 @@
+import { RefreshCw } from "lucide-react";
 import { useSheetStore } from "@store/sheetStore";
 
 // =============================================================================
@@ -33,29 +34,30 @@ export function SyncButton({ onClick }: SyncButtonProps) {
     <div className="flex items-center gap-2">
       {/* Connection status */}
       {isConnected ? (
-        <span className="text-xs text-gray-400 truncate max-w-[200px]">
+        <span className="text-xs text-muted truncate max-w-[200px]">
           {sheetName ?? "Connected"}
           {lastSyncedAt && <> · {formatRelativeTime(lastSyncedAt)}</>}
         </span>
       ) : (
-        <span className="text-xs text-gray-500">Not connected</span>
+        <span className="text-xs text-muted">Not connected</span>
       )}
 
       {/* Sync button with unsync badge */}
       <button
         onClick={onClick}
         disabled={isDisabled}
-        className={`relative px-3 py-1 rounded text-sm font-medium transition-colors ${
+        className={`relative px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 transition-colors ${
           isDisabled
-            ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700 text-white"
+            ? "app-secondary opacity-60 cursor-not-allowed"
+            : "app-primary"
         }`}
       >
-        ↻ Sync
+        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+        Sync
         {hasUnsyncedChanges && !isDisabled && (
           <span
             data-testid="unsync-badge"
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full"
+            className="absolute -top-1 -right-1 w-2.5 h-2.5 app-unsync-dot rounded-full"
           />
         )}
       </button>

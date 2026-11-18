@@ -47,95 +47,49 @@ export interface ModeTheme {
   };
 }
 
+const ULTRAVIOLET_THEME_BASE: Omit<ModeTheme, "id"> = {
+  accent: {
+    bg: "app-primary",
+    bgHover: "",
+    bgActive: "",
+    text: "text-accent",
+    border: "border-[var(--color-rule-2)]",
+  },
+  primary: {
+    bg: "app-primary",
+    bgHover: "",
+    bgActive: "",
+  },
+  secondary: {
+    bg: "app-secondary",
+    bgHover: "",
+    bgActive: "",
+  },
+  header: {
+    bg: "app-toolbar",
+    border: "border-[var(--color-rule)]",
+  },
+  badge: {
+    bg: "bg-accent-soft",
+    text: "text-accent",
+  },
+};
+
 /**
  * Theme configurations for all supported game modes
  */
 export const MODE_THEMES: Record<GameMode, ModeTheme> = {
   stadium_5v5: {
     id: "stadium_5v5",
-    accent: {
-      bg: "bg-blue-600",
-      bgHover: "hover:bg-blue-700",
-      bgActive: "active:bg-blue-800",
-      text: "text-blue-400",
-      border: "border-blue-500",
-    },
-    primary: {
-      bg: "bg-blue-600",
-      bgHover: "hover:bg-blue-700",
-      bgActive: "active:bg-blue-800",
-    },
-    secondary: {
-      bg: "bg-blue-600",
-      bgHover: "hover:bg-blue-700",
-      bgActive: "active:bg-blue-800",
-    },
-    header: {
-      bg: "bg-gray-800",
-      border: "border-blue-500/30",
-    },
-    badge: {
-      bg: "bg-blue-500/20",
-      text: "text-blue-400",
-    },
+    ...ULTRAVIOLET_THEME_BASE,
   },
-
   regular_5v5: {
     id: "regular_5v5",
-    accent: {
-      bg: "bg-emerald-600",
-      bgHover: "hover:bg-emerald-700",
-      bgActive: "active:bg-emerald-800",
-      text: "text-emerald-400",
-      border: "border-emerald-500",
-    },
-    primary: {
-      bg: "bg-emerald-600",
-      bgHover: "hover:bg-emerald-700",
-      bgActive: "active:bg-emerald-800",
-    },
-    secondary: {
-      bg: "bg-emerald-600",
-      bgHover: "hover:bg-emerald-700",
-      bgActive: "active:bg-emerald-800",
-    },
-    header: {
-      bg: "bg-gray-800",
-      border: "border-emerald-500/30",
-    },
-    badge: {
-      bg: "bg-emerald-500/20",
-      text: "text-emerald-400",
-    },
+    ...ULTRAVIOLET_THEME_BASE,
   },
-
   regular_6v6: {
     id: "regular_6v6",
-    accent: {
-      bg: "bg-orange-600",
-      bgHover: "hover:bg-orange-700",
-      bgActive: "active:bg-orange-800",
-      text: "text-orange-400",
-      border: "border-orange-500",
-    },
-    primary: {
-      bg: "bg-orange-600",
-      bgHover: "hover:bg-orange-700",
-      bgActive: "active:bg-orange-800",
-    },
-    secondary: {
-      bg: "bg-orange-600",
-      bgHover: "hover:bg-orange-700",
-      bgActive: "active:bg-orange-800",
-    },
-    header: {
-      bg: "bg-gray-800",
-      border: "border-orange-500/30",
-    },
-    badge: {
-      bg: "bg-orange-500/20",
-      text: "text-orange-400",
-    },
+    ...ULTRAVIOLET_THEME_BASE,
   },
 };
 

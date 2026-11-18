@@ -202,12 +202,12 @@ describe("AddPlayerModal", () => {
       
       // Click to select
       fireEvent.click(tankButton);
-      // Check that it's visually selected (Tank role has yellow background when selected)
-      expect(tankButton.closest("button")).toHaveClass("bg-yellow-600");
+      // Check that it's visually selected
+      expect(tankButton.closest("button")).toHaveClass("role-badge-tank");
       
       // Click again to deselect
       fireEvent.click(tankButton);
-      expect(tankButton.closest("button")).not.toHaveClass("bg-yellow-600");
+      expect(tankButton.closest("button")).not.toHaveClass("role-badge-tank");
     });
   });
 

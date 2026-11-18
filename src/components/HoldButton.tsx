@@ -66,7 +66,7 @@ export function HoldButton({
       {/* Progress overlay */}
       {isHolding && (
         <div
-          className="absolute inset-0 bg-white/20 transition-none"
+          className="absolute inset-0 app-hold-progress transition-none"
           style={{ width: `${progress}%` }}
         />
       )}

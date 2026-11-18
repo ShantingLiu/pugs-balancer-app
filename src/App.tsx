@@ -89,7 +89,7 @@ function App() {
   const fontLabel = fontScale === "large" ? "A+" : fontScale === "x-large" ? "A++" : "A";
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
+    <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)]">
       <header className="app-toolbar px-6 py-3">
         <div className="container flex items-center justify-between gap-6 px-0">
           <div className="min-w-0">
@@ -100,7 +100,7 @@ function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSheetSetup(true)}
-              className="app-secondary px-3 py-2 rounded-lg text-sm font-medium"
+              className="app-secondary px-3 py-2 text-sm font-medium"
             >
               Sheets
             </button>
@@ -108,7 +108,8 @@ function App() {
             <ModeSelector />
             <button
               onClick={cycleFontScale}
-              className="app-secondary px-3 py-2 rounded-lg text-sm font-medium min-w-10"
+              className="app-secondary px-3 py-2 text-sm font-medium min-w-10"
+              aria-label={`Font size: ${fontScale} (click to cycle)`}
               title={`Font size: ${fontScale} (click to cycle)`}
             >
               {fontLabel}
@@ -121,10 +122,10 @@ function App() {
       {syncError && (
         <div className="container pt-3">
           <div
-            className={`px-3 py-2 rounded-lg text-sm flex items-center justify-between border ${
+            className={`px-3 py-2 text-sm flex items-center justify-between ${
               syncError === "Everything is up to date."
-                ? "border-green-600 text-green-300 bg-green-950/30"
-                : "border-red-500 text-red-300 bg-red-950/30"
+                ? "app-alert-success"
+                : "app-alert-error"
             }`}
           >
             <span>
@@ -133,7 +134,7 @@ function App() {
                   Please{" "}
                   <button
                     onClick={() => { setSyncError(null); setShowSheetSetup(true); }}
-                    className="underline text-blue-400 hover:text-blue-300"
+                    className="underline text-accent font-medium"
                   >
                     sign in with Google
                   </button>
@@ -145,7 +146,7 @@ function App() {
             </span>
             <button
               onClick={() => setSyncError(null)}
-              className="ml-4 text-gray-400 hover:text-gray-200"
+              className="ml-4 text-muted hover:text-ink"
               aria-label="Dismiss sync message"
             >
               Dismiss
@@ -187,20 +188,20 @@ function App() {
             <nav className="app-surface flex gap-1 p-1" aria-label="Team planning mode">
               <button
                 onClick={() => setDraftMode(false)}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium ${
+                className={`flex-1 py-2 px-4 text-sm font-medium ${
                   !draftMode
                     ? "app-primary"
-                    : "text-muted"
+                    : "text-muted hover:text-ink"
                 }`}
               >
                 Balance
               </button>
               <button
                 onClick={() => setDraftMode(true)}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium ${
+                className={`flex-1 py-2 px-4 text-sm font-medium ${
                   draftMode
                     ? "app-primary"
-                    : "text-muted"
+                    : "text-muted hover:text-ink"
                 }`}
               >
                 Draft

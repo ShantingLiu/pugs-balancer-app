@@ -43,9 +43,9 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
       {errors.map((warning, idx) => (
         <div
           key={`error-${idx}`}
-          className={`flex items-start gap-2 rounded-lg ${
+          className={`flex items-start gap-2 ${
             compact ? "p-2 text-xs" : "p-3 text-sm"
-          } bg-[var(--color-bad-soft)] border border-[var(--color-bad)] text-[var(--color-ink)]`}
+          } app-alert-error`}
         >
           <WarningIcon type={warning.type} />
           <span>{warning.message}</span>
@@ -56,9 +56,9 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
       {warningItems.map((warning, idx) => (
         <div
           key={`warning-${idx}`}
-          className={`flex items-start gap-2 rounded-lg ${
+          className={`flex items-start gap-2 ${
             compact ? "p-2 text-xs" : "p-3 text-sm"
-          } bg-[var(--color-accent-soft)] border border-[var(--color-accent)] text-[var(--color-ink)]`}
+          } app-alert-accent`}
         >
           <WarningIcon type={warning.type} />
           <span>{warning.message}</span>

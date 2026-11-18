@@ -1,5 +1,5 @@
 import type { LobbyPlayer, Player, Role } from "@engine/types";
-import { LockKeyhole, Scale } from "lucide-react";
+import { LockKeyhole, Scale, Star } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import { parseBattletag } from "@utils/heroUtils";
 import { getRoleRankDisplay } from "@utils/rankMapper";
@@ -33,15 +33,15 @@ function isLobbyPlayer(player: Player | LobbyPlayer): player is LobbyPlayer {
   return "mustPlay" in player;
 }
 
-/** Get role badge color */
+/** Get role badge class */
 function getRoleBadgeColor(role: Role): string {
   switch (role) {
     case "Tank":
-      return "bg-yellow-600";
+      return "role-badge-tank";
     case "DPS":
-      return "bg-red-600";
+      return "role-badge-dps";
     case "Support":
-      return "bg-green-600";
+      return "role-badge-support";
   }
 }
 
@@ -57,7 +57,7 @@ export function PlayerCard({
   onWeightClick,
 }: PlayerCardProps) {
   const lobbyPlayer = isLobbyPlayer(player) ? player : null;
-  
+
   // Store actions
   const gameMode = useSessionStore((state) => state.gameMode);
   const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
@@ -71,27 +71,27 @@ export function PlayerCard({
     return (
       <div
         className={`
-          flex items-center gap-2 p-2 rounded-lg bg-gray-800
+          flex items-center gap-2 p-2 app-card
           ${lobbyPlayer?.isAfk ? "opacity-50" : ""}
-          ${lobbyPlayer?.lockedToTeam ? "ring-1 ring-purple-500" : ""}
+          ${lobbyPlayer?.lockedToTeam ? "outline outline-1 outline-[var(--color-accent)]" : ""}
         `}
       >
         <span
           className={`
-            px-2 py-0.5 text-xs font-bold rounded
+            px-2 py-0.5 text-xs font-bold
             ${getRoleBadgeColor(assignedRole)}
           `}
         >
           {assignedRole.charAt(0)}
         </span>
-        <span className="flex-1 truncate font-medium">
+        <span className="flex-1 truncate font-medium text-ink">
           {parseBattletag(player.battletag).name}
         </span>
         {lobbyPlayer?.lockedToTeam && (
           <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />
         )}
         {effectiveSR !== undefined && (
-          <span className="text-sm text-gray-400">{effectiveSR}</span>
+          <span className="text-sm text-muted app-measured">{effectiveSR}</span>
         )}
       </div>
     );
@@ -102,21 +102,21 @@ export function PlayerCard({
     <div
       onClick={onClick}
       className={`
-        p-3 rounded-lg border transition-colors
-        ${onClick ? "cursor-pointer hover:border-[var(--color-cool)]" : ""}
-        ${selected ? "border-[var(--color-cool)] bg-[var(--color-cool-soft)]" : "border-[var(--color-rule)] bg-[var(--color-paper-2)]"}
+        p-3 border transition-colors rounded-[var(--radius-card)]
+        ${onClick ? "cursor-pointer hover:border-[var(--color-accent)]" : ""}
+        ${selected ? "app-surface-selected" : "app-card"}
         ${lobbyPlayer?.isAfk ? "opacity-50" : ""}
-        ${lobbyPlayer?.mustPlay ? "ring-2 ring-yellow-500" : ""}
+        ${lobbyPlayer?.mustPlay ? "outline outline-2 outline-[var(--color-accent)]" : ""}
       `}
     >
       {/* Header with name and roles */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-semibold text-white truncate">
+      <div className="flex items-center justify-between gap-2 mb-2 pr-6">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-semibold text-ink truncate">
             {parseBattletag(player.battletag).name}
           </span>
           {parseBattletag(player.battletag).discriminator && (
-            <span className="text-xs text-gray-500 flex-shrink-0">
+            <span className="text-xs text-muted flex-shrink-0 app-measured">
               #{parseBattletag(player.battletag).discriminator}
             </span>
           )}
@@ -128,9 +128,9 @@ export function PlayerCard({
             <span
               key={role}
               className={`
-                px-2 py-0.5 text-xs font-medium rounded
+                px-2 py-0.5 text-xs font-medium
                 ${getRoleBadgeColor(role)}
-                ${idx === 0 && player.rolePreference[0] === role ? "ring-1 ring-white" : ""}
+                ${idx === 0 && player.rolePreference[0] === role ? "outline outline-1 outline-[var(--color-ink)]" : ""}
               `}
             >
               {role}
@@ -140,31 +140,35 @@ export function PlayerCard({
       </div>
 
       {/* Status badges */}
-      {(lobbyPlayer?.mustPlay || lobbyPlayer?.lockedToTeam || lobbyPlayer?.isAfk || 
-        (showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0) || player.isOneTrick) && (
-        <div className="flex gap-1 mb-2">
+      {(lobbyPlayer?.mustPlay ||
+        lobbyPlayer?.lockedToTeam ||
+        lobbyPlayer?.isAfk ||
+        (showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0) ||
+        player.isOneTrick) && (
+        <div className="flex flex-wrap gap-1 mb-2">
           {lobbyPlayer?.mustPlay && (
-            <span className="px-1.5 py-0.5 text-xs bg-yellow-600 rounded">
+            <span className="px-2 py-0.5 text-xs app-chip-active inline-flex items-center gap-1">
+              <Star className="h-3 w-3" aria-hidden="true" />
               Must
             </span>
           )}
           {lobbyPlayer?.lockedToTeam && (
-            <span className="px-1.5 py-0.5 text-xs bg-purple-600 rounded">
+            <span className="px-2 py-0.5 text-xs app-badge app-measured">
               T{lobbyPlayer.lockedToTeam}
             </span>
           )}
           {lobbyPlayer?.isAfk && (
-            <span className="px-1.5 py-0.5 text-xs bg-gray-600 rounded">
+            <span className="px-2 py-0.5 text-xs app-chip">
               AFK
             </span>
           )}
           {showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0 && (
-            <span className="px-1.5 py-0.5 text-xs bg-red-700 rounded">
+            <span className="px-2 py-0.5 text-xs app-alert-error app-measured">
               L{lobbyPlayer.consecutiveLosses}
             </span>
           )}
           {player.isOneTrick && (
-            <span className="px-1.5 py-0.5 text-xs bg-orange-600 rounded">
+            <span className="px-2 py-0.5 text-xs app-badge">
               OT
             </span>
           )}
@@ -172,47 +176,50 @@ export function PlayerCard({
       )}
 
       {/* Ranks - only show for roles they're willing to play */}
-      <div className="text-xs text-gray-400 space-y-0.5">
-        {player.rolesWilling.includes("Tank") && (() => {
-          const tankRank = getRoleRankDisplay(player, "Tank", gameMode);
-          return tankRank ? (
-            <div className="flex justify-between">
-              <span>Tank:</span>
-              <span className="text-yellow-400">{tankRank}</span>
-            </div>
-          ) : null;
-        })()}
-        {player.rolesWilling.includes("DPS") && (() => {
-          const dpsRank = getRoleRankDisplay(player, "DPS", gameMode);
-          return dpsRank ? (
-            <div className="flex justify-between">
-              <span>DPS:</span>
-              <span className="text-red-400">{dpsRank}</span>
-            </div>
-          ) : null;
-        })()}
-        {player.rolesWilling.includes("Support") && (() => {
-          const supportRank = getRoleRankDisplay(player, "Support", gameMode);
-          return supportRank ? (
-            <div className="flex justify-between">
-              <span>Support:</span>
-              <span className="text-green-400">{supportRank}</span>
-            </div>
-          ) : null;
-        })()}
+      <div className="text-xs text-muted space-y-0.5">
+        {player.rolesWilling.includes("Tank") &&
+          (() => {
+            const tankRank = getRoleRankDisplay(player, "Tank", gameMode);
+            return tankRank ? (
+              <div className="flex justify-between">
+                <span>Tank:</span>
+                <span className="role-text-tank font-medium">{tankRank}</span>
+              </div>
+            ) : null;
+          })()}
+        {player.rolesWilling.includes("DPS") &&
+          (() => {
+            const dpsRank = getRoleRankDisplay(player, "DPS", gameMode);
+            return dpsRank ? (
+              <div className="flex justify-between">
+                <span>DPS:</span>
+                <span className="role-text-dps font-medium">{dpsRank}</span>
+              </div>
+            ) : null;
+          })()}
+        {player.rolesWilling.includes("Support") &&
+          (() => {
+            const supportRank = getRoleRankDisplay(player, "Support", gameMode);
+            return supportRank ? (
+              <div className="flex justify-between">
+                <span>Support:</span>
+                <span className="role-text-support font-medium">{supportRank}</span>
+              </div>
+            ) : null;
+          })()}
       </div>
 
       {/* Weight modifier if non-zero */}
       {showWeightModifiers && (player.weightModifier !== 0 || lobbyPlayer?.tempWeightOverride) && (
-        <div className="mt-2 text-xs">
+        <div className="mt-2 text-xs app-measured">
           {player.weightModifier !== 0 && (
-            <span className="text-blue-400">
+            <span className="text-accent">
               Weight: {player.weightModifier > 0 ? "+" : ""}
               {player.weightModifier}
             </span>
           )}
           {lobbyPlayer?.tempWeightOverride && (
-            <span className="text-purple-400 ml-2">
+            <span className="text-ink-2 ml-2">
               (Temp: {lobbyPlayer.tempWeightOverride > 0 ? "+" : ""}
               {lobbyPlayer.tempWeightOverride})
             </span>
@@ -222,27 +229,26 @@ export function PlayerCard({
 
       {/* Notes preview */}
       {player.notes && (
-        <div className="mt-2 text-xs text-gray-500 truncate" title={player.notes}>
+        <div className="mt-2 text-xs text-muted truncate" title={player.notes}>
           {player.notes}
         </div>
       )}
 
       {/* Session controls */}
       {showControls && lobbyPlayer && (
-        <div className="mt-3 pt-2 border-t border-gray-700 flex gap-2 flex-wrap">
+        <div className="mt-3 pt-2 border-t border-[var(--color-rule)] flex gap-1 flex-wrap items-center">
           {/* Must-play toggle */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               toggleMustPlay(player.battletag);
             }}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              lobbyPlayer.mustPlay
-                ? "bg-yellow-600 hover:bg-yellow-700"
-                : "bg-gray-600 hover:bg-gray-500"
+            className={`px-2 py-0.5 text-xs inline-flex items-center gap-1 transition-colors ${
+              lobbyPlayer.mustPlay ? "app-chip-active" : "app-chip"
             }`}
           >
-            {lobbyPlayer.mustPlay ? "★ Must" : "☆ Must"}
+            <Star className="h-3 w-3" aria-hidden="true" />
+            Must
           </button>
 
           {/* AFK toggle */}
@@ -251,13 +257,11 @@ export function PlayerCard({
               e.stopPropagation();
               toggleAfk(player.battletag);
             }}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              lobbyPlayer.isAfk
-                ? "bg-gray-500 hover:bg-gray-400"
-                : "bg-gray-600 hover:bg-gray-500"
+            className={`px-2 py-0.5 text-xs transition-colors ${
+              lobbyPlayer.isAfk ? "app-chip-active" : "app-chip"
             }`}
           >
-            {lobbyPlayer.isAfk ? "AFK" : "AFK"}
+            AFK
           </button>
 
           {/* Weight adjust button */}
@@ -267,11 +271,10 @@ export function PlayerCard({
                 e.stopPropagation();
                 onWeightClick();
               }}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                lobbyPlayer.tempWeightOverride !== null
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : "bg-gray-600 hover:bg-gray-500"
+              className={`px-2 py-0.5 text-xs inline-flex items-center transition-colors ${
+                lobbyPlayer.tempWeightOverride !== null ? "app-chip-active" : "app-chip"
               }`}
+              title="Adjust temporary weight"
             >
               <Scale className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -284,26 +287,28 @@ export function PlayerCard({
                 e.stopPropagation();
                 lockToTeam(player.battletag, lobbyPlayer.lockedToTeam === 1 ? null : 1);
               }}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                lobbyPlayer.lockedToTeam === 1
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : "bg-gray-600 hover:bg-gray-500"
+              className={`px-1.5 py-0.5 text-xs inline-flex items-center gap-0.5 transition-colors app-measured ${
+                lobbyPlayer.lockedToTeam === 1 ? "app-chip-active" : "app-chip"
               }`}
             >
-              {lobbyPlayer.lockedToTeam === 1 ? <><LockKeyhole className="inline h-3 w-3 mr-1" aria-hidden="true" />T1</> : "T1"}
+              {lobbyPlayer.lockedToTeam === 1 && (
+                <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+              )}
+              T1
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 lockToTeam(player.battletag, lobbyPlayer.lockedToTeam === 2 ? null : 2);
               }}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                lobbyPlayer.lockedToTeam === 2
-                  ? "bg-purple-600 hover:bg-purple-700"
-                  : "bg-gray-600 hover:bg-gray-500"
+              className={`px-1.5 py-0.5 text-xs inline-flex items-center gap-0.5 transition-colors app-measured ${
+                lobbyPlayer.lockedToTeam === 2 ? "app-chip-active" : "app-chip"
               }`}
             >
-              {lobbyPlayer.lockedToTeam === 2 ? <><LockKeyhole className="inline h-3 w-3 mr-1" aria-hidden="true" />T2</> : "T2"}
+              {lobbyPlayer.lockedToTeam === 2 && (
+                <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+              )}
+              T2
             </button>
           </div>
 
@@ -313,11 +318,6 @@ export function PlayerCard({
               {player.rolesWilling.map((role) => {
                 const isLocked = lobbyPlayer.lockedToRole === role;
                 const roleInitial = role.charAt(0);
-                const bgColor = role === "Tank" 
-                  ? (isLocked ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-600 hover:bg-gray-500")
-                  : role === "DPS"
-                  ? (isLocked ? "bg-red-600 hover:bg-red-700" : "bg-gray-600 hover:bg-gray-500")
-                  : (isLocked ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-500");
                 return (
                   <button
                     key={role}
@@ -325,10 +325,13 @@ export function PlayerCard({
                       e.stopPropagation();
                       lockToRole(player.battletag, isLocked ? null : role);
                     }}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${bgColor}`}
+                    className={`px-1.5 py-0.5 text-xs inline-flex items-center gap-0.5 transition-colors ${
+                      isLocked ? getRoleBadgeColor(role) : "app-chip"
+                    }`}
                     title={isLocked ? `Unlock ${role}` : `Lock to ${role} for this game`}
                   >
-                    {isLocked ? `🎯${roleInitial}` : roleInitial}
+                    {isLocked && <LockKeyhole className="h-2.5 w-2.5" aria-hidden="true" />}
+                    {roleInitial}
                   </button>
                 );
               })}
@@ -345,26 +348,24 @@ export function PlayerCard({
               e.stopPropagation();
               lockToTeam(player.battletag, lobbyPlayer.lockedToTeam === 1 ? null : 1);
             }}
-            className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-              lobbyPlayer.lockedToTeam === 1
-                ? "bg-purple-600"
-                : "bg-gray-700 hover:bg-gray-600"
+            className={`flex-1 px-2 py-1 text-xs inline-flex items-center justify-center gap-1 transition-colors ${
+              lobbyPlayer.lockedToTeam === 1 ? "app-chip-active" : "app-chip"
             }`}
           >
-            <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />T1
+            <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+            T1
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               lockToTeam(player.battletag, lobbyPlayer.lockedToTeam === 2 ? null : 2);
             }}
-            className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-              lobbyPlayer.lockedToTeam === 2
-                ? "bg-purple-600"
-                : "bg-gray-700 hover:bg-gray-600"
+            className={`flex-1 px-2 py-1 text-xs inline-flex items-center justify-center gap-1 transition-colors ${
+              lobbyPlayer.lockedToTeam === 2 ? "app-chip-active" : "app-chip"
             }`}
           >
-            <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />T2
+            <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+            T2
           </button>
         </div>
       )}

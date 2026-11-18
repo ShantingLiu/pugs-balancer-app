@@ -89,9 +89,9 @@ export function Leaderboard() {
       </h3>
       <p className="text-xs text-muted mb-2">Top 10 by {getModeName(gameMode)} wins</p>
       
-      <div className="max-h-48 overflow-y-auto">
+      <div className="max-h-72 overflow-y-auto">
         <table className="w-full text-xs">
-          <thead className="text-muted sticky top-0 bg-[var(--color-paper)]">
+          <thead className="text-muted sticky top-0 bg-[var(--color-paper-2)]">
             <tr>
               <th className="text-center py-1 px-1 w-8">#</th>
               <th className="text-left py-1 px-1">Player</th>
@@ -104,14 +104,14 @@ export function Leaderboard() {
                 key={player.battletag}
                 className="hover:bg-[var(--color-paper-3)] transition-colors"
               >
-                <td className="text-center py-0.5 px-1 text-muted">
+                <td className="text-center py-0.5 px-1 text-muted app-measured">
                   {player.rank}
                 </td>
                 <td className="py-0.5 px-1 truncate max-w-[100px]" title={player.battletag}>
                   {player.name}
                 </td>
                 <td 
-                  className="text-center py-0.5 px-1 text-accent font-medium"
+                  className="text-center py-0.5 px-1 text-accent font-medium app-measured"
                   title={`CSV: ${player.baselineWins} + Session: ${player.sessionWins} = ${player.totalWins}`}
                 >
                   {player.sessionWins > 0 ? (

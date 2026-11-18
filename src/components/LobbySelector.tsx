@@ -22,15 +22,15 @@ export function LobbySelector() {
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [selectedBattletag, setSelectedBattletag] = useState<string | null>(null);
-  
+
   // Refs for scrolling to player cards
   const playerCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const playerListRef = useRef<HTMLDivElement>(null);
-  
+
   // Bug #8 fix: Track scroll position to restore after state changes
   const scrollPositionRef = useRef<number>(0);
   const shouldRestoreScrollRef = useRef<boolean>(false);
-  
+
   // Get stable references - don't call functions in selectors
   const players = usePlayerStore((state) => state.players);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
@@ -55,7 +55,7 @@ export function LobbySelector() {
   const allPlayers = useMemo(() => Array.from(players.values()), [players]);
 
   const lobbySet = useMemo(() => new Set(lobbyBattletags), [lobbyBattletags]);
-  
+
   // Bug #8 fix: Restore scroll position after lobby changes
   useLayoutEffect(() => {
     if (shouldRestoreScrollRef.current && playerListRef.current) {
@@ -63,7 +63,7 @@ export function LobbySelector() {
       shouldRestoreScrollRef.current = false;
     }
   }, [lobbyBattletags]);
-  
+
   // Helper to save scroll position before state changes
   const saveScrollPosition = useCallback(() => {
     if (playerListRef.current) {
@@ -71,14 +71,14 @@ export function LobbySelector() {
       shouldRestoreScrollRef.current = true;
     }
   }, []);
-  
+
   // Get lobby players with session state - derive from primitive state
   const lobbyPlayersMap = useMemo(() => {
     const map = new Map<string, LobbyPlayer>();
     for (const battletag of lobbyBattletags) {
       const player = players.get(battletag);
       if (!player) continue;
-      
+
       const lockedToTeam = lockedTeam1.has(battletag)
         ? 1
         : lockedTeam2.has(battletag)
@@ -99,7 +99,20 @@ export function LobbySelector() {
       });
     }
     return map;
-  }, [lobbyBattletags, players, mustPlay, mustPlayPriority, lockedTeam1, lockedTeam2, lockedRoles, afkPlayers, tempWeightOverrides, adaptiveWeights, playerLossStreaks, satOutStreaks]);
+  }, [
+    lobbyBattletags,
+    players,
+    mustPlay,
+    mustPlayPriority,
+    lockedTeam1,
+    lockedTeam2,
+    lockedRoles,
+    afkPlayers,
+    tempWeightOverrides,
+    adaptiveWeights,
+    playerLossStreaks,
+    satOutStreaks,
+  ]);
 
   // Filter players based on search and role
   const filteredPlayers = useMemo(() => {
@@ -182,11 +195,11 @@ export function LobbySelector() {
 
   if (allPlayers.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div className="text-center text-muted py-8">
         <p className="mb-4">Import players first to build your lobby</p>
         <button
           onClick={handleAddPlayer}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className="px-4 py-2 app-primary transition-colors"
         >
           + Add Player Manually
         </button>
@@ -203,26 +216,29 @@ export function LobbySelector() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-lg font-semibold text-ink">
           Lobby ({lobbyBattletags.length - afkPlayers.size} active
-          {afkPlayers.size > 0 && <span className="text-gray-500"> / {afkPlayers.size} AFK</span>})
+          {afkPlayers.size > 0 && (
+            <span className="text-muted"> / {afkPlayers.size} AFK</span>
+          )}
+          )
         </h2>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={handleAddPlayer}
-            className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+            className="px-3 py-1 text-sm app-primary transition-colors"
           >
             + Add
           </button>
           <button
             onClick={handleSelectAll}
-            className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            className="px-3 py-1 text-sm app-secondary transition-colors"
           >
             All
           </button>
           <button
             onClick={handleClearAll}
-            className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            className="px-3 py-1 text-sm app-secondary transition-colors"
           >
             Clear
           </button>
@@ -231,13 +247,13 @@ export function LobbySelector() {
 
       {/* Quick lobby summary */}
       {lobbyBattletags.length > 0 && (
-        <div className="bg-gray-700/50 rounded-lg p-3">
+        <div className="app-subsurface p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400">In Lobby:</span>
+            <span className="text-xs text-muted">In Lobby:</span>
             {selectedBattletag && (
               <button
                 onClick={() => setSelectedBattletag(null)}
-                className="text-xs text-gray-400 hover:text-white"
+                className="text-xs text-muted hover:text-ink"
               >
                 Clear selection
               </button>
@@ -246,7 +262,6 @@ export function LobbySelector() {
           <div className="flex flex-wrap gap-1">
             {lobbyBattletags.map((bt) => {
               const isAfk = afkPlayers.has(bt);
-              // Show must-play highlight if player has mustPlay status (even if currently on proposed teams)
               const isMustPlay = mustPlay.has(bt);
               const isSelected = selectedBattletag === bt;
               const name = getDisplayName(bt);
@@ -255,11 +270,9 @@ export function LobbySelector() {
                   key={bt}
                   onClick={() => {
                     if (selectedBattletag === bt) {
-                      // Clicking again deselects
                       setSelectedBattletag(null);
                     } else {
                       setSelectedBattletag(bt);
-                      // Scroll to the card
                       const cardEl = playerCardRefs.current.get(bt);
                       if (cardEl && playerListRef.current) {
                         cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -267,32 +280,37 @@ export function LobbySelector() {
                     }
                   }}
                   className={`
-                    group/badge inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full cursor-pointer transition-colors
-                    ${isSelected
-                      ? isMustPlay
-                        ? "ring-2 ring-white bg-yellow-600/50 text-yellow-100"
-                        : "ring-2 ring-white bg-blue-500 text-white"
-                      : isAfk 
-                        ? "bg-gray-600 text-gray-400 hover:bg-gray-500" 
+                    group/badge inline-flex items-center gap-1 px-2.5 py-0.5 text-xs cursor-pointer transition-colors
+                    ${
+                      isSelected
+                        ? "app-chip-active"
+                        : isAfk
+                        ? "app-chip opacity-65"
                         : isMustPlay
-                          ? "bg-yellow-600/40 text-yellow-200 ring-2 ring-yellow-500 hover:bg-yellow-600/60"
-                          : "bg-blue-600/30 text-blue-300 hover:bg-blue-600/50"
+                        ? "app-badge outline outline-1 outline-[var(--color-accent)]"
+                        : "app-badge"
                     }
                   `}
-                  title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
+                  title={
+                    bt +
+                    (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") +
+                    " - Click to view"
+                  }
                 >
-                  {isMustPlay && !isAfk && <Star className="h-3 w-3" aria-hidden="true" />}{name}{isAfk && <span className="text-muted"> AFK</span>}
+                  {isMustPlay && !isAfk && (
+                    <Star className="h-3 w-3 text-accent" aria-hidden="true" />
+                  )}
+                  {name}
+                  {isAfk && <span className="text-muted"> AFK</span>}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       removeFromLobby(bt);
                     }}
-                    className="hidden group-hover/badge:inline-flex w-4 h-4 items-center justify-center rounded-full bg-gray-500/50 hover:bg-red-500 hover:text-white transition-colors"
+                    className="hidden group-hover/badge:inline-flex w-4 h-4 items-center justify-center rounded-full bg-[var(--color-paper)] hover:bg-[var(--color-error)] hover:text-[var(--color-accent-ink)] transition-colors"
                     title="Remove from lobby"
                   >
-                    <svg aria-hidden="true" className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <path d="M2 2 L8 8 M8 2 L2 8" />
-                    </svg>
+                    <X className="w-2.5 h-2.5" aria-hidden="true" />
                   </button>
                 </span>
               );
@@ -304,10 +322,10 @@ export function LobbySelector() {
       {/* Search */}
       <input
         type="text"
-        placeholder="Search players or heroes..."
+        placeholder="Search players or heroes…"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm outline-none focus:border-blue-500"
+        className="w-full px-3 py-2 text-sm app-input"
       />
 
       {/* Filters */}
@@ -315,7 +333,7 @@ export function LobbySelector() {
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as Role | "all")}
-          className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm outline-none focus:border-blue-500"
+          className="px-3 py-1.5 text-sm app-input"
         >
           <option value="all">All Roles</option>
           <option value="Tank">Tank</option>
@@ -325,7 +343,7 @@ export function LobbySelector() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm outline-none focus:border-blue-500"
+          className="px-3 py-1.5 text-sm app-input"
         >
           <option value="name">Sort: Name</option>
           <option value="rank-desc">Sort: Rank ↓</option>
@@ -335,20 +353,22 @@ export function LobbySelector() {
         <div className="flex-1" />
         <button
           onClick={toggleShowWeightModifiers}
-          className={`px-2 py-1.5 rounded text-sm transition-colors ${
-            showWeightModifiers
-              ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              : "bg-gray-800 text-gray-500 hover:bg-gray-700"
+          className={`px-2.5 py-1.5 text-sm transition-colors ${
+            showWeightModifiers ? "app-chip-active" : "app-chip"
           }`}
           aria-label={showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
         >
-          {showWeightModifiers ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}
+          {showWeightModifiers ? (
+            <Eye className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
+          )}
         </button>
       </div>
 
       {/* Player count indicator */}
       {lobbyBattletags.length - afkPlayers.size < 10 && (
-        <div className="text-sm text-yellow-500">
+        <div className="text-sm text-accent font-medium">
           Need at least 10 active players ({10 - (lobbyBattletags.length - afkPlayers.size)} more)
         </div>
       )}
@@ -359,26 +379,23 @@ export function LobbySelector() {
           const inLobby = lobbySet.has(player.battletag);
           const lobbyPlayer = lobbyPlayersMap.get(player.battletag);
           return (
-            <div 
-              key={player.battletag} 
+            <div
+              key={player.battletag}
               ref={(el) => {
                 if (el) {
                   playerCardRefs.current.set(player.battletag, el);
                 }
               }}
-              className={`relative group transition-colors rounded-lg`}
+              className="relative group transition-colors rounded-[var(--radius-card)]"
             >
               <PlayerCard
                 player={inLobby && lobbyPlayer ? lobbyPlayer : player}
                 selected={inLobby}
                 onClick={() => {
-                  // Clear highlight on click
                   setSelectedBattletag(null);
                   if (inLobby) {
-                    // If in lobby, clicking edits the player
                     handleEditPlayer(player.battletag);
                   } else {
-                    // If not in lobby, clicking adds them
                     saveScrollPosition();
                     addToLobby(player.battletag);
                   }
@@ -390,8 +407,7 @@ export function LobbySelector() {
                     : undefined
                 }
               />
-              {/* Remove from lobby button (appears on hover when in lobby) */}
-              {/* Bug #12 fix: Use transition-opacity only to prevent layout shifts */}
+              {/* Remove from lobby button (appears on hover/focus when in lobby) */}
               {inLobby && (
                 <button
                   onClick={(e) => {
@@ -399,20 +415,21 @@ export function LobbySelector() {
                     saveScrollPosition();
                     removeFromLobby(player.battletag);
                   }}
-                  className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-xs bg-gray-600 hover:bg-red-600 text-gray-400 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center text-xs app-chip hover:bg-[var(--color-error)] hover:text-[var(--color-accent-ink)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10"
                   title="Remove from lobby"
                 >
                   <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               )}
-              {/* Edit button (appears on hover when NOT in lobby) */}
+              {/* Edit button (appears on hover/focus when NOT in lobby) */}
               {!inLobby && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditPlayer(player.battletag);
                   }}
-                  className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 px-2 py-1 text-xs app-chip opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10"
+                  title="Edit player"
                 >
                   <Pencil className="h-3 w-3" aria-hidden="true" />
                 </button>

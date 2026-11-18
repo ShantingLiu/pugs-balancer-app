@@ -47,8 +47,8 @@ export function SpectatorsList() {
   }
 
   return (
-    <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-      <h2 className="text-sm font-semibold text-gray-400 mb-2">
+    <div className="app-surface p-4">
+      <h2 className="text-sm font-semibold text-ink-2 mb-2">
         Sitting Out / Spectating ({spectators.length})
       </h2>
       <div className="flex flex-wrap gap-2">
@@ -59,16 +59,16 @@ export function SpectatorsList() {
           return (
             <span
               key={bt}
-              className={`px-3 py-1 text-sm rounded-full ${
-                isAfk 
-                  ? "bg-gray-600 text-gray-400" 
+              className={`px-3 py-1 text-sm ${
+                isAfk
+                  ? "app-chip opacity-65"
                   : isMustPlay
-                    ? "bg-yellow-600/30 text-yellow-300 ring-1 ring-yellow-500"
-                    : "bg-gray-700 text-gray-300"
+                  ? "app-badge outline outline-1 outline-[var(--color-accent)]"
+                  : "app-chip"
               }`}
               title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "")}
             >
-              {isMustPlay && !isAfk && <span className="text-accent mr-1">Must</span>}{name}{isAfk && <span className="text-muted ml-1">AFK</span>}
+              {isMustPlay && !isAfk && <span className="text-accent mr-1 font-medium">Must</span>}{name}{isAfk && <span className="text-muted ml-1">AFK</span>}
             </span>
           );
         })}

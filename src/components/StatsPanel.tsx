@@ -78,8 +78,8 @@ export function StatsPanel() {
   if (!hasData) {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-300">Session Stats</h3>
-        <p className="text-xs text-gray-500">
+        <h3 className="text-sm font-semibold text-ink-2">Session Stats</h3>
+        <p className="text-xs text-muted">
           Stats will appear after games are played.
         </p>
       </div>
@@ -89,12 +89,12 @@ export function StatsPanel() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-300">Session Stats</h3>
+        <h3 className="text-sm font-semibold text-ink-2">Session Stats</h3>
         <div className="flex gap-2">
           {adaptiveWeights.size > 0 && (
             <button
               onClick={handleClearAdaptive}
-              className="text-xs text-gray-400 hover:text-orange-400 transition-colors"
+              className="text-xs text-muted hover:text-accent transition-colors"
               title="Reset Auto-SR adjustments only"
             >
               Reset Auto-SR
@@ -102,45 +102,45 @@ export function StatsPanel() {
           )}
           <button
             onClick={handleClear}
-            className="text-xs text-gray-400 hover:text-red-400 transition-colors"
+            className="text-xs text-muted hover:text-bad transition-colors"
           >
             Clear
           </button>
         </div>
       </div>
       
-      <div className="max-h-48 overflow-y-auto">
+      <div className="max-h-72 overflow-y-auto">
         <table className="w-full text-xs">
-          <thead className="text-gray-400 sticky top-0 bg-gray-900">
+          <thead className="text-muted sticky top-0 bg-[var(--color-paper-2)]">
             <tr>
               <th className="text-left py-1 px-1">Player</th>
-              <th className="text-center py-1 px-1 text-green-400" title="Wins">W</th>
-              <th className="text-center py-1 px-1 text-red-400" title="Losses">L</th>
-              <th className="text-center py-1 px-1 text-yellow-400" title="Sat Out">S</th>
+              <th className="text-center py-1 px-1 text-ok" title="Wins">W</th>
+              <th className="text-center py-1 px-1 text-bad" title="Losses">L</th>
+              <th className="text-center py-1 px-1 text-accent" title="Sat Out">S</th>
               <th className="text-center py-1 px-1" title="Win Rate">%</th>
             </tr>
           </thead>
-          <tbody className="text-gray-300">
+          <tbody className="text-ink-2">
             {sortedStats.map((player) => (
               <tr 
                 key={player.battletag}
-                className="hover:bg-gray-800/50 transition-colors"
+                className="hover:bg-[var(--color-paper-3)] transition-colors"
               >
                 <td className="py-0.5 px-1 truncate max-w-[80px]" title={player.name}>
                   {player.name}
                 </td>
-                <td className="text-center py-0.5 px-1 text-green-400">
+                <td className="text-center py-0.5 px-1 text-ok app-measured">
                   {player.wins || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1 text-red-400">
+                <td className="text-center py-0.5 px-1 text-bad app-measured">
                   {player.losses || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1 text-yellow-400">
+                <td className="text-center py-0.5 px-1 text-accent app-measured">
                   {player.satOut || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1">
+                <td className="text-center py-0.5 px-1 app-measured">
                   {player.gamesPlayed > 0 ? (
-                    <span className={player.winRate >= 50 ? "text-green-400" : "text-red-400"}>
+                    <span className={player.winRate >= 50 ? "text-ok" : "text-bad"}>
                       {player.winRate}%
                     </span>
                   ) : "-"}
