@@ -3,12 +3,27 @@ import { Eye, EyeOff, Pencil, X, Star } from "lucide-react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { PlayerCard } from "./PlayerCard";
+import { AppSelect, type SelectOption } from "./AppSelect";
 import { AddPlayerModal } from "./AddPlayerModal";
 import { WeightAdjuster } from "./WeightAdjuster";
 import { getDisplayName } from "@utils/heroUtils";
 import type { Player, LobbyPlayer, Role } from "@engine/types";
 
 type SortOption = "name" | "rank-desc" | "rank-asc" | "role";
+
+const ROLE_FILTER_OPTIONS: readonly SelectOption<Role | "all">[] = [
+  { value: "all", label: "All Roles" },
+  { value: "Tank", label: "Tank" },
+  { value: "DPS", label: "DPS" },
+  { value: "Support", label: "Support" },
+];
+
+const SORT_OPTIONS: readonly SelectOption<SortOption>[] = [
+  { value: "name", label: "Sort: Name" },
+  { value: "rank-desc", label: "Sort: Rank ↓" },
+  { value: "rank-asc", label: "Sort: Rank ↑" },
+  { value: "role", label: "Sort: Role" },
+];
 
 // =============================================================================
 // LobbySelector - Select players for the current lobby
@@ -300,28 +315,18 @@ export function LobbySelector() {
 
       {/* Filters */}
       <div className="flex gap-2 items-center">
-        <select
+        <AppSelect
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as Role | "all")}
-          aria-label="Filter by role"
-          className="app-input px-3 py-1.5 text-sm"
-        >
-          <option value="all">All Roles</option>
-          <option value="Tank">Tank</option>
-          <option value="DPS">DPS</option>
-          <option value="Support">Support</option>
-        </select>
-        <select
+          onChange={setRoleFilter}
+          options={ROLE_FILTER_OPTIONS}
+          ariaLabel="Filter by role"
+        />
+        <AppSelect
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          aria-label="Sort players"
-          className="app-input px-3 py-1.5 text-sm"
-        >
-          <option value="name">Sort: Name</option>
-          <option value="rank-desc">Sort: Rank ↓</option>
-          <option value="rank-asc">Sort: Rank ↑</option>
-          <option value="role">Sort: Role</option>
-        </select>
+          onChange={setSortBy}
+          options={SORT_OPTIONS}
+          ariaLabel="Sort players"
+        />
         <div className="flex-1" />
         <button
           type="button"

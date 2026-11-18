@@ -190,23 +190,19 @@ function App() {
               aria-hidden="true"
             >
               <svg
-                width="20"
-                height="20"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden="true"
               >
                 <path
-                  d="M7.5 16.5h9a3.5 3.5 0 0 0 .4-6.98A4.8 4.8 0 0 0 7.6 8.4a3.6 3.6 0 0 0-.1 8.1Z"
-                  fill="var(--color-sky)"
-                  stroke="var(--color-ink)"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
+                  d="M12 6.8C10.5 4.3 7.5 3.8 5.4 5.2C3.2 6.7 2.8 9.9 4.2 12.6C5.8 15.6 9.6 18.4 12 20.2C14.4 18.4 18.2 15.6 19.8 12.6C21.2 9.9 20.8 6.7 18.6 5.2C16.5 3.8 13.5 4.3 12 6.8Z"
+                  fill="var(--color-wordmark)"
                 />
-                <circle cx="15.5" cy="9.5" r="2.2" fill="var(--color-accent)" />
               </svg>
             </span>
-            <h1 className="text-xl font-semibold text-ink truncate">
+            <h1 className="text-xl font-semibold text-wordmark truncate">
               Swoo’s PUGs Balancer
             </h1>
           </div>

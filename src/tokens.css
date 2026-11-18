@@ -22,7 +22,8 @@
   --color-paper-3: oklch(93.8% 0.028 225);
   --color-card-row: oklch(99.2% 0.006 350);
   --color-card-row-2: oklch(99.2% 0.006 350);
-  --color-card-row-hover: oklch(96.8% 0.016 225);
+  --color-card-row-hover: oklch(96.8% 0.02 225);
+  --color-pink-row-hover: oklch(97% 0.022 355);
   --color-ink: oklch(24% 0.032 260);
   --color-ink-2: oklch(35% 0.028 258);
   --color-muted: oklch(50% 0.028 252);
@@ -39,6 +40,7 @@
   --color-pink-soft: oklch(94.5% 0.038 355);
   --color-pink-edge: oklch(73% 0.125 355);
   --color-pink-ink: oklch(38% 0.145 355);
+  --color-wordmark: oklch(56% 0.185 354);
 
   /* Pastel Sky Blue (Secondary Accent & Team 2) */
   --color-sky: oklch(85% 0.088 225);
@@ -51,8 +53,10 @@
   --color-cool: oklch(42% 0.12 232);
   --color-cool-soft: oklch(93.6% 0.04 225);
 
-  /* Focus Ring */
-  --color-focus: oklch(48% 0.17 354);
+  /* Focus Ring & Inputs */
+  --color-focus: oklch(59% 0.12 232);
+  --color-input-bg: oklch(96.8% 0.016 225);
+  --color-input-edge: oklch(62% 0.095 228);
 
   /* Semantic Status & Pastel Role Tokens */
   --color-ok: oklch(35% 0.11 155);
@@ -153,6 +157,10 @@
   }
 }
 
+[data-mode="light"] {
+  color-scheme: light;
+}
+
 [data-mode="dark"] {
   color-scheme: dark;
   --color-paper: oklch(11.5% 0.01 250);
@@ -161,6 +169,7 @@
   --color-card-row: oklch(28.5% 0.044 228);
   --color-card-row-2: oklch(27.5% 0.028 244);
   --color-card-row-hover: oklch(34% 0.045 232);
+  --color-pink-row-hover: oklch(34% 0.045 232);
   --color-ink: oklch(96.5% 0.006 235);
   --color-ink-2: oklch(87% 0.018 232);
   --color-muted: oklch(75% 0.026 235);
@@ -178,6 +187,7 @@
   --color-pink-soft: oklch(22.5% 0.056 226);
   --color-pink-edge: oklch(66% 0.12 225);
   --color-pink-ink: oklch(90% 0.08 224);
+  --color-wordmark: oklch(96.5% 0.006 235);
 
   /* Midnight Black & Ice-Silver Cloud (Secondary & Team 2 in night mode) */
   --color-sky: oklch(76% 0.088 244);
@@ -191,6 +201,8 @@
   --color-cool-soft: oklch(22.5% 0.045 234);
 
   --color-focus: oklch(76% 0.14 230);
+  --color-input-bg: oklch(14% 0.018 246);
+  --color-input-edge: oklch(56% 0.055 235);
 
   /* Semantic & Role Tokens on dark */
   --color-ok: oklch(84% 0.1 160);
@@ -235,6 +247,7 @@
     --color-card-row: oklch(28.5% 0.044 228);
     --color-card-row-2: oklch(27.5% 0.028 244);
     --color-card-row-hover: oklch(34% 0.045 232);
+    --color-pink-row-hover: oklch(34% 0.045 232);
     --color-ink: oklch(96.5% 0.006 235);
     --color-ink-2: oklch(87% 0.018 232);
     --color-muted: oklch(75% 0.026 235);
@@ -250,6 +263,7 @@
     --color-pink-soft: oklch(22.5% 0.056 226);
     --color-pink-edge: oklch(66% 0.12 225);
     --color-pink-ink: oklch(90% 0.08 224);
+    --color-wordmark: oklch(96.5% 0.006 235);
     --color-sky: oklch(76% 0.088 244);
     --color-sky-hover: oklch(36% 0.095 246);
     --color-sky-hover-ink: oklch(97% 0.006 235);
@@ -260,6 +274,8 @@
     --color-cool: oklch(85% 0.085 232);
     --color-cool-soft: oklch(22.5% 0.045 234);
     --color-focus: oklch(76% 0.14 230);
+    --color-input-bg: oklch(14% 0.018 246);
+    --color-input-edge: oklch(56% 0.055 235);
     --color-ok: oklch(84% 0.1 160);
     --color-ok-soft: oklch(22% 0.038 165);
     --color-ok-edge: oklch(50% 0.08 165);
