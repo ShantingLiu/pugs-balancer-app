@@ -179,8 +179,9 @@ interface SessionActions {
   // Toggle weight modifier visibility
   toggleShowWeightModifiers: () => void;
 
-  // Cycle font scale for accessibility
+  // Font scale for accessibility
   cycleFontScale: () => void;
+  setFontScale: (scale: "normal" | "large" | "x-large") => void;
 
   // Layout & color mode preferences
   setLayoutMode: (mode: LayoutMode) => void;
@@ -1447,6 +1448,10 @@ export const useSessionStore = create<SessionStore>()(
           const idx = order.indexOf(state.fontScale);
           return { fontScale: order[(idx + 1) % order.length] };
         });
+      },
+
+      setFontScale: (fontScale: "normal" | "large" | "x-large") => {
+        set({ fontScale });
       },
 
       setLayoutMode: (mode: LayoutMode) => {

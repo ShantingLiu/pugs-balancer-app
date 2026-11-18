@@ -213,98 +213,13 @@ export function TeamColumn({
 
                     {/* Player details + quick controls */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-start justify-between gap-1.5">
                         <span
-                          className="flex-1 font-semibold text-ink truncate min-w-0"
+                          className="flex-1 min-w-0 font-semibold text-ink break-words"
                           title={assignment.player.battletag}
                         >
                           {assignment.player.battletag.split("#")[0]}
                         </span>
-
-                        {/* Swap button */}
-                        <button
-                          type="button"
-                          onClick={() => onSwapClick(battletag)}
-                          className={`px-2 py-1 text-xs rounded-pill border shrink-0 ${
-                            isSwapSource
-                              ? "bg-sky border-sky-edge text-ink"
-                              : swapSource
-                              ? "bg-sky-soft border-sky-edge text-sky-ink animate-pulse"
-                              : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft opacity-0 group-hover:opacity-100"
-                          }`}
-                          title={
-                            isSwapSource
-                              ? "Click to cancel"
-                              : swapSource
-                              ? "Click to swap with selected player"
-                              : "Swap roles with another player"
-                          }
-                          aria-label={`Swap ${assignment.player.battletag.split("#")[0]}`}
-                        >
-                          <ArrowLeftRight className="h-3 w-3" aria-hidden="true" />
-                        </button>
-
-                        {/* Substitute button */}
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
-                            className="px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge rounded-pill shrink-0 opacity-0 group-hover:opacity-100"
-                            title="Substitute player"
-                            aria-label={`Substitute ${assignment.player.battletag.split("#")[0]}`}
-                          >
-                            <RefreshCw className="h-3 w-3" aria-hidden="true" />
-                          </button>
-                          {substituteOpen === battletag && (
-                            <div className="absolute right-0 top-full mt-1 z-50 app-modal min-w-[200px] max-h-[300px] overflow-y-auto">
-                              <div className="p-2.5 text-xs font-semibold text-muted border-b border-rule">
-                                Sub for {assignment.player.battletag.split("#")[0]}
-                              </div>
-                              {getEligibleSubstitutes(assignment.assignedRole).length === 0 ? (
-                                <div className="p-3 text-sm text-muted">
-                                  No eligible {assignment.assignedRole} subs
-                                </div>
-                              ) : (
-                                getEligibleSubstitutes(assignment.assignedRole).map((sub) => (
-                                  <button
-                                    type="button"
-                                    key={sub.battletag}
-                                    onClick={() => {
-                                      substitutePlayer(battletag, sub.battletag, true);
-                                      setSubstituteOpen(null);
-                                    }}
-                                    className="w-full px-3 py-2 text-left text-sm text-ink hover:bg-sky-soft flex items-center justify-between"
-                                  >
-                                    <span className="font-semibold">{sub.battletag.split("#")[0]}</span>
-                                    <span className="text-muted text-xs">
-                                      {formatRankOnly(getEffectiveSR(sub, assignment.assignedRole), gameMode)}
-                                    </span>
-                                  </button>
-                                ))
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setSubstituteOpen(null)}
-                                className="w-full px-3 py-2 text-left text-xs font-semibold text-muted hover:bg-paper-3 border-t border-rule"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Edit button */}
-                        {onEditPlayer && (
-                          <button
-                            type="button"
-                            onClick={() => onEditPlayer(battletag)}
-                            className="px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-sky-soft rounded-pill opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                            title="Edit player"
-                            aria-label={`Edit ${assignment.player.battletag.split("#")[0]}`}
-                          >
-                            <Pencil className="h-3 w-3" aria-hidden="true" />
-                          </button>
-                        )}
 
                         {/* Lock button */}
                         <button
@@ -336,27 +251,122 @@ export function TeamColumn({
                         </button>
                       </div>
 
-                      {/* Rank display */}
-                      {assignment.effectiveSR !== undefined && (
-                        <div
-                          className="text-xs text-ink-2 mt-0.5"
-                          title={
-                            showWeightModifiers
-                              ? `${assignment.effectiveSR.toLocaleString()} SR (manual: ${
-                                  modifier - adaptive >= 0 ? "+" : ""
-                                }${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})`
-                              : `${(assignment.effectiveSR - modifier).toLocaleString()} SR`
-                          }
-                        >
-                          {formatRankWithModifier(
-                            assignment.effectiveSR,
-                            modifier,
-                            adaptive,
-                            gameMode,
-                            showWeightModifiers
+                      {/* Rank display & hover/focus actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
+                        {assignment.effectiveSR !== undefined ? (
+                          <div
+                            className="text-xs text-ink-2"
+                            title={
+                              showWeightModifiers
+                                ? `${assignment.effectiveSR.toLocaleString()} SR (manual: ${
+                                    modifier - adaptive >= 0 ? "+" : ""
+                                  }${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})`
+                                : `${(assignment.effectiveSR - modifier).toLocaleString()} SR`
+                            }
+                          >
+                            {formatRankWithModifier(
+                              assignment.effectiveSR,
+                              modifier,
+                              adaptive,
+                              gameMode,
+                              showWeightModifiers
+                            )}
+                          </div>
+                        ) : (
+                          <span />
+                        )}
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Swap button */}
+                          <button
+                            type="button"
+                            onClick={() => onSwapClick(battletag)}
+                            className={`px-2 py-1 text-xs rounded-pill border shrink-0 ${
+                              isSwapSource
+                                ? "bg-sky border-sky-edge text-ink"
+                                : swapSource
+                                ? "bg-sky-soft border-sky-edge text-sky-ink animate-pulse"
+                                : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                            }`}
+                            title={
+                              isSwapSource
+                                ? "Click to cancel"
+                                : swapSource
+                                ? "Click to swap with selected player"
+                                : "Swap roles with another player"
+                            }
+                            aria-label={`Swap ${assignment.player.battletag.split("#")[0]}`}
+                          >
+                            <ArrowLeftRight className="h-3 w-3" aria-hidden="true" />
+                          </button>
+
+                          {/* Substitute button */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
+                              className={`px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge rounded-pill shrink-0 ${
+                                substituteOpen === battletag
+                                  ? "opacity-100"
+                                  : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                              }`}
+                              title="Substitute player"
+                              aria-label={`Substitute ${assignment.player.battletag.split("#")[0]}`}
+                            >
+                              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                            </button>
+                            {substituteOpen === battletag && (
+                              <div className="absolute right-0 top-full mt-1 z-50 app-modal min-w-[200px] max-h-[300px] overflow-y-auto">
+                                <div className="p-2.5 text-xs font-semibold text-muted border-b border-rule">
+                                  Sub for {assignment.player.battletag.split("#")[0]}
+                                </div>
+                                {getEligibleSubstitutes(assignment.assignedRole).length === 0 ? (
+                                  <div className="p-3 text-sm text-muted">
+                                    No eligible {assignment.assignedRole} subs
+                                  </div>
+                                ) : (
+                                  getEligibleSubstitutes(assignment.assignedRole).map((sub) => (
+                                    <button
+                                      type="button"
+                                      key={sub.battletag}
+                                      onClick={() => {
+                                        substitutePlayer(battletag, sub.battletag, true);
+                                        setSubstituteOpen(null);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-ink hover:bg-sky-soft flex items-center justify-between"
+                                    >
+                                      <span className="font-semibold">{sub.battletag.split("#")[0]}</span>
+                                      <span className="text-muted text-xs">
+                                        {formatRankOnly(getEffectiveSR(sub, assignment.assignedRole), gameMode)}
+                                      </span>
+                                    </button>
+                                  ))
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setSubstituteOpen(null)}
+                                  className="w-full px-3 py-2 text-left text-xs font-semibold text-muted hover:bg-paper-3 border-t border-rule"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Edit button */}
+                          {onEditPlayer && (
+                            <button
+                              type="button"
+                              onClick={() => onEditPlayer(battletag)}
+                              className="px-2 py-1 text-xs bg-paper-3 border border-rule text-ink-2 hover:bg-sky-soft rounded-pill opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0"
+                              title="Edit player"
+                              aria-label={`Edit ${assignment.player.battletag.split("#")[0]}`}
+                            >
+                              <Pencil className="h-3 w-3" aria-hidden="true" />
+                            </button>
                           )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 );

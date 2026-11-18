@@ -140,7 +140,7 @@ export function CsvImportModal({
                       aria-label={`Keep ${player.battletag}`}
                       className="w-4 h-4 accent-focus shrink-0"
                     />
-                    <span className="font-semibold text-sm text-ink truncate flex-1">
+                    <span className="font-semibold text-sm text-ink break-words min-w-0 flex-1">
                       {player.battletag}
                     </span>
                     <span className="text-xs text-muted shrink-0">

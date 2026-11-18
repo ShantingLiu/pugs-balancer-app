@@ -121,7 +121,7 @@ export function StatsPanel() {
           <tbody className="text-ink-2 divide-y divide-rule">
             {sortedStats.map((player) => (
               <tr key={player.battletag} className="hover:bg-sky-soft/60">
-                <td className="py-1.5 px-1 font-semibold text-ink truncate max-w-[96px]" title={player.name}>
+                <td className="py-1.5 px-1 font-semibold text-ink break-words" title={player.name}>
                   {player.name}
                 </td>
                 <td className="text-center py-1.5 px-1 text-ok font-semibold app-measured">

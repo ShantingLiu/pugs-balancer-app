@@ -78,14 +78,14 @@ export function PlayerCard({
   if (compact && assignedRole) {
     return (
       <div
-        className={`flex items-center gap-2 p-2 rounded-well border ${
+        className={`flex flex-wrap items-center gap-x-2 gap-y-1 p-2 rounded-well border ${
           lobbyPlayer?.isAfk ? "opacity-55" : ""
         } ${lobbyPlayer?.lockedToTeam ? "border-lock-edge bg-lock-soft" : "app-player-row border-rule"}`}
       >
-        <span className={`px-2 py-0.5 text-xs font-semibold rounded-pill ${getRoleBadgeColor(assignedRole)}`}>
+        <span className={`px-2 py-0.5 text-xs font-semibold rounded-pill shrink-0 ${getRoleBadgeColor(assignedRole)}`}>
           {assignedRole.charAt(0)}
         </span>
-        <span className="flex-1 truncate font-semibold text-ink">
+        <span className="flex-1 min-w-0 break-words font-semibold text-ink">
           {parseBattletag(player.battletag).name}
         </span>
         {lobbyPlayer?.lockedToTeam && (
@@ -111,9 +111,9 @@ export function PlayerCard({
       } ${lobbyPlayer?.isAfk ? "opacity-55" : ""}`}
     >
       {/* Header with name and roles */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-semibold text-ink truncate">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          <span className="font-semibold text-ink break-words min-w-0">
             {parseBattletag(player.battletag).name}
           </span>
           {parseBattletag(player.battletag).discriminator && (

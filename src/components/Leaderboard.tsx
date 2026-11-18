@@ -105,7 +105,7 @@ export function Leaderboard() {
                 <td className="text-center py-1.5 px-1 text-muted app-measured">
                   {player.rank}
                 </td>
-                <td className="py-1.5 px-1 font-semibold text-ink truncate max-w-[110px]" title={player.battletag}>
+                <td className="py-1.5 px-1 font-semibold text-ink break-words" title={player.battletag}>
                   {player.name}
                 </td>
                 <td

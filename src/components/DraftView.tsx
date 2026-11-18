@@ -203,7 +203,7 @@ function DraftPlayerCard({
 
   return (
     <div
-      className={`app-player-row app-card-interactive flex items-center gap-2.5 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
+      className={`app-player-row app-card-interactive flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
         player.isAfk ? "opacity-55" : ""
       } ${dimmed ? "opacity-45" : ""}`}
       onClick={(e) => onClick(e)}
@@ -234,7 +234,7 @@ function DraftPlayerCard({
             {getRoleLabel(displayRole)}
             {canCycleRole && <RefreshCw className="h-2.5 w-2.5" aria-hidden="true" />}
           </button>
-          <span className="flex-1 font-semibold text-ink truncate">{name}</span>
+          <span className="flex-1 min-w-0 font-semibold text-ink break-words">{name}</span>
           {formatSRDisplay()}
         </>
       ) : (

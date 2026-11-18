@@ -1,33 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { LayoutGrid, ChevronDown, Check } from "lucide-react";
-import { useSessionStore, type LayoutMode } from "@store/sessionStore";
+import { useSessionStore } from "@store/sessionStore";
+import { LAYOUT_OPTIONS } from "@config/headerOptions";
 
 // =============================================================================
 // LayoutSelector - Dropdown to switch workspace layouts
 // =============================================================================
-
-const LAYOUT_OPTIONS: { id: LayoutMode; label: string; description: string }[] = [
-  {
-    id: "sidebar-left",
-    label: "Sidebar Left",
-    description: "Lobby on left, teams & stats on right",
-  },
-  {
-    id: "teams-left",
-    label: "Teams Left",
-    description: "Teams & stats on left, lobby on right",
-  },
-  {
-    id: "wide-teams",
-    label: "Wide Teams",
-    description: "Full-width teams on top, lobby & stats below",
-  },
-  {
-    id: "three-col",
-    label: "Three Column",
-    description: "Lobby, teams, and stats side by side",
-  },
-];
 
 export function LayoutSelector() {
   const layoutMode = useSessionStore((state) => state.layoutMode);

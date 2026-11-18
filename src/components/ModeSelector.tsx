@@ -3,17 +3,59 @@ import { ChevronDown, Check, Info } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import type { GameMode } from "@engine/types";
 import { MODE_CONFIGS } from "@engine/modeConfig";
+import { MODE_OPTIONS } from "@config/headerOptions";
 import { useTheme } from "@hooks/useTheme";
 
 // =============================================================================
 // ModeSelector - Dropdown to switch between game modes
 // =============================================================================
 
-const MODE_OPTIONS: { id: GameMode; label: string; description: string }[] = [
-  { id: "regular_5v5", label: "Regular 5v5", description: "Full hero roster, comp ranks" },
-  { id: "regular_6v6", label: "Regular 6v6", description: "2-2-2 composition" },
-  { id: "stadium_5v5", label: "Stadium 5v5", description: "Locked heroes, stadium ranks" },
-];
+interface ModeSwitchConfirmModalProps {
+  targetMode: GameMode;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+/** Confirms switching game mode when a match result exists. */
+export function ModeSwitchConfirmModal({
+  targetMode,
+  onCancel,
+  onConfirm,
+}: ModeSwitchConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
+      <div className="app-modal p-6 max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-ink mb-2">Switch Game Mode?</h3>
+        <p className="text-ink-2 text-sm mb-4">
+          Switching to {MODE_CONFIGS[targetMode].label} will reset your current session stats (wins, losses, adaptive weights).
+        </p>
+        <p className="flex items-start gap-2 text-sm text-pink-ink bg-pink-soft border border-pink-edge rounded-well p-3 mb-4">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+          <span>Export your CSV first to save session wins before switching.</span>
+        </p>
+        <p className="text-muted text-sm mb-6">
+          Your lobby players and imported roster will be preserved.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="app-secondary px-4 py-2 rounded-pill text-sm font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="app-primary px-4 py-2 rounded-pill text-sm font-semibold"
+          >
+            Switch Mode
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ModeSelector() {
   const gameMode = useSessionStore((state) => state.gameMode);
@@ -91,37 +133,11 @@ export function ModeSelector() {
 
       {/* Confirmation modal */}
       {showConfirm && (
-        <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
-          <div className="app-modal p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-ink mb-2">Switch Game Mode?</h3>
-            <p className="text-ink-2 text-sm mb-4">
-              Switching to {MODE_CONFIGS[showConfirm].label} will reset your current session stats (wins, losses, adaptive weights).
-            </p>
-            <p className="flex items-start gap-2 text-sm text-pink-ink bg-pink-soft border border-pink-edge rounded-well p-3 mb-4">
-              <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-              <span>Export your CSV first to save session wins before switching.</span>
-            </p>
-            <p className="text-muted text-sm mb-6">
-              Your lobby players and imported roster will be preserved.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowConfirm(null)}
-                className="app-secondary px-4 py-2 rounded-pill text-sm font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => { setGameMode(showConfirm); setShowConfirm(null); }}
-                className="app-primary px-4 py-2 rounded-pill text-sm font-semibold"
-              >
-                Switch Mode
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModeSwitchConfirmModal
+          targetMode={showConfirm}
+          onCancel={() => setShowConfirm(null)}
+          onConfirm={() => { setGameMode(showConfirm); setShowConfirm(null); }}
+        />
       )}
     </>
   );

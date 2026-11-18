@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Moon, Sun } from "lucide-react";
 import { CsvImporter } from "@components/CsvImporter";
 import { LobbySelector } from "@components/LobbySelector";
 import { TeamDisplay } from "@components/TeamDisplay";
@@ -8,15 +7,15 @@ import { ConstraintsPanel } from "@components/ConstraintsPanel";
 import { StatsPanel } from "@components/StatsPanel";
 import { Leaderboard } from "@components/Leaderboard";
 import { SpectatorsList } from "@components/SpectatorsList";
-import { ModeSelector } from "@components/ModeSelector";
-import { LayoutSelector } from "@components/LayoutSelector";
-import { SyncButton } from "@components/SyncButton";
+import { HeaderMenu } from "@components/HeaderMenu";
 import { SyncDiffModal } from "@components/SyncDiffModal";
 import { SheetSetupModal } from "@components/SheetSetupModal";
 import { DraftView } from "@components/DraftView";
 import { UpdateBanner } from "@components/UpdateBanner";
 import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
+import { useTheme } from "@hooks/useTheme";
+import { MODE_CONFIGS } from "@engine/modeConfig";
 import { performSync, applySyncResult } from "@services/sheetSync";
 import { initAuth } from "@services/googleAuth";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "@config/google";
@@ -28,10 +27,10 @@ function App() {
   const draftMode = useSessionStore((state) => state.draftMode);
   const setDraftMode = useSessionStore((state) => state.setDraftMode);
   const fontScale = useSessionStore((state) => state.fontScale);
-  const cycleFontScale = useSessionStore((state) => state.cycleFontScale);
   const layoutMode = useSessionStore((state) => state.layoutMode);
   const colorMode = useSessionStore((state) => state.colorMode);
-  const toggleColorMode = useSessionStore((state) => state.toggleColorMode);
+  const gameMode = useSessionStore((state) => state.gameMode);
+  const theme = useTheme();
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
 
   const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
@@ -99,8 +98,7 @@ function App() {
     document.documentElement.dataset.mode = colorMode;
   }, [colorMode]);
 
-  const fontLabel = fontScale === "large" ? "A+" : fontScale === "x-large" ? "A++" : "A";
-  const isDark = colorMode === "dark";
+  const currentModeLabel = MODE_CONFIGS[gameMode].label;
 
   const importerSection = (
     <section className="app-surface p-5">
@@ -213,38 +211,16 @@ function App() {
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowSheetSetup(true)}
-              className="app-secondary px-3.5 py-2 rounded-pill text-sm font-semibold"
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={`px-3 py-1 text-xs font-semibold rounded-pill ${theme.badge.bg} ${theme.badge.text}`}
             >
-              Sheets
-            </button>
-            <SyncButton onClick={handleSync} />
-            <ModeSelector />
-            <LayoutSelector />
-            <button
-              type="button"
-              onClick={toggleColorMode}
-              className="app-secondary p-2 rounded-pill text-sm font-semibold"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? (
-                <Sun className="h-4 w-4 text-warn" aria-hidden="true" />
-              ) : (
-                <Moon className="h-4 w-4 text-sky-ink" aria-hidden="true" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={cycleFontScale}
-              className="app-secondary px-3 py-2 rounded-pill text-sm font-semibold min-w-10"
-              title={`Font size: ${fontScale} (click to cycle)`}
-            >
-              {fontLabel}
-            </button>
+              {currentModeLabel}
+            </span>
+            <HeaderMenu
+              onOpenSheets={() => setShowSheetSetup(true)}
+              onSync={handleSync}
+            />
           </div>
         </div>
       </header>
