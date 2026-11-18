@@ -203,9 +203,9 @@ function DraftPlayerCard({
 
   return (
     <div
-      className={`app-player-row app-card-interactive flex items-center gap-2.5 px-3 py-2 rounded-well border cursor-pointer select-none ${
-        player.mustPlay ? "border-warn-edge ring-1 ring-warn-edge" : "border-rule"
-      } ${player.isAfk ? "opacity-55" : ""} ${dimmed ? "opacity-45" : ""}`}
+      className={`app-player-row app-card-interactive flex items-center gap-2.5 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
+        player.isAfk ? "opacity-55" : ""
+      } ${dimmed ? "opacity-45" : ""}`}
       onClick={(e) => onClick(e)}
       draggable={isDraggable}
       onDragStart={(e) => {

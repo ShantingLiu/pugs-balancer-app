@@ -194,7 +194,7 @@ export function TeamColumn({
                 return (
                   <div
                     key={assignment.player.battletag}
-                    className={`px-3 py-2 rounded-well border group flex gap-3 ${
+                    className={`px-3 py-2 rounded-well border group flex gap-3 app-card-interactive ${
                       isSwapSource
                         ? "border-sky-edge ring-2 ring-focus bg-sky-soft"
                         : isLocked

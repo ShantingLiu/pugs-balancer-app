@@ -232,7 +232,20 @@ button:disabled {
 }
 
 [data-mode="dark"] .app-card-interactive:hover {
-  background: var(--color-card-row);
+  background: var(--color-card-row-hover);
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.app-team-1 .app-player-row.app-card-interactive:hover,
+.app-team-2 .app-player-row.app-card-interactive:hover {
+  background: var(--color-card-row-hover);
+  border-color: var(--color-pink-edge);
+}
+
+[data-mode="dark"] .app-team-1 .app-player-row.app-card-interactive:hover,
+[data-mode="dark"] .app-team-2 .app-player-row.app-card-interactive:hover {
+  background: var(--color-card-row-hover);
   border-color: var(--color-accent);
   color: var(--color-ink);
 }

@@ -346,7 +346,7 @@ export function LobbySelector() {
       )}
 
       {/* Player list */}
-      <div ref={playerListRef} className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+      <div ref={playerListRef} className="space-y-2 max-h-[600px] overflow-y-auto p-1">
         {sortedPlayers.map((player) => {
           const inLobby = lobbySet.has(player.battletag);
           const lobbyPlayer = lobbyPlayersMap.get(player.battletag);

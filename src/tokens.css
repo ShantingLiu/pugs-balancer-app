@@ -22,6 +22,7 @@
   --color-paper-3: oklch(93.8% 0.028 225);
   --color-card-row: oklch(99.2% 0.006 350);
   --color-card-row-2: oklch(99.2% 0.006 350);
+  --color-card-row-hover: oklch(96.8% 0.016 225);
   --color-ink: oklch(24% 0.032 260);
   --color-ink-2: oklch(35% 0.028 258);
   --color-muted: oklch(50% 0.028 252);
@@ -159,6 +160,7 @@
   --color-paper-3: oklch(22.5% 0.032 238);
   --color-card-row: oklch(28.5% 0.044 228);
   --color-card-row-2: oklch(27.5% 0.028 244);
+  --color-card-row-hover: oklch(34% 0.045 232);
   --color-ink: oklch(96.5% 0.006 235);
   --color-ink-2: oklch(87% 0.018 232);
   --color-muted: oklch(75% 0.026 235);
@@ -211,9 +213,9 @@
   --color-tank-soft: oklch(20% 0.022 245);
   --color-tank-edge: oklch(80% 0.12 88);
 
-  --color-dps: oklch(83% 0.105 16);
-  --color-dps-soft: oklch(22% 0.042 16);
-  --color-dps-edge: oklch(50% 0.085 16);
+  --color-dps: oklch(85% 0.115 34);
+  --color-dps-soft: oklch(19% 0.018 248);
+  --color-dps-edge: oklch(74% 0.115 34);
 
   --color-sup: oklch(84% 0.1 162);
   --color-sup-soft: oklch(22% 0.038 165);
@@ -232,6 +234,7 @@
     --color-paper-3: oklch(22.5% 0.032 238);
     --color-card-row: oklch(28.5% 0.044 228);
     --color-card-row-2: oklch(27.5% 0.028 244);
+    --color-card-row-hover: oklch(34% 0.045 232);
     --color-ink: oklch(96.5% 0.006 235);
     --color-ink-2: oklch(87% 0.018 232);
     --color-muted: oklch(75% 0.026 235);
@@ -273,9 +276,9 @@
     --color-tank: oklch(88% 0.12 88);
     --color-tank-soft: oklch(20% 0.022 245);
     --color-tank-edge: oklch(80% 0.12 88);
-    --color-dps: oklch(83% 0.105 16);
-    --color-dps-soft: oklch(22% 0.042 16);
-    --color-dps-edge: oklch(50% 0.085 16);
+    --color-dps: oklch(85% 0.115 34);
+    --color-dps-soft: oklch(19% 0.018 248);
+    --color-dps-edge: oklch(74% 0.115 34);
     --color-sup: oklch(84% 0.1 162);
     --color-sup-soft: oklch(22% 0.038 165);
     --color-sup-edge: oklch(50% 0.08 165);

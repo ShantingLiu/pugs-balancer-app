@@ -108,9 +108,7 @@ export function PlayerCard({
         selected
           ? "app-lobby-card--selected"
           : "app-lobby-card"
-      } ${lobbyPlayer?.isAfk ? "opacity-55" : ""} ${
-        lobbyPlayer?.mustPlay ? "ring-2 ring-warn-edge" : ""
-      }`}
+      } ${lobbyPlayer?.isAfk ? "opacity-55" : ""}`}
     >
       {/* Header with name and roles */}
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -127,12 +125,10 @@ export function PlayerCard({
 
         {/* Roles aligned right */}
         <div className="flex gap-1 shrink-0">
-          {player.rolesWilling.map((role, idx) => (
+          {player.rolesWilling.map((role) => (
             <span
               key={role}
-              className={`px-2 py-0.5 text-xs font-semibold rounded-pill ${getRoleBadgeColor(role)} ${
-                idx === 0 && player.rolePreference[0] === role ? "ring-1 ring-ink" : ""
-              }`}
+              className={`px-2 py-0.5 text-xs font-semibold rounded-pill ${getRoleBadgeColor(role)}`}
             >
               {role}
             </span>
