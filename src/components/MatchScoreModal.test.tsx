@@ -39,7 +39,7 @@ describe("MatchScoreModal", () => {
         />
       );
 
-      expect(screen.getByText("🏆 Team 1 Won!")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
     });
 
     it("should display correct winning team number", () => {
@@ -52,7 +52,7 @@ describe("MatchScoreModal", () => {
         />
       );
 
-      expect(screen.getByText("🏆 Team 2 Won!")).toBeInTheDocument();
+      expect(screen.getByText("Team 2 Won")).toBeInTheDocument();
     });
 
     it("should have default score values of 4-0", () => {

@@ -68,7 +68,7 @@ export function SpectatorsList() {
               }`}
               title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "")}
             >
-              {isMustPlay && !isAfk && "★ "}{name}{isAfk && " 💤"}
+              {isMustPlay && !isAfk && <span className="text-accent mr-1">Must</span>}{name}{isAfk && <span className="text-muted ml-1">AFK</span>}
             </span>
           );
         })}

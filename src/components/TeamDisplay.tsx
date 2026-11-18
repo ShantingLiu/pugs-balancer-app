@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { Users, RefreshCw, MapPin, Scale } from "lucide-react";
 import type { TeamAssignment, Player, RoleAssignment, LobbyPlayer, GameMode } from "@engine/types";
 import { TeamColumn } from "./TeamColumn";
 import { WarningsPanel } from "./WarningsPanel";
@@ -154,15 +155,15 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
           <div className="flex gap-4 justify-center">
             <button
               onClick={handleAutoBalanceNext}
-              className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
+              className={`flex-1 py-2 px-4 app-primary rounded-lg font-medium transition-colors`}
             >
-              ⚖️ Auto-Balance Next Game
+              <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />Auto-Balance Next Game
             </button>
             <button
               onClick={handleDraftNext}
-              className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
+              className={`flex-1 py-2 px-4 app-secondary rounded-lg font-medium transition-colors`}
             >
-              👥 Draft Next Game
+              <Users className="inline h-4 w-4 mr-2" aria-hidden="true" />Draft Next Game
             </button>
           </div>
         </div>
@@ -180,7 +181,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
       return (
         <div className="flex items-center justify-center h-64 text-gray-500">
           <div className="text-center">
-            <div className="text-4xl mb-2">⚖️</div>
+            <Scale className="h-10 w-10 mx-auto mb-2 text-muted" aria-hidden="true" />
             <div>No teams generated yet</div>
             <div className="text-sm mt-1">
               Add at least {requiredPlayers} players to lobby and click Balance
@@ -212,8 +213,9 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
     return (
       <div className="space-y-4">
         <div className="bg-gray-800/50 rounded-lg p-3 text-center border border-dashed border-gray-600">
-          <span className="text-gray-400 text-sm">
-            📌 Preview — {preAssigned.length} player{preAssigned.length !== 1 ? "s" : ""} pre-assigned
+          <span className="text-gray-400 text-sm inline-flex items-center gap-2">
+            <MapPin className="h-4 w-4" aria-hidden="true" />
+            Preview: {preAssigned.length} player{preAssigned.length !== 1 ? "s" : ""} pre-assigned
           </span>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -264,7 +266,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
             <div className="text-sm text-gray-400">Team 1</div>
             <div className="text-xs mt-1 h-4">
               {team1AvgSR > team2AvgSR && srDifference >= 25 && (
-                <span className="text-green-400">⭐ Favored</span>
+                <span className="text-green-400">Favored</span>
               )}
             </div>
           </div>
@@ -279,11 +281,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
               }`}
               title={`${srDifference.toFixed(0)} SR difference`}
             >
-              {srDifference < 25 ? (
-                <span>⚔️ Even</span>
-              ) : (
-                <span>Δ {srDifference.toFixed(0)} SR</span>
-              )}
+              {srDifference < 25 ? <span>Even</span> : <span>Delta {srDifference.toFixed(0)} SR</span>}
             </div>
             <div className="text-sm text-gray-400">Difference</div>
             <div className="h-4"></div>
@@ -295,7 +293,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
             <div className="text-sm text-gray-400">Team 2</div>
             <div className="text-xs mt-1 h-4">
               {team2AvgSR > team1AvgSR && srDifference >= 25 && (
-                <span className="text-green-400">⭐ Favored</span>
+                <span className="text-green-400">Favored</span>
               )}
             </div>
           </div>
@@ -332,15 +330,15 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
             <div className="flex gap-4 pt-2">
               <button
                 onClick={handleAutoBalanceNext}
-                className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
+                className={`flex-1 py-2 px-4 app-primary rounded-lg font-medium transition-colors`}
               >
-                ⚖️ Auto-Balance Next Game
+                <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />Auto-Balance Next Game
               </button>
               <button
                 onClick={handleDraftNext}
-                className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
+                className={`flex-1 py-2 px-4 app-secondary rounded-lg font-medium transition-colors`}
               >
-                👥 Draft Next Game
+                <Users className="inline h-4 w-4 mr-2" aria-hidden="true" />Draft Next Game
               </button>
             </div>
           ) : (
@@ -350,14 +348,14 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
                 className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
                 title="Hold for 1 second to confirm Team 1 won"
               >
-                🏆 Team 1 Won
+                Team 1 Won
               </HoldButton>
               <HoldButton
                 onConfirm={() => handleTeamWon(2)}
                 className={`flex-1 py-2 px-4 ${theme.secondary.bg} ${theme.secondary.bgHover} rounded-lg font-medium transition-colors`}
                 title="Hold for 1 second to confirm Team 2 won"
               >
-                🏆 Team 2 Won
+                Team 2 Won
               </HoldButton>
               {!pendingMatchResult && (
                 <button
@@ -365,7 +363,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
                   className="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors text-gray-300"
                   title="Clear teams without recording a result"
                 >
-                  🔄 New Game
+                  <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />New Game
                 </button>
               )}
             </div>

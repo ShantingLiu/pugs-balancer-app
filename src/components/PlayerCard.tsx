@@ -1,4 +1,5 @@
 import type { LobbyPlayer, Player, Role } from "@engine/types";
+import { LockKeyhole, Scale } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import { parseBattletag } from "@utils/heroUtils";
 import { getRoleRankDisplay } from "@utils/rankMapper";
@@ -44,11 +45,6 @@ function getRoleBadgeColor(role: Role): string {
   }
 }
 
-/** Format SR for display */
-function formatSR(sr: number): string {
-  return sr.toLocaleString();
-}
-
 export function PlayerCard({
   player,
   showControls = false,
@@ -92,10 +88,10 @@ export function PlayerCard({
           {parseBattletag(player.battletag).name}
         </span>
         {lobbyPlayer?.lockedToTeam && (
-          <span className="text-xs text-purple-400">🔒</span>
+          <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />
         )}
         {effectiveSR !== undefined && (
-          <span className="text-sm text-gray-400">{formatSR(effectiveSR)}</span>
+          <span className="text-sm text-gray-400">{effectiveSR}</span>
         )}
       </div>
     );
@@ -106,9 +102,9 @@ export function PlayerCard({
     <div
       onClick={onClick}
       className={`
-        p-3 rounded-lg border transition-all
-        ${onClick ? "cursor-pointer hover:border-blue-500" : ""}
-        ${selected ? "border-blue-500 bg-blue-500/10" : "border-gray-700 bg-gray-800"}
+        p-3 rounded-lg border transition-colors
+        ${onClick ? "cursor-pointer hover:border-[var(--color-cool)]" : ""}
+        ${selected ? "border-[var(--color-cool)] bg-[var(--color-cool-soft)]" : "border-[var(--color-rule)] bg-[var(--color-paper-2)]"}
         ${lobbyPlayer?.isAfk ? "opacity-50" : ""}
         ${lobbyPlayer?.mustPlay ? "ring-2 ring-yellow-500" : ""}
       `}
@@ -164,7 +160,7 @@ export function PlayerCard({
           )}
           {showWeightModifiers && lobbyPlayer && lobbyPlayer.consecutiveLosses > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-red-700 rounded">
-              📉L{lobbyPlayer.consecutiveLosses}
+              L{lobbyPlayer.consecutiveLosses}
             </span>
           )}
           {player.isOneTrick && (
@@ -261,7 +257,7 @@ export function PlayerCard({
                 : "bg-gray-600 hover:bg-gray-500"
             }`}
           >
-            {lobbyPlayer.isAfk ? "💤 AFK" : "AFK"}
+            {lobbyPlayer.isAfk ? "AFK" : "AFK"}
           </button>
 
           {/* Weight adjust button */}
@@ -277,7 +273,7 @@ export function PlayerCard({
                   : "bg-gray-600 hover:bg-gray-500"
               }`}
             >
-              ⚖️
+              <Scale className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
 
@@ -294,7 +290,7 @@ export function PlayerCard({
                   : "bg-gray-600 hover:bg-gray-500"
               }`}
             >
-              {lobbyPlayer.lockedToTeam === 1 ? "🔒T1" : "T1"}
+              {lobbyPlayer.lockedToTeam === 1 ? <><LockKeyhole className="inline h-3 w-3 mr-1" aria-hidden="true" />T1</> : "T1"}
             </button>
             <button
               onClick={(e) => {
@@ -307,7 +303,7 @@ export function PlayerCard({
                   : "bg-gray-600 hover:bg-gray-500"
               }`}
             >
-              {lobbyPlayer.lockedToTeam === 2 ? "🔒T2" : "T2"}
+              {lobbyPlayer.lockedToTeam === 2 ? <><LockKeyhole className="inline h-3 w-3 mr-1" aria-hidden="true" />T2</> : "T2"}
             </button>
           </div>
 
@@ -355,7 +351,7 @@ export function PlayerCard({
                 : "bg-gray-700 hover:bg-gray-600"
             }`}
           >
-            🔒T1
+            <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />T1
           </button>
           <button
             onClick={(e) => {
@@ -368,7 +364,7 @@ export function PlayerCard({
                 : "bg-gray-700 hover:bg-gray-600"
             }`}
           >
-            🔒T2
+            <LockKeyhole className="h-3 w-3 text-accent" aria-hidden="true" />T2
           </button>
         </div>
       )}

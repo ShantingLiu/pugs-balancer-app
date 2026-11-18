@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Users, Zap, RefreshCw, Trophy, AlertTriangle } from "lucide-react";
 import type { LobbyPlayer, Role } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { getModeConfig } from "@engine/modeConfig";
@@ -287,7 +288,7 @@ function AssignPopup({ anchorRect, roles, team1OpenRoles, team2OpenRoles, onAssi
   };
 
   return (
-    <div ref={popupRef} style={style} className="bg-gray-700 rounded-lg shadow-xl border border-gray-600 p-2 flex gap-3">
+    <div ref={popupRef} style={style} className="bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule-2)] p-2 flex gap-3">
       <div className="text-center">
         <div className="text-[10px] text-gray-400 mb-1">← Team 1</div>
         <div className="flex gap-1">
@@ -393,8 +394,9 @@ function TeamPanel({ players, onUnassign, onCycleRole, onDrop, onDragStart, drag
       onDrop={handleDrop}
     >
       {compositionWarning && (
-        <div className="text-xs text-yellow-400 bg-yellow-900/30 rounded px-2 py-1">
-          ⚠️ {compositionWarning}
+        <div className="text-xs text-accent bg-[var(--color-accent-soft)] rounded px-2 py-1 flex items-center gap-2">
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+          {compositionWarning}
         </div>
       )}
       {ROLE_ORDER.map((role) => {
@@ -403,7 +405,7 @@ function TeamPanel({ players, onUnassign, onCycleRole, onDrop, onDragStart, drag
 
         return (
           <div key={role}>
-            <div className={`text-xs font-semibold uppercase mb-1 ${getRoleTextColor(role)}`}>
+            <div className={`text-xs font-medium mb-1 ${getRoleTextColor(role)}`}>
               {role} ({playersInRole.length}/{roleCounts[role]})
             </div>
             <div className="space-y-1">
@@ -427,7 +429,7 @@ function TeamPanel({ players, onUnassign, onCycleRole, onDrop, onDragStart, drag
                     border border-dashed ${getRoleBorderColor(role)} text-gray-600
                   `}
                 >
-                  — {role} —
+                  Open {role} slot
                 </div>
               ))}
             </div>
@@ -617,16 +619,12 @@ export function DraftView() {
             <div className="flex items-center justify-center gap-8">
               <div className="text-center">
                 <div className="text-xl font-bold text-blue-400" title={`${team1AvgSR} SR`}>
-                  {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "—"}
+                  {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
                 </div>
                 <div className="text-xs text-gray-400">Team 1</div>
                 <div className="text-xs mt-1 h-4">
-                  {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
-                    <span className="text-green-400">⭐ Favored</span>
-                  )}
-                  {team1AvgSR < team2AvgSR && srDiff >= 25 && team1.length > 0 && (
-                    <span className="text-red-400">Underdog</span>
-                  )}
+                  {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && <span className="text-green-400">Favored</span>}
+                  {team1AvgSR < team2AvgSR && srDiff >= 25 && team1.length > 0 && <span className="text-red-400">Underdog</span>}
                 </div>
               </div>
               <div className="text-center">
@@ -636,11 +634,7 @@ export function DraftView() {
                     : srDiff <= 100 ? "text-yellow-400"
                     : "text-red-400"
                   }`} title={`${srDiff} SR difference`}>
-                    {srDiff < 25 ? (
-                      <span>⚔️ Even</span>
-                    ) : (
-                      <span>Δ {srDiff} SR</span>
-                    )}
+                    {srDiff < 25 ? <span>Even</span> : <span>Delta {srDiff} SR</span>}
                   </div>
                 ) : (
                   <div className="text-lg text-gray-600">vs</div>
@@ -649,12 +643,12 @@ export function DraftView() {
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold text-blue-400" title={`${team2AvgSR} SR`}>
-                  {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "—"}
+                  {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
                 </div>
                 <div className="text-xs text-gray-400">Team 2</div>
                 <div className="text-xs mt-1 h-4">
                   {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
-                    <span className="text-green-400">⭐ Favored</span>
+                    <span className="text-green-400">Favored</span>
                   )}
                   {team2AvgSR < team1AvgSR && srDiff >= 25 && team2.length > 0 && (
                     <span className="text-red-400">Underdog</span>
@@ -670,11 +664,9 @@ export function DraftView() {
       <div className="grid grid-cols-[1fr_auto_1fr] gap-4">
         {/* Team 1 */}
         <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <h3 className="text-sm font-bold uppercase text-blue-400 mb-3 text-center">
+          <h3 className="text-sm font-bold text-cool mb-3 text-center">
             Team 1
-            <span className={`ml-2 text-xs font-normal ${
-              team1.length === teamSize ? "text-green-400" : team1.length > 0 ? "text-yellow-400" : "text-gray-500"
-            }`}>
+            <span className={`ml-2 text-xs font-normal ${team1.length === teamSize ? "text-ok" : team1.length > 0 ? "text-accent" : "text-muted"}`}>
               ({team1.length}/{teamSize})
             </span>
           </h3>
@@ -703,7 +695,7 @@ export function DraftView() {
           onDragLeave={() => setDragOverPool(false)}
           onDrop={handlePoolDrop}
         >
-          <h3 className="text-sm font-bold uppercase text-gray-400 mb-1 text-center">
+          <h3 className="text-sm font-bold text-gray-400 mb-1 text-center">
             Unassigned
             <span className="ml-2 text-xs font-normal text-gray-500">
               ({sortedUnassigned.length})
@@ -748,11 +740,9 @@ export function DraftView() {
 
         {/* Team 2 */}
         <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <h3 className="text-sm font-bold uppercase text-blue-400 mb-3 text-center">
+          <h3 className="text-sm font-bold text-cool mb-3 text-center">
             Team 2
-            <span className={`ml-2 text-xs font-normal ${
-              team2.length === teamSize ? "text-green-400" : team2.length > 0 ? "text-yellow-400" : "text-gray-500"
-            }`}>
+            <span className={`ml-2 text-xs font-normal ${team2.length === teamSize ? "text-ok" : team2.length > 0 ? "text-accent" : "text-muted"}`}>
               ({team2.length}/{teamSize})
             </span>
           </h3>
@@ -776,7 +766,8 @@ export function DraftView() {
             onClick={handleFillRemaining}
             className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors"
           >
-            ⚡ Fill Remaining
+            <Zap className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+            Fill Remaining
           </button>
           {fillError && (
             <div className="mt-2 text-sm text-red-400 bg-red-900/30 rounded px-3 py-1.5 inline-block">
@@ -793,7 +784,8 @@ export function DraftView() {
             className="px-6 py-2 bg-teal-600 hover:bg-teal-500 rounded-lg font-medium transition-colors"
             title="Auto-balance just the drafted players"
           >
-            ⚖️ Shuffle Drafted
+            <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+            Shuffle Drafted
           </button>
           {shuffleError && (
             <div className="mt-2 text-sm text-red-400 bg-red-900/30 rounded px-3 py-1.5 inline-block">
@@ -812,13 +804,15 @@ export function DraftView() {
                 onClick={handleAutoBalanceNext}
                 className="py-2 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors"
               >
-                ⚖️ Auto-Balance Next Game
+                <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+                Auto-Balance Next Game
               </button>
               <button
                 onClick={handleDraftNext}
                 className="py-2 px-4 bg-purple-600 hover:bg-purple-500 rounded-lg font-medium transition-colors"
               >
-                👥 Draft Next Game
+                <Users className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+                Draft Next Game
               </button>
             </div>
           ) : (
@@ -828,21 +822,24 @@ export function DraftView() {
                 className="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
                 title="Hold for 1 second to confirm Team 1 won"
               >
-                🏆 Team 1 Won
+                <Trophy className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+                Team 1 Won
               </HoldButton>
               <HoldButton
                 onConfirm={() => handleTeamWon(2)}
                 className="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
                 title="Hold for 1 second to confirm Team 2 won"
               >
-                🏆 Team 2 Won
+                <Trophy className="inline-block w-5 h-5 mr-1 -mt-0.5" />
+                Team 2 Won
               </HoldButton>
               <button
                 onClick={handleNewGame}
-                className="py-2 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors text-gray-300"
+                className="py-2 px-4 app-secondary rounded-lg font-medium transition-colors"
                 title="Clear teams without recording a result"
               >
-                🔄 New Game
+                <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                New Game
               </button>
             </div>
           )}

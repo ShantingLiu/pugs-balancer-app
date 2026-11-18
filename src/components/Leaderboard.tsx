@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Trophy } from "lucide-react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import type { GameMode } from "@engine/types";
@@ -71,49 +72,52 @@ export function Leaderboard() {
   if (topPlayers.length === 0) {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-300">🏆 Leaderboard</h3>
-        <p className="text-xs text-gray-500">No wins recorded yet.</p>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+          <Trophy className="h-4 w-4" aria-hidden="true" />
+          Leaderboard
+        </h3>
+        <p className="text-xs text-muted">No wins recorded yet.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-300">🏆 {getModeName(gameMode)} Leaderboard</h3>
-      <p className="text-xs text-gray-500 mb-2">Top 10 by {getModeName(gameMode)} wins</p>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-2">
+        <Trophy className="h-4 w-4" aria-hidden="true" />
+        {getModeName(gameMode)} Leaderboard
+      </h3>
+      <p className="text-xs text-muted mb-2">Top 10 by {getModeName(gameMode)} wins</p>
       
       <div className="max-h-48 overflow-y-auto">
         <table className="w-full text-xs">
-          <thead className="text-gray-400 sticky top-0 bg-gray-900">
+          <thead className="text-muted sticky top-0 bg-[var(--color-paper)]">
             <tr>
               <th className="text-center py-1 px-1 w-8">#</th>
               <th className="text-left py-1 px-1">Player</th>
-              <th className="text-center py-1 px-1 text-yellow-400">Wins</th>
+              <th className="text-center py-1 px-1 text-accent">Wins</th>
             </tr>
           </thead>
-          <tbody className="text-gray-300">
+          <tbody className="text-ink-2">
             {topPlayers.map((player) => (
               <tr 
                 key={player.battletag}
-                className="hover:bg-gray-800/50 transition-colors"
+                className="hover:bg-[var(--color-paper-3)] transition-colors"
               >
-                <td className="text-center py-0.5 px-1 text-gray-500">
-                  {player.rank === 1 && "🥇"}
-                  {player.rank === 2 && "🥈"}
-                  {player.rank === 3 && "🥉"}
-                  {player.rank > 3 && player.rank}
+                <td className="text-center py-0.5 px-1 text-muted">
+                  {player.rank}
                 </td>
                 <td className="py-0.5 px-1 truncate max-w-[100px]" title={player.battletag}>
                   {player.name}
                 </td>
                 <td 
-                  className="text-center py-0.5 px-1 text-yellow-400 font-medium"
+                  className="text-center py-0.5 px-1 text-accent font-medium"
                   title={`CSV: ${player.baselineWins} + Session: ${player.sessionWins} = ${player.totalWins}`}
                 >
                   {player.sessionWins > 0 ? (
                     <>
                       {player.baselineWins}
-                      <span className="text-green-400">+{player.sessionWins}</span>
+                      <span className="text-ok">+{player.sessionWins}</span>
                     </>
                   ) : (
                     player.totalWins

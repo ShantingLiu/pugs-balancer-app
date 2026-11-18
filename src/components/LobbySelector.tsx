@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useRef, useLayoutEffect } from "react";
+import { Eye, EyeOff, Pencil, X, Star } from "lucide-react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { PlayerCard } from "./PlayerCard";
@@ -266,7 +267,7 @@ export function LobbySelector() {
                     }
                   }}
                   className={`
-                    group/badge inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full cursor-pointer transition-all
+                    group/badge inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full cursor-pointer transition-colors
                     ${isSelected
                       ? isMustPlay
                         ? "ring-2 ring-white bg-yellow-600/50 text-yellow-100"
@@ -280,7 +281,7 @@ export function LobbySelector() {
                   `}
                   title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
                 >
-                  {isMustPlay && !isAfk && "★ "}{name}{isAfk && " 💤"}
+                  {isMustPlay && !isAfk && <Star className="h-3 w-3" aria-hidden="true" />}{name}{isAfk && <span className="text-muted"> AFK</span>}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -289,7 +290,7 @@ export function LobbySelector() {
                     className="hidden group-hover/badge:inline-flex w-4 h-4 items-center justify-center rounded-full bg-gray-500/50 hover:bg-red-500 hover:text-white transition-colors"
                     title="Remove from lobby"
                   >
-                    <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg aria-hidden="true" className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <path d="M2 2 L8 8 M8 2 L2 8" />
                     </svg>
                   </button>
@@ -339,9 +340,9 @@ export function LobbySelector() {
               ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
               : "bg-gray-800 text-gray-500 hover:bg-gray-700"
           }`}
-          title={showWeightModifiers ? "Hide weight modifiers and loss streaks" : "Show weight modifiers and loss streaks"}
+          aria-label={showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
         >
-          {showWeightModifiers ? "👁️" : "👁️‍🗨️"}
+          {showWeightModifiers ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}
         </button>
       </div>
 
@@ -357,7 +358,6 @@ export function LobbySelector() {
         {sortedPlayers.map((player) => {
           const inLobby = lobbySet.has(player.battletag);
           const lobbyPlayer = lobbyPlayersMap.get(player.battletag);
-          const isHighlighted = selectedBattletag === player.battletag;
           return (
             <div 
               key={player.battletag} 
@@ -366,7 +366,7 @@ export function LobbySelector() {
                   playerCardRefs.current.set(player.battletag, el);
                 }
               }}
-              className={`relative group transition-all ${isHighlighted ? "shadow-[0_0_0_3px_rgba(96,165,250,0.7)] rounded-lg" : ""}`}
+              className={`relative group transition-colors rounded-lg`}
             >
               <PlayerCard
                 player={inLobby && lobbyPlayer ? lobbyPlayer : player}
@@ -402,7 +402,7 @@ export function LobbySelector() {
                   className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-xs bg-gray-600 hover:bg-red-600 text-gray-400 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   title="Remove from lobby"
                 >
-                  ✕
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               )}
               {/* Edit button (appears on hover when NOT in lobby) */}
@@ -414,7 +414,7 @@ export function LobbySelector() {
                   }}
                   className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  ✏️
+                  <Pencil className="h-3 w-3" aria-hidden="true" />
                 </button>
               )}
             </div>

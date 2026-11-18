@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { Download, FileSpreadsheet, Gamepad2, Upload } from "lucide-react";
 import { parsePlayersCSV } from "@utils/csvParser";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
@@ -297,20 +298,14 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          border-2 border-dashed rounded-lg p-6 transition-all cursor-pointer
-          flex flex-col items-center justify-center gap-2
-          ${
-            isDragging
-              ? "border-blue-500 bg-blue-500/10"
-              : "border-gray-600 hover:border-blue-400 hover:bg-gray-800/50"
-          }
-        `}
+        className={`border border-dashed rounded-lg p-6 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${
+          isDragging
+            ? "border-[var(--color-cool)] bg-[var(--color-cool-soft)]"
+            : "border-[var(--color-rule-2)] hover:border-[var(--color-cool)] bg-[var(--color-paper-3)]"
+        }`}
       >
-        <div className="text-2xl">📁</div>
-        <div className="text-sm text-gray-300 font-medium">
-          Drop CSV file or click to import
-        </div>
+        <Upload className="h-6 w-6 text-cool" aria-hidden="true" />
+        <div className="text-sm text-ink-2 font-medium">Drop CSV file or click to import</div>
         <input
           ref={fileInputRef}
           type="file"
@@ -325,27 +320,23 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
         <button
           onClick={handleExportCSV}
           disabled={playerCount === 0}
-          className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-            playerCount === 0
-              ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-              : "bg-emerald-600 hover:bg-emerald-500 text-white"
-          }`}
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
         >
-          <span>📤</span>
+          <Download className="h-4 w-4" aria-hidden="true" />
           <span>Export</span>
         </button>
         <button
           onClick={handleDownloadTemplate}
-          className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
         >
-          <span>📋</span>
+          <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
           <span>Template</span>
         </button>
         <button
           onClick={handleLoadSampleData}
-          className="col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors"
+          className="app-secondary col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
         >
-          <span>🎮</span>
+          <Gamepad2 className="h-4 w-4" aria-hidden="true" />
           <span>Load Sample Data</span>
         </button>
       </div>
@@ -368,7 +359,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
                 className="ml-2 text-green-400 hover:text-green-200 transition-colors"
                 title={showDetails ? "Hide details" : "Show details"}
               >
-                {showDetails ? "▲" : "ℹ️"}
+                {showDetails ? "Hide" : "Details"}
               </button>
             )}
           </div>

@@ -148,7 +148,7 @@ function App() {
               className="ml-4 text-gray-400 hover:text-gray-200"
               aria-label="Dismiss sync message"
             >
-              ✕
+              Dismiss
             </button>
           </div>
         </div>

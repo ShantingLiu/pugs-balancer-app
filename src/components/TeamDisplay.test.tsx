@@ -122,8 +122,8 @@ describe("TeamDisplay", () => {
 
       render(<TeamDisplay result={result} />);
 
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
-      expect(screen.getByText("🏆 Team 2 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 2 Won")).toBeInTheDocument();
     });
   });
 
@@ -134,8 +134,8 @@ describe("TeamDisplay", () => {
 
       // Initial render - should show Team Won buttons
       const { rerender } = render(<TeamDisplay result={result1} />);
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
-      expect(screen.getByText("🏆 Team 2 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 2 Won")).toBeInTheDocument();
 
       // Simulate the post-match state by directly calling the store methods
       // This is what happens internally after confirmMatchScore + setPostMatchPending(true)
@@ -151,8 +151,8 @@ describe("TeamDisplay", () => {
       rerender(<TeamDisplay result={result2} />);
 
       // Team Won buttons should still be visible (since we never entered post-match state)
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
-      expect(screen.getByText("🏆 Team 2 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 2 Won")).toBeInTheDocument();
     });
 
     it("keeps showing Team Won buttons when same result reference is passed", () => {
@@ -160,11 +160,11 @@ describe("TeamDisplay", () => {
       seedPlayersAndLobby(result);
 
       const { rerender } = render(<TeamDisplay result={result} />);
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
 
       // Re-render with same result object - should NOT change anything
       rerender(<TeamDisplay result={result} />);
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
     });
     
     it("shows Auto-Balance/Draft buttons in post-match pending state", async () => {
@@ -178,7 +178,7 @@ describe("TeamDisplay", () => {
       render(<TeamDisplay result={result} />);
       
       // Initially shows Team Won buttons
-      expect(screen.getByText("🏆 Team 1 Won")).toBeInTheDocument();
+      expect(screen.getByText("Team 1 Won")).toBeInTheDocument();
       
       // The key behavior we're testing is that when a NEW result comes in,
       // it should reset any post-match state. This is verified by the useEffect

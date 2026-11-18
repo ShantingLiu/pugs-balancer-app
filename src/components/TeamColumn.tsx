@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { LockKeyhole, LockKeyholeOpen, RefreshCw, Pencil } from "lucide-react";
 import type { RoleAssignment, Role, LobbyPlayer, GameMode } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { formatRankOnly, getEffectiveSR } from "@utils/rankMapper";
@@ -188,7 +189,7 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer, s
                   <div
                     key={assignment.player.battletag}
                     className={`
-                      px-3 py-2 rounded-lg bg-gray-700 group transition-all flex gap-3
+                      px-3 py-2 rounded-lg bg-[var(--color-paper-2)] group transition-colors flex gap-3
                       ${isLocked ? "ring-1 ring-purple-500" : ""}
                       ${isSwapSource ? "ring-2 ring-cyan-400 bg-cyan-900/30" : ""}
                     `}
@@ -232,10 +233,10 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer, s
                           className="px-2 py-1 text-xs bg-gray-600 hover:bg-orange-600 rounded transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
                           title="Substitute player"
                         >
-                          🔄
+                          <RefreshCw className="h-3 w-3" aria-hidden="true" />
                         </button>
                         {substituteOpen === battletag && (
-                          <div className="absolute right-0 top-full mt-1 z-50 bg-gray-900 rounded-lg shadow-xl border border-gray-700 min-w-[200px] max-h-[300px] overflow-y-auto">
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-[var(--color-paper-2)] rounded-lg border border-[var(--color-rule-2)] min-w-[200px] max-h-[300px] overflow-y-auto">
                             <div className="p-2 text-xs text-gray-400 border-b border-gray-700">
                               Sub for {assignment.player.battletag.split("#")[0]}
                             </div>
@@ -273,10 +274,10 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer, s
                       {onEditPlayer && (
                         <button
                           onClick={() => onEditPlayer(battletag)}
-                          className="px-2 py-1 text-xs bg-gray-600 hover:bg-blue-600 rounded opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                          className="px-2 py-1 text-xs bg-[var(--color-paper-3)] hover:bg-[var(--color-cool-soft)] rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                           title="Edit player"
                         >
-                          ✏️
+                          <Pencil className="h-3 w-3" aria-hidden="true" />
                         </button>
                       )}
                       {/* Lock button - always visible, rightmost */}
@@ -301,7 +302,7 @@ export function TeamColumn({ teamNumber, assignments, averageSR, onEditPlayer, s
                         `}
                         title={isLocked ? "Unlock player" : `Lock to Team ${teamNumber}`}
                       >
-                        {isLocked ? "🔒" : "🔓"}
+                        {isLocked ? <LockKeyhole className="h-3 w-3" aria-hidden="true" /> : <LockKeyholeOpen className="h-3 w-3" aria-hidden="true" />}
                       </button>
                       </div>
                       {/* Bottom row: rank display */}

@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import type { ReactNode } from "react";
+import { AlertOctagon } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -33,23 +34,23 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-8">
+        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex items-center justify-center p-8">
           <div className="max-w-lg text-center space-y-4">
-            <div className="text-6xl">💥</div>
-            <h1 className="text-2xl font-bold text-red-400">Something went wrong</h1>
-            <p className="text-gray-400">
+            <AlertOctagon className="h-12 w-12 mx-auto text-bad" aria-hidden="true" />
+            <h1 className="text-2xl font-bold text-bad">Something went wrong</h1>
+            <p className="text-muted">
               The app encountered an error. This might be due to corrupted saved data.
             </p>
             {this.state.error && (
-              <pre className="text-left text-xs bg-gray-800 p-4 rounded-lg overflow-auto max-h-48 text-red-300">
+              <pre className="text-left text-xs bg-[var(--color-paper-2)] p-4 rounded-lg overflow-auto max-h-48 text-bad">
                 {this.state.error.message}
               </pre>
             )}
             <button
               onClick={this.handleReset}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
+              className="app-primary px-6 py-3 rounded-lg font-medium"
             >
-              Clear Data & Reload
+              Clear Data &amp; Reload
             </button>
           </div>
         </div>

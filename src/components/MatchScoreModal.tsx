@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trophy } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 
 // =============================================================================
@@ -71,8 +72,9 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-xl p-6 w-full max-w-sm shadow-xl">
-        <h2 className="text-xl font-bold mb-4 text-center">
-          🏆 Team {winningTeam} Won!
+        <h2 className="text-xl font-bold mb-4 text-center flex items-center justify-center gap-2">
+          <Trophy className="h-5 w-5 text-accent" aria-hidden="true" />
+          Team {winningTeam} Won
         </h2>
         
         <p className="text-gray-400 text-sm mb-4 text-center">

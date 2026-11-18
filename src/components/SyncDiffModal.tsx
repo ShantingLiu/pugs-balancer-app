@@ -61,7 +61,7 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
         {/* P1-038: First-sync banner */}
         {diff.isFirstSync && (
           <div className="bg-blue-900/40 border border-blue-500 rounded p-3 mb-4 text-sm">
-            This is your first sync — the sheet roster will replace your local data.
+            This is your first sync. The sheet roster will replace your local data.
             You can review individual changes below.
           </div>
         )}
@@ -69,7 +69,7 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
         {/* No changes message */}
         {!resolvedDiff.hasChanges && (
           <p className="text-gray-400 text-sm mb-4">
-            No changes detected — your local data matches the sheet.
+            No changes detected. Your local data matches the sheet.
           </p>
         )}
 

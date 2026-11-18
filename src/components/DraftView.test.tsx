@@ -108,7 +108,7 @@ describe("DraftView", () => {
       render(<DraftView />);
 
       // Should show placeholder slots for empty roles
-      const tankSlots = screen.getAllByText("— Tank —");
+      const tankSlots = screen.getAllByText("Open Tank slot");
       expect(tankSlots.length).toBeGreaterThanOrEqual(2); // 1 per team
     });
   });
@@ -167,7 +167,7 @@ describe("DraftView", () => {
 
       render(<DraftView />);
 
-      expect(screen.getByText("⚡ Fill Remaining")).toBeInTheDocument();
+      expect(screen.getByText("Fill Remaining")).toBeInTheDocument();
     });
 
     it("hidden when no players assigned", () => {

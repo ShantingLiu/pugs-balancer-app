@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FilePlus2, Link2, Upload, PlugZap } from "lucide-react";
 import { useSheetStore } from "@store/sheetStore";
 import { usePlayerStore } from "@store/playerStore";
 import {
@@ -224,29 +225,32 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => setMode("create")}
-                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left"
+                className="px-4 py-3 app-secondary rounded-lg text-left flex items-center gap-2"
               >
-                📝 Create New Sheet
+                <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+                Create New Sheet
               </button>
               <button
                 onClick={() => setMode("connect")}
-                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left"
+                className="px-4 py-3 app-secondary rounded-lg text-left flex items-center gap-2"
               >
-                🔗 Connect Existing Sheet
+                <Link2 className="h-4 w-4" aria-hidden="true" />
+                Connect Existing Sheet
               </button>
               <button
                 onClick={() => setMode("upload")}
-                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left"
+                className="px-4 py-3 app-secondary rounded-lg text-left flex items-center gap-2"
               >
-                📤 Upload Roster to New Sheet
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                Upload Roster
               </button>
               {/* P2-014: Disconnect button */}
               {spreadsheetId && (
                 <button
                   onClick={handleDisconnect}
-                  className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left text-red-400"
+                  className="px-4 py-3 app-secondary rounded-lg text-left text-bad flex items-center gap-2"
                 >
-                  🔌 Disconnect
+                  <PlugZap className="h-4 w-4" aria-hidden="true" />Disconnect
                 </button>
               )}
             </div>

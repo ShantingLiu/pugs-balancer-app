@@ -1,4 +1,5 @@
 import type { Warning } from "@engine/types";
+import { AlertTriangle, CircleOff, Gamepad2, Link2, Scale, Swords, Users } from "lucide-react";
 
 // =============================================================================
 // WarningsPanel - Displays algorithm warnings
@@ -10,22 +11,23 @@ interface WarningsPanelProps {
 }
 
 /** Get icon for warning type */
-function getWarningIcon(type: Warning["type"]): string {
+function WarningIcon({ type }: { type: Warning["type"] }) {
+  const props = { className: "h-4 w-4 shrink-0", "aria-hidden": true as const };
   switch (type) {
     case "one_trick_conflict":
-      return "🎮";
+      return <Gamepad2 {...props} />;
     case "archetype_gap":
-      return "⚔️";
+      return <Swords {...props} />;
     case "soft_constraint_ignored":
-      return "🔗";
+      return <Link2 {...props} />;
     case "imbalanced_roles":
-      return "⚖️";
+      return <Scale {...props} />;
     case "insufficient_players":
-      return "👥";
+      return <Users {...props} />;
     case "impossible_composition":
-      return "❌";
+      return <CircleOff {...props} />;
     default:
-      return "⚠️";
+      return <AlertTriangle {...props} />;
   }
 }
 
@@ -43,9 +45,9 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
           key={`error-${idx}`}
           className={`flex items-start gap-2 rounded-lg ${
             compact ? "p-2 text-xs" : "p-3 text-sm"
-          } bg-red-900/50 border border-red-700 text-red-300`}
+          } bg-[var(--color-bad-soft)] border border-[var(--color-bad)] text-[var(--color-ink)]`}
         >
-          <span className="shrink-0">{getWarningIcon(warning.type)}</span>
+          <WarningIcon type={warning.type} />
           <span>{warning.message}</span>
         </div>
       ))}
@@ -56,9 +58,9 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
           key={`warning-${idx}`}
           className={`flex items-start gap-2 rounded-lg ${
             compact ? "p-2 text-xs" : "p-3 text-sm"
-          } bg-yellow-900/50 border border-yellow-700 text-yellow-300`}
+          } bg-[var(--color-accent-soft)] border border-[var(--color-accent)] text-[var(--color-ink)]`}
         >
-          <span className="shrink-0">{getWarningIcon(warning.type)}</span>
+          <WarningIcon type={warning.type} />
           <span>{warning.message}</span>
         </div>
       ))}

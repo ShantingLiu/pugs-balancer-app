@@ -145,7 +145,7 @@ export function ConstraintsPanel() {
             onChange={(e) => setPlayerA(e.target.value)}
             className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm"
           >
-            <option value="">Select player 1...</option>
+            <option value="">Select player 1…</option>
             {lobbyPlayers.map((p) => (
               <option key={p.battletag} value={p.battletag}>
                 {formatPlayerName(p.battletag)}
@@ -183,7 +183,7 @@ export function ConstraintsPanel() {
             onChange={(e) => setPlayerB(e.target.value)}
             className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm"
           >
-            <option value="">Select player 2...</option>
+            <option value="">Select player 2…</option>
             {lobbyPlayers
               .filter((p) => p.battletag !== playerA)
               .map((p) => (
