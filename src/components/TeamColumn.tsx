@@ -194,12 +194,12 @@ export function TeamColumn({
                 return (
                   <div
                     key={assignment.player.battletag}
-                    className={`px-3 py-2 rounded-well bg-paper-2 border group flex gap-3 ${
+                    className={`px-3 py-2 rounded-well border group flex gap-3 ${
                       isSwapSource
                         ? "border-sky-edge ring-2 ring-focus bg-sky-soft"
                         : isLocked
                         ? "border-lock-edge bg-lock-soft"
-                        : "border-rule"
+                        : "app-player-row border-rule"
                     }`}
                   >
                     {/* Role badge */}

@@ -203,7 +203,7 @@ function DraftPlayerCard({
 
   return (
     <div
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-well bg-paper-2 border hover:border-pink-edge cursor-pointer select-none ${
+      className={`app-player-row app-card-interactive flex items-center gap-2.5 px-3 py-2 rounded-well border cursor-pointer select-none ${
         player.mustPlay ? "border-warn-edge ring-1 ring-warn-edge" : "border-rule"
       } ${player.isAfk ? "opacity-55" : ""} ${dimmed ? "opacity-45" : ""}`}
       onClick={(e) => onClick(e)}

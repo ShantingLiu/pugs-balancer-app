@@ -293,14 +293,14 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-2 app-nowrap ${
+        className={`w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-2 app-nowrap app-card-interactive ${
           isDragging
-            ? "border-pink-edge bg-pink-soft"
-            : "border-sky-edge bg-paper-3 hover:bg-sky-soft"
+            ? "border-accent bg-card-row text-ink"
+            : "border-sky-edge bg-paper-3 text-ink-2"
         }`}
       >
         <Upload className="h-5 w-5 text-sky-ink" aria-hidden="true" />
-        <span className="text-sm text-ink-2 font-semibold">Drop or click for CSV</span>
+        <span className="text-sm font-semibold">Drop or click for CSV</span>
       </button>
       <input
         ref={fileInputRef}

@@ -15,6 +15,13 @@
       href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=JetBrains+Mono:wght@500&family=Onest:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem("pugs-balancer-session") || "{}");
+        var m = s && s.state && s.state.colorMode;
+        if (m === "dark" || m === "light") document.documentElement.dataset.mode = m;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -253,16 +253,16 @@ export function LobbySelector() {
                       }
                     }
                   }}
-                  className={`group/badge inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-pill cursor-pointer border ${
+                  className={`group/badge inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-pill cursor-pointer border transition-colors duration-150 ${
                     isSelected
                       ? isMustPlay
-                        ? "bg-warn-soft text-warn border-warn-edge ring-2 ring-focus"
-                        : "bg-pink-soft text-pink-ink border-pink-edge ring-2 ring-focus"
+                        ? "bg-warn-soft text-warn border-warn-edge ring-2 ring-focus hover:bg-warn-fill hover:text-warn-btn-ink"
+                        : "bg-pink-soft text-pink-ink border-pink-edge ring-2 ring-focus hover:bg-accent hover:text-accent-ink"
                       : isAfk
-                        ? "bg-paper-2 text-muted border-rule"
+                        ? "bg-paper-2 text-muted border-rule hover:bg-paper-3 hover:text-ink hover:border-rule-2"
                         : isMustPlay
-                          ? "bg-warn-soft text-warn border-warn-edge"
-                          : "bg-sky-soft text-sky-ink border-sky-edge hover:bg-pink-soft hover:border-pink-edge"
+                          ? "bg-warn-soft text-warn border-warn-edge hover:bg-warn-fill hover:text-warn-btn-ink"
+                          : "bg-sky-soft text-sky-ink border-sky-edge hover:bg-accent hover:text-accent-ink hover:border-pink-edge"
                   }`}
                   title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
                 >
@@ -275,8 +275,9 @@ export function LobbySelector() {
                       e.stopPropagation();
                       removeFromLobby(bt);
                     }}
-                    className="hidden group-hover/badge:inline-flex w-4 h-4 items-center justify-center rounded-pill bg-paper-2 text-ink hover:bg-bad-soft hover:text-bad"
+                    className="inline-flex w-4 h-4 items-center justify-center rounded-pill bg-paper-2/80 text-ink opacity-55 group-hover/badge:opacity-100 focus-visible:opacity-100 hover:bg-bad-soft hover:text-bad transition-opacity"
                     title="Remove from lobby"
+                    aria-label={`Remove ${name} from lobby`}
                   >
                     <X className="w-2.5 h-2.5" aria-hidden="true" />
                   </button>

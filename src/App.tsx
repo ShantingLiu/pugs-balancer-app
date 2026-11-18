@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Moon, Sun } from "lucide-react";
 import { CsvImporter } from "@components/CsvImporter";
 import { LobbySelector } from "@components/LobbySelector";
 import { TeamDisplay } from "@components/TeamDisplay";
@@ -8,6 +9,7 @@ import { StatsPanel } from "@components/StatsPanel";
 import { Leaderboard } from "@components/Leaderboard";
 import { SpectatorsList } from "@components/SpectatorsList";
 import { ModeSelector } from "@components/ModeSelector";
+import { LayoutSelector } from "@components/LayoutSelector";
 import { SyncButton } from "@components/SyncButton";
 import { SyncDiffModal } from "@components/SyncDiffModal";
 import { SheetSetupModal } from "@components/SheetSetupModal";
@@ -26,6 +28,9 @@ function App() {
   const setDraftMode = useSessionStore((state) => state.setDraftMode);
   const fontScale = useSessionStore((state) => state.fontScale);
   const cycleFontScale = useSessionStore((state) => state.cycleFontScale);
+  const layoutMode = useSessionStore((state) => state.layoutMode);
+  const colorMode = useSessionStore((state) => state.colorMode);
+  const toggleColorMode = useSessionStore((state) => state.toggleColorMode);
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
 
   const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
@@ -88,7 +93,92 @@ function App() {
     };
   }, [fontScale]);
 
+  // Sync light/dark color mode to root dataset
+  useEffect(() => {
+    document.documentElement.dataset.mode = colorMode;
+  }, [colorMode]);
+
   const fontLabel = fontScale === "large" ? "A+" : fontScale === "x-large" ? "A++" : "A";
+  const isDark = colorMode === "dark";
+
+  const importerSection = (
+    <section className="app-surface p-5">
+      <CsvImporter />
+    </section>
+  );
+
+  const lobbySection = (
+    <section className="app-surface p-5">
+      <LobbySelector />
+    </section>
+  );
+
+  const workspaceSection = (
+    <>
+      <nav
+        className="app-well flex gap-1.5 p-1.5 rounded-pill"
+        aria-label="Team planning mode"
+      >
+        <button
+          type="button"
+          onClick={() => setDraftMode(false)}
+          className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
+            !draftMode
+              ? "app-primary"
+              : "text-ink-2 hover:bg-card-row hover:text-ink"
+          }`}
+        >
+          Balance
+        </button>
+        <button
+          type="button"
+          onClick={() => setDraftMode(true)}
+          className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
+            draftMode
+              ? "app-sky"
+              : "text-ink-2 hover:bg-card-row hover:text-ink"
+          }`}
+        >
+          Draft
+        </button>
+      </nav>
+
+      {draftMode ? (
+        <section className="app-surface p-5">
+          <DraftView />
+        </section>
+      ) : (
+        <>
+          <div>
+            <BalanceButton />
+          </div>
+          <section className="app-surface p-5">
+            <TeamDisplay result={lastResult} />
+          </section>
+        </>
+      )}
+
+      <SpectatorsList />
+    </>
+  );
+
+  const constraintsSection = (
+    <section className="app-surface p-5">
+      <ConstraintsPanel />
+    </section>
+  );
+
+  const statsSection = (
+    <section className="app-surface p-5">
+      <StatsPanel />
+    </section>
+  );
+
+  const leaderboardSection = (
+    <section className="app-surface p-5">
+      <Leaderboard />
+    </section>
+  );
 
   return (
     <div className="min-h-dvh bg-paper text-ink">
@@ -131,6 +221,20 @@ function App() {
             </button>
             <SyncButton onClick={handleSync} />
             <ModeSelector />
+            <LayoutSelector />
+            <button
+              type="button"
+              onClick={toggleColorMode}
+              className="app-secondary p-2 rounded-pill text-sm font-semibold"
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? (
+                <Sun className="h-4 w-4 text-warn" aria-hidden="true" />
+              ) : (
+                <Moon className="h-4 w-4 text-sky-ink" aria-hidden="true" />
+              )}
+            </button>
             <button
               type="button"
               onClick={cycleFontScale}
@@ -201,79 +305,69 @@ function App() {
 
       {/* Main workbench */}
       <main className="container py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left column: Import & Lobby (4 cols) */}
-          <div className="lg:col-span-4 space-y-5">
-            <section className="app-surface p-5">
-              <CsvImporter />
-            </section>
-            <section className="app-surface p-5">
-              <LobbySelector />
-            </section>
-          </div>
-
-          {/* Right column: Mode Switcher, Balance / Draft, Spectators, Constraints, Stats (8 cols) */}
-          <div className="lg:col-span-8 space-y-5">
-            {/* Draft/Balance pill switcher */}
-            <nav
-              className="app-well flex gap-1.5 p-1.5 rounded-pill"
-              aria-label="Team planning mode"
-            >
-              <button
-                type="button"
-                onClick={() => setDraftMode(false)}
-                className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
-                  !draftMode
-                    ? "app-primary"
-                    : "text-ink-2 hover:bg-paper-2"
-                }`}
-              >
-                Balance
-              </button>
-              <button
-                type="button"
-                onClick={() => setDraftMode(true)}
-                className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
-                  draftMode
-                    ? "app-sky"
-                    : "text-ink-2 hover:bg-paper-2"
-                }`}
-              >
-                Draft
-              </button>
-            </nav>
-
-            {draftMode ? (
-              <section className="app-surface p-5">
-                <DraftView />
-              </section>
-            ) : (
-              <>
-                <div>
-                  <BalanceButton />
+        {layoutMode === "wide-teams" ? (
+          <div className="space-y-6">
+            <div className="space-y-5">{workspaceSection}</div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-5 space-y-5">
+                {importerSection}
+                {lobbySection}
+              </div>
+              <div className="lg:col-span-7 space-y-5">
+                {constraintsSection}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {statsSection}
+                  {leaderboardSection}
                 </div>
-                <section className="app-surface p-5">
-                  <TeamDisplay result={lastResult} />
-                </section>
-              </>
-            )}
-
-            <SpectatorsList />
-
-            <section className="app-surface p-5">
-              <ConstraintsPanel />
-            </section>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <section className="app-surface p-5">
-                <StatsPanel />
-              </section>
-              <section className="app-surface p-5">
-                <Leaderboard />
-              </section>
+              </div>
             </div>
           </div>
-        </div>
+        ) : layoutMode === "three-col" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-4 xl:col-span-3 space-y-5">
+              {importerSection}
+              {lobbySection}
+            </div>
+            <div className="lg:col-span-8 xl:col-span-6 space-y-5">
+              {workspaceSection}
+            </div>
+            <div className="lg:col-span-12 xl:col-span-3 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-1 gap-5">
+              {constraintsSection}
+              {statsSection}
+              {leaderboardSection}
+            </div>
+          </div>
+        ) : layoutMode === "teams-left" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-8 space-y-5">
+              {workspaceSection}
+              {constraintsSection}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {statsSection}
+                {leaderboardSection}
+              </div>
+            </div>
+            <div className="lg:col-span-4 space-y-5">
+              {importerSection}
+              {lobbySection}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-4 space-y-5">
+              {importerSection}
+              {lobbySection}
+            </div>
+            <div className="lg:col-span-8 space-y-5">
+              {workspaceSection}
+              {constraintsSection}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {statsSection}
+                {leaderboardSection}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

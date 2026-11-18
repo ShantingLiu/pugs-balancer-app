@@ -78,9 +78,9 @@ export function PlayerCard({
   if (compact && assignedRole) {
     return (
       <div
-        className={`flex items-center gap-2 p-2 rounded-well bg-paper-2 border ${
+        className={`flex items-center gap-2 p-2 rounded-well border ${
           lobbyPlayer?.isAfk ? "opacity-55" : ""
-        } ${lobbyPlayer?.lockedToTeam ? "border-lock-edge bg-lock-soft" : "border-rule"}`}
+        } ${lobbyPlayer?.lockedToTeam ? "border-lock-edge bg-lock-soft" : "app-player-row border-rule"}`}
       >
         <span className={`px-2 py-0.5 text-xs font-semibold rounded-pill ${getRoleBadgeColor(assignedRole)}`}>
           {assignedRole.charAt(0)}
@@ -103,11 +103,11 @@ export function PlayerCard({
     <div
       onClick={onClick}
       className={`p-3 rounded-well border ${
-        onClick ? "cursor-pointer hover:border-pink-edge" : ""
+        onClick ? "cursor-pointer app-card-interactive" : ""
       } ${
         selected
-          ? "border-sky-edge bg-sky-soft"
-          : "border-rule bg-paper-3"
+          ? "app-lobby-card--selected"
+          : "app-lobby-card"
       } ${lobbyPlayer?.isAfk ? "opacity-55" : ""} ${
         lobbyPlayer?.mustPlay ? "ring-2 ring-warn-edge" : ""
       }`}
@@ -239,8 +239,8 @@ export function PlayerCard({
             }}
             className={`px-2.5 py-1 text-xs font-semibold rounded-pill inline-flex items-center gap-1 border ${
               lobbyPlayer.mustPlay
-                ? "bg-warn-soft border-warn-edge text-warn"
-                : "bg-paper-2 border-rule text-ink-2 hover:bg-warn-soft"
+                ? "bg-warn-fill border-warn-edge text-warn-btn-ink hover:bg-warn-soft hover:text-warn"
+                : "bg-paper-2 border-rule text-ink-2 hover:bg-warn-fill hover:text-warn-btn-ink hover:border-warn-edge"
             }`}
           >
             <Star className="h-3 w-3" aria-hidden="true" />
@@ -255,8 +255,8 @@ export function PlayerCard({
             }}
             className={`px-2.5 py-1 text-xs font-semibold rounded-pill border ${
               lobbyPlayer.isAfk
-                ? "bg-bad-soft border-bad-edge text-bad"
-                : "bg-paper-2 border-rule text-ink-2 hover:bg-paper"
+                ? "bg-bad-soft border-bad-edge text-bad hover:bg-bad hover:text-paper"
+                : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
             }`}
           >
             AFK
@@ -271,8 +271,8 @@ export function PlayerCard({
               }}
               className={`px-2.5 py-1 text-xs font-semibold rounded-pill border ${
                 lobbyPlayer.tempWeightOverride !== null
-                  ? "bg-lock-soft border-lock-edge text-lock"
-                  : "bg-paper-2 border-rule text-ink-2 hover:bg-paper"
+                  ? "bg-lock-soft border-lock-edge text-lock hover:bg-lock hover:text-paper"
+                  : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
               }`}
               title="Adjust temporary SR weight"
               aria-label={`Adjust weight for ${parseBattletag(player.battletag).name}`}
@@ -291,8 +291,8 @@ export function PlayerCard({
               }}
               className={`px-2.5 py-1 text-xs font-semibold rounded-pill border inline-flex items-center gap-1 ${
                 lobbyPlayer.lockedToTeam === 1
-                  ? "bg-pink-soft border-pink-edge text-pink-ink"
-                  : "bg-paper-2 border-rule text-ink-2 hover:bg-pink-soft"
+                  ? "bg-pink-soft border-pink-edge text-pink-ink hover:bg-accent hover:text-accent-ink"
+                  : "bg-paper-2 border-rule text-ink-2 hover:bg-accent hover:text-accent-ink hover:border-pink-edge"
               }`}
             >
               {lobbyPlayer.lockedToTeam === 1 && <LockKeyhole className="h-3 w-3" aria-hidden="true" />}
@@ -306,8 +306,8 @@ export function PlayerCard({
               }}
               className={`px-2.5 py-1 text-xs font-semibold rounded-pill border inline-flex items-center gap-1 ${
                 lobbyPlayer.lockedToTeam === 2
-                  ? "bg-sky border-sky-edge text-ink"
-                  : "bg-paper-2 border-rule text-ink-2 hover:bg-sky-soft"
+                  ? "bg-sky border-sky-edge text-sky-btn-ink hover:bg-sky-hover hover:text-sky-hover-ink"
+                  : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
               }`}
             >
               {lobbyPlayer.lockedToTeam === 2 && <LockKeyhole className="h-3 w-3" aria-hidden="true" />}
@@ -332,7 +332,7 @@ export function PlayerCard({
                     className={`px-2.5 py-1 text-xs font-semibold rounded-pill border inline-flex items-center gap-0.5 ${
                       isLocked
                         ? getRoleBadgeColor(role)
-                        : "bg-paper-2 border-rule text-ink-2 hover:bg-paper"
+                        : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
                     }`}
                     title={isLocked ? `Unlock ${role}` : `Lock to ${role} for this game`}
                   >
@@ -357,8 +357,8 @@ export function PlayerCard({
             }}
             className={`flex-1 px-2 py-1 text-xs font-semibold rounded-pill border inline-flex items-center justify-center gap-1 ${
               lobbyPlayer.lockedToTeam === 1
-                ? "bg-pink-soft border-pink-edge text-pink-ink"
-                : "bg-paper-2 border-rule text-ink-2 hover:bg-pink-soft"
+                ? "bg-pink-soft border-pink-edge text-pink-ink hover:bg-accent hover:text-accent-ink"
+                : "bg-paper-2 border-rule text-ink-2 hover:bg-accent hover:text-accent-ink hover:border-pink-edge"
             }`}
           >
             <LockKeyhole className="h-3 w-3" aria-hidden="true" />T1
@@ -371,8 +371,8 @@ export function PlayerCard({
             }}
             className={`flex-1 px-2 py-1 text-xs font-semibold rounded-pill border inline-flex items-center justify-center gap-1 ${
               lobbyPlayer.lockedToTeam === 2
-                ? "bg-sky border-sky-edge text-ink"
-                : "bg-paper-2 border-rule text-ink-2 hover:bg-sky-soft"
+                ? "bg-sky border-sky-edge text-sky-btn-ink hover:bg-sky-hover hover:text-sky-hover-ink"
+                : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
             }`}
           >
             <LockKeyhole className="h-3 w-3" aria-hidden="true" />T2

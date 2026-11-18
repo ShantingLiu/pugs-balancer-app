@@ -3,7 +3,7 @@
  * vibe: "soft cloud-white cards, pastel sky, cotton-candy pink"
  * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Fredoka · body: Onest
  * nav: cloud top bar · signature: Cotton Candy vs Sky team matchup ledger · states: empty, preview, result, draft, sync
- * axes: light/rounded-sans/chromatic-pink · posture: full-palette · contrast: pass · v2.0.0 */
+ * axes: light/rounded-sans/chromatic-pink · posture: full-palette · modes: light+dark · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: R, pastel sky + cotton-candy pink across 20 components could turn noisy; restrained every surface to sky paper, cloud cards, and purposeful pink-vs-sky team coding */
 /* Hallmark · waive 74 · AddPlayerModal.test.tsx line 206 asserts bg-yellow-600 class on Tank toggle · preserved that single utility on the Tank toggle and styled it through pastel tank tokens */
 /* Hallmark · dismissed 49b · SheetSetupModal "Upload Roster to New Sheet" label is pinned by SheetSetupModal.test.tsx and carries app-nowrap */
@@ -80,6 +80,7 @@ button:disabled {
 
 .app-primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
+  color: var(--color-accent-hover-ink);
 }
 
 .app-primary:active:not(:disabled) {
@@ -90,12 +91,24 @@ button:disabled {
 .app-sky {
   background: var(--color-sky);
   border: 1.5px solid var(--color-sky-edge);
-  color: var(--color-ink);
+  color: var(--color-sky-btn-ink);
   box-shadow: 0 2px 0 var(--color-sky-edge);
+}
+
+[data-mode="dark"] .app-modal,
+[data-mode="dark"] .app-primary,
+[data-mode="dark"] .app-sky {
+  box-shadow: none;
+}
+
+[data-mode="dark"] .app-primary:active:not(:disabled),
+[data-mode="dark"] .app-sky:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .app-sky:hover:not(:disabled) {
   background: var(--color-sky-hover);
+  color: var(--color-sky-hover-ink);
 }
 
 .app-sky:active:not(:disabled) {
@@ -110,8 +123,9 @@ button:disabled {
 }
 
 .app-secondary:hover:not(:disabled) {
-  background: var(--color-sky-soft);
+  background: var(--color-sky);
   border-color: var(--color-sky-edge);
+  color: var(--color-sky-btn-ink);
 }
 
 .app-quiet {
@@ -121,8 +135,9 @@ button:disabled {
 }
 
 .app-quiet:hover:not(:disabled) {
-  background: var(--color-sky-soft);
-  color: var(--color-ink);
+  background: var(--color-sky);
+  border-color: var(--color-sky-edge);
+  color: var(--color-sky-btn-ink);
 }
 
 .app-danger {
@@ -169,7 +184,7 @@ button:disabled {
   white-space: nowrap;
 }
 
-/* Team themes: Team 1 = Cotton Candy Pink, Team 2 = Pastel Sky Blue */
+/* Team themes: Team 1 = Cotton Candy Pink (Blue Cloud in dark), Team 2 = Pastel Sky Blue (Night Mist in dark) */
 .app-team-1 {
   background: var(--color-pink-soft);
   border: 1.5px solid var(--color-pink-edge);
@@ -180,6 +195,46 @@ button:disabled {
   background: var(--color-sky-soft);
   border: 1.5px solid var(--color-sky-edge);
   border-radius: var(--radius-card);
+}
+
+.app-player-row {
+  background: var(--color-card-row);
+}
+
+[data-mode="dark"] .app-team-1 .app-player-row {
+  background: var(--color-card-row);
+  border-color: var(--color-pink-edge);
+  color: var(--color-ink);
+}
+
+[data-mode="dark"] .app-team-2 .app-player-row {
+  background: var(--color-card-row-2);
+  border-color: var(--color-sky-edge);
+  color: var(--color-ink);
+}
+
+.app-lobby-card {
+  background: var(--color-paper-3);
+  border-color: var(--color-rule);
+  color: var(--color-ink);
+}
+
+.app-lobby-card--selected {
+  background: var(--color-cool-soft);
+  border-color: var(--color-pink-edge);
+  color: var(--color-ink);
+}
+
+.app-card-interactive:hover {
+  background: var(--color-paper-2);
+  border-color: var(--color-pink-edge);
+  color: var(--color-ink);
+}
+
+[data-mode="dark"] .app-card-interactive:hover {
+  background: var(--color-card-row);
+  border-color: var(--color-accent);
+  color: var(--color-ink);
 }
 
 /* Role badges */

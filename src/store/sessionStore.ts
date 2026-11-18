@@ -11,6 +11,9 @@ import { getModeConfig } from "@engine/modeConfig";
 // Session Store - Manages current balancing session state
 // =============================================================================
 
+export type LayoutMode = "sidebar-left" | "teams-left" | "wide-teams" | "three-col";
+export type ColorMode = "light" | "dark";
+
 interface SessionState {
   /** Current game mode */
   gameMode: GameMode;
@@ -80,6 +83,12 @@ interface SessionState {
 
   /** Font scale for accessibility */
   fontScale: "normal" | "large" | "x-large";
+
+  /** Preferred workspace layout */
+  layoutMode: LayoutMode;
+
+  /** Color mode preference */
+  colorMode: ColorMode;
 
   /** Whether draft mode is active (captain pick flow) */
   draftMode: boolean;
@@ -173,6 +182,11 @@ interface SessionActions {
   // Cycle font scale for accessibility
   cycleFontScale: () => void;
 
+  // Layout & color mode preferences
+  setLayoutMode: (mode: LayoutMode) => void;
+  toggleColorMode: () => void;
+  setColorMode: (mode: ColorMode) => void;
+
   // Update all references when a player is renamed
   renamePlayerInSession: (oldBattletag: string, newBattletag: string) => void;
 
@@ -245,6 +259,9 @@ const sessionStorage = {
         parsed.state.gameMode = parsed.state.gameMode || "stadium_5v5";
         // Default draftMode for existing sessions
         parsed.state.draftMode = parsed.state.draftMode ?? false;
+        // Default layoutMode and colorMode for existing sessions
+        parsed.state.layoutMode = parsed.state.layoutMode || "sidebar-left";
+        parsed.state.colorMode = parsed.state.colorMode || "light";
       }
       return parsed;
     } catch (e) {
@@ -335,6 +352,8 @@ const initialState: SessionState = {
   lastMatchCashScores: null,
   showWeightModifiers: true,
   fontScale: "normal" as const,
+  layoutMode: "sidebar-left" as const,
+  colorMode: "light" as const,
   draftMode: false,
 };
 
@@ -1428,6 +1447,20 @@ export const useSessionStore = create<SessionStore>()(
           const idx = order.indexOf(state.fontScale);
           return { fontScale: order[(idx + 1) % order.length] };
         });
+      },
+
+      setLayoutMode: (mode: LayoutMode) => {
+        set({ layoutMode: mode });
+      },
+
+      toggleColorMode: () => {
+        set((state) => ({
+          colorMode: state.colorMode === "dark" ? "light" : "dark",
+        }));
+      },
+
+      setColorMode: (mode: ColorMode) => {
+        set({ colorMode: mode });
       },
 
       // Update all references when a player is renamed

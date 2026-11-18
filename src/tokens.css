@@ -20,6 +20,8 @@
   --color-paper: oklch(96.8% 0.016 225);
   --color-paper-2: oklch(99.2% 0.006 350);
   --color-paper-3: oklch(93.8% 0.028 225);
+  --color-card-row: oklch(99.2% 0.006 350);
+  --color-card-row-2: oklch(99.2% 0.006 350);
   --color-ink: oklch(24% 0.032 260);
   --color-ink-2: oklch(35% 0.028 258);
   --color-muted: oklch(50% 0.028 252);
@@ -29,7 +31,8 @@
 
   /* Cotton Candy Pink (Primary Accent & Team 1) */
   --color-accent: oklch(84% 0.105 355);
-  --color-accent-hover: oklch(79.5% 0.125 355);
+  --color-accent-hover: oklch(75% 0.145 355);
+  --color-accent-hover-ink: oklch(23% 0.055 352);
   --color-accent-ink: oklch(23% 0.055 352);
   --color-accent-soft: oklch(94.5% 0.038 355);
   --color-pink-soft: oklch(94.5% 0.038 355);
@@ -38,7 +41,9 @@
 
   /* Pastel Sky Blue (Secondary Accent & Team 2) */
   --color-sky: oklch(85% 0.088 225);
-  --color-sky-hover: oklch(80.5% 0.105 225);
+  --color-sky-hover: oklch(75% 0.125 225);
+  --color-sky-hover-ink: oklch(23% 0.032 260);
+  --color-sky-btn-ink: oklch(23% 0.032 260);
   --color-sky-soft: oklch(93.6% 0.04 225);
   --color-sky-edge: oklch(73% 0.095 225);
   --color-sky-ink: oklch(35% 0.115 232);
@@ -62,6 +67,8 @@
   --color-warn: oklch(37% 0.1 68);
   --color-warn-soft: oklch(93.5% 0.058 78);
   --color-warn-edge: oklch(76% 0.105 74);
+  --color-warn-fill: oklch(88% 0.125 86);
+  --color-warn-btn-ink: oklch(23% 0.045 72);
 
   --color-tank: oklch(36% 0.1 72);
   --color-tank-soft: oklch(93% 0.062 82);
@@ -94,7 +101,7 @@
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   --space-3xs: 2px;
   --space-2xs: 4px;
   --space-xs: 8px;
@@ -142,5 +149,138 @@
     --section-gap: 72px;
     --section-gap-l: 96px;
     --gap-columns: 16px;
+  }
+}
+
+[data-mode="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(11.5% 0.01 250);
+  --color-paper-2: oklch(17% 0.02 242);
+  --color-paper-3: oklch(22.5% 0.032 238);
+  --color-card-row: oklch(28.5% 0.044 228);
+  --color-card-row-2: oklch(27.5% 0.028 244);
+  --color-ink: oklch(96.5% 0.006 235);
+  --color-ink-2: oklch(87% 0.018 232);
+  --color-muted: oklch(75% 0.026 235);
+  --color-rule: oklch(33% 0.036 238);
+  --color-rule-2: oklch(56% 0.055 235);
+  --color-shadow: oklch(10% 0.012 252);
+  --shadow-card: none;
+
+  /* Sky-Cloud Blue (Primary Accent & Team 1 in night mode) */
+  --color-accent: oklch(80% 0.105 228);
+  --color-accent-hover: oklch(42% 0.125 232);
+  --color-accent-hover-ink: oklch(97% 0.006 235);
+  --color-accent-ink: oklch(14% 0.025 245);
+  --color-accent-soft: oklch(23% 0.056 226);
+  --color-pink-soft: oklch(22.5% 0.056 226);
+  --color-pink-edge: oklch(66% 0.12 225);
+  --color-pink-ink: oklch(90% 0.08 224);
+
+  /* Midnight Black & Ice-Silver Cloud (Secondary & Team 2 in night mode) */
+  --color-sky: oklch(76% 0.088 244);
+  --color-sky-hover: oklch(36% 0.095 246);
+  --color-sky-hover-ink: oklch(97% 0.006 235);
+  --color-sky-btn-ink: oklch(14% 0.025 245);
+  --color-sky-soft: oklch(19% 0.024 248);
+  --color-sky-edge: oklch(66% 0.065 240);
+  --color-sky-ink: oklch(92% 0.025 235);
+  --color-cool: oklch(85% 0.085 232);
+  --color-cool-soft: oklch(22.5% 0.045 234);
+
+  --color-focus: oklch(76% 0.14 230);
+
+  /* Semantic & Role Tokens on dark */
+  --color-ok: oklch(84% 0.1 160);
+  --color-ok-soft: oklch(22% 0.038 165);
+  --color-ok-edge: oklch(50% 0.08 165);
+  --color-success: oklch(84% 0.1 160);
+
+  --color-bad: oklch(82% 0.11 18);
+  --color-bad-soft: oklch(22% 0.042 18);
+  --color-bad-edge: oklch(50% 0.09 18);
+  --color-error: oklch(82% 0.11 18);
+
+  --color-warn: oklch(89% 0.135 92);
+  --color-warn-soft: oklch(20% 0.022 245);
+  --color-warn-edge: oklch(84% 0.135 92);
+  --color-warn-fill: oklch(86% 0.135 94);
+  --color-warn-btn-ink: oklch(16% 0.03 85);
+
+  --color-tank: oklch(88% 0.12 88);
+  --color-tank-soft: oklch(20% 0.022 245);
+  --color-tank-edge: oklch(80% 0.12 88);
+
+  --color-dps: oklch(83% 0.105 16);
+  --color-dps-soft: oklch(22% 0.042 16);
+  --color-dps-edge: oklch(50% 0.085 16);
+
+  --color-sup: oklch(84% 0.1 162);
+  --color-sup-soft: oklch(22% 0.038 165);
+  --color-sup-edge: oklch(50% 0.08 165);
+
+  --color-lock: oklch(84% 0.095 262);
+  --color-lock-soft: oklch(24% 0.05 262);
+  --color-lock-edge: oklch(56% 0.095 262);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) {
+    color-scheme: dark;
+    --color-paper: oklch(11.5% 0.01 250);
+    --color-paper-2: oklch(17% 0.02 242);
+    --color-paper-3: oklch(22.5% 0.032 238);
+    --color-card-row: oklch(28.5% 0.044 228);
+    --color-card-row-2: oklch(27.5% 0.028 244);
+    --color-ink: oklch(96.5% 0.006 235);
+    --color-ink-2: oklch(87% 0.018 232);
+    --color-muted: oklch(75% 0.026 235);
+    --color-rule: oklch(33% 0.036 238);
+    --color-rule-2: oklch(56% 0.055 235);
+    --color-shadow: oklch(10% 0.012 252);
+    --shadow-card: none;
+    --color-accent: oklch(80% 0.105 228);
+    --color-accent-hover: oklch(42% 0.125 232);
+    --color-accent-hover-ink: oklch(97% 0.006 235);
+    --color-accent-ink: oklch(14% 0.025 245);
+    --color-accent-soft: oklch(23% 0.056 226);
+    --color-pink-soft: oklch(22.5% 0.056 226);
+    --color-pink-edge: oklch(66% 0.12 225);
+    --color-pink-ink: oklch(90% 0.08 224);
+    --color-sky: oklch(76% 0.088 244);
+    --color-sky-hover: oklch(36% 0.095 246);
+    --color-sky-hover-ink: oklch(97% 0.006 235);
+    --color-sky-btn-ink: oklch(14% 0.025 245);
+    --color-sky-soft: oklch(19% 0.024 248);
+    --color-sky-edge: oklch(66% 0.065 240);
+    --color-sky-ink: oklch(92% 0.025 235);
+    --color-cool: oklch(85% 0.085 232);
+    --color-cool-soft: oklch(22.5% 0.045 234);
+    --color-focus: oklch(76% 0.14 230);
+    --color-ok: oklch(84% 0.1 160);
+    --color-ok-soft: oklch(22% 0.038 165);
+    --color-ok-edge: oklch(50% 0.08 165);
+    --color-success: oklch(84% 0.1 160);
+    --color-bad: oklch(82% 0.11 18);
+    --color-bad-soft: oklch(22% 0.042 18);
+    --color-bad-edge: oklch(50% 0.09 18);
+    --color-error: oklch(82% 0.11 18);
+    --color-warn: oklch(89% 0.135 92);
+    --color-warn-soft: oklch(20% 0.022 245);
+    --color-warn-edge: oklch(84% 0.135 92);
+    --color-warn-fill: oklch(86% 0.135 94);
+    --color-warn-btn-ink: oklch(16% 0.03 85);
+    --color-tank: oklch(88% 0.12 88);
+    --color-tank-soft: oklch(20% 0.022 245);
+    --color-tank-edge: oklch(80% 0.12 88);
+    --color-dps: oklch(83% 0.105 16);
+    --color-dps-soft: oklch(22% 0.042 16);
+    --color-dps-edge: oklch(50% 0.085 16);
+    --color-sup: oklch(84% 0.1 162);
+    --color-sup-soft: oklch(22% 0.038 165);
+    --color-sup-edge: oklch(50% 0.08 165);
+    --color-lock: oklch(84% 0.095 262);
+    --color-lock-soft: oklch(24% 0.05 262);
+    --color-lock-edge: oklch(56% 0.095 262);
   }
 }
