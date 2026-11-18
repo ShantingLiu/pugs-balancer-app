@@ -92,7 +92,7 @@
   --color-lock-edge: oklch(76% 0.095 305);
 
   /* Typography */
-  --font-display: "Fredoka", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Lexend", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
   --font-outlier: "JetBrains Mono", ui-monospace, monospace;
 

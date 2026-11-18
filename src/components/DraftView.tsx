@@ -178,7 +178,7 @@ function DraftPlayerCard({
     }
 
     const showManual = showWeightModifiers && manualMod !== 0;
-    const showAdaptive = adaptiveWeight !== 0;
+    const showAdaptive = showWeightModifiers && adaptiveWeight !== 0;
 
     if (!showManual && !showAdaptive) {
       return <span className="text-xs text-ink-2">{baseRank}</span>;

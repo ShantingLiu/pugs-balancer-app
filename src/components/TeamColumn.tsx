@@ -36,13 +36,13 @@ function formatRankWithModifier(
   modifier: number,
   adaptiveWeight: number,
   mode: GameMode,
-  showManualModifier: boolean = true
+  showModifiers: boolean = true
 ): ReactNode {
   const baseRank = formatRankOnly(effectiveSR - modifier, mode);
 
   const manualMod = modifier - adaptiveWeight;
-  const showManual = showManualModifier && manualMod !== 0;
-  const showAdaptive = adaptiveWeight !== 0;
+  const showManual = showModifiers && manualMod !== 0;
+  const showAdaptive = showModifiers && adaptiveWeight !== 0;
 
   if (!showManual && !showAdaptive) {
     return <>{baseRank}</>;

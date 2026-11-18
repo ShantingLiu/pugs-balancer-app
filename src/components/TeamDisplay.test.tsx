@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { TeamDisplay } from "./TeamDisplay";
 import { useSessionStore } from "@store/sessionStore";
@@ -183,6 +183,31 @@ describe("TeamDisplay", () => {
       // The key behavior we're testing is that when a NEW result comes in,
       // it should reset any post-match state. This is verified by the useEffect
       // that watches the result prop and resets postMatchPending.
+    });
+
+    it("hides adaptive win/loss rank modifiers when showWeightModifiers is false", () => {
+      const result = createMockResult();
+      result.team1[0].effectiveSR = 3050;
+      result.team2[0].effectiveSR = 2950;
+      seedPlayersAndLobby(result);
+      useSessionStore.setState({
+        adaptiveWeights: new Map([
+          ["Tank1#1", 50],
+          ["Tank2#1", -50],
+        ]),
+        showWeightModifiers: true,
+      });
+
+      const { rerender } = render(<TeamDisplay result={result} />);
+      expect(screen.getByText("+50")).toBeInTheDocument();
+      expect(screen.getByText("-50")).toBeInTheDocument();
+
+      act(() => {
+        useSessionStore.setState({ showWeightModifiers: false });
+      });
+      rerender(<TeamDisplay result={result} />);
+      expect(screen.queryByText("+50")).not.toBeInTheDocument();
+      expect(screen.queryByText("-50")).not.toBeInTheDocument();
     });
   });
 });

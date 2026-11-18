@@ -1,7 +1,7 @@
 /* Hallmark · shape: app screen · genre: playful · theme: custom · redesign: full
  * idea: "Sky-milk and cotton-candy stationery workbench where Team 1 is cotton-candy pink and Team 2 is pastel sky blue"
  * vibe: "soft cloud-white cards, pastel sky, cotton-candy pink"
- * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Fredoka · body: Onest
+ * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Lexend · body: Onest
  * nav: cloud top bar · signature: Cotton Candy vs Sky team matchup ledger · states: empty, preview, result, draft, sync
  * axes: light/rounded-sans/chromatic-pink · posture: full-palette · modes: light+dark · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: R, pastel sky + cotton-candy pink across 20 components could turn noisy; restrained every surface to sky paper, cloud cards, and purposeful pink-vs-sky team coding */
@@ -156,15 +156,29 @@ button:disabled {
 }
 
 .app-secondary {
-  background: var(--color-paper-2);
-  border: 1.5px solid var(--color-rule-2);
-  color: var(--color-ink);
+  background: var(--color-sky-soft);
+  border: 1.5px solid var(--color-sky-edge);
+  color: var(--color-sky-ink);
 }
 
 .app-secondary:hover:not(:disabled) {
   background: var(--color-sky);
   border-color: var(--color-sky-edge);
   color: var(--color-sky-btn-ink);
+}
+
+[data-mode="dark"] .app-secondary {
+  background: var(--color-paper-2);
+  border: 1.5px solid var(--color-rule-2);
+  color: var(--color-ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) .app-secondary {
+    background: var(--color-paper-2);
+    border: 1.5px solid var(--color-rule-2);
+    color: var(--color-ink);
+  }
 }
 
 .app-quiet {
