@@ -1,7 +1,7 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: Console (deal 2/3, seed desktop-pug-team-balancer-workbench-f51b·4f012c82·2026-11-17·r0)
- * nav: edge toolbar · signature: team workspace ledger · states: lobby, result, sync · console: graphite
- * axes: dark/grotesk-sans/chromatic-amber · posture: restrained · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 · weakest: S, Console treated like a terminal; led with the team ledger and measured readings instead */
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Ultraviolet (deal 3/3, seed soft-feminine-pastel-redesign-814f·4f012c82·2026-11-18·r0)
+ * nav: edge toolbar · signature: team ledger · states: lobby, result, sync · ultraviolet: lavender
+ * axes: light/geometric-sans/cool · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 · weakest: S, the pastel could read generic; led with the team ledger and violet action rail */
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css" layer(base);
@@ -12,12 +12,21 @@ body {
   color: var(--color-ink);
 }
 
+h1,
+h2,
+h3,
+button,
+nav,
+.app-surface {
+  text-transform: lowercase;
+}
+
 button,
 input,
 select,
 textarea {
   transition-property: color, background-color, border-color, opacity;
-  transition-duration: var(--dur-short);
+  transition-duration: var(--dur-micro);
   transition-timing-function: var(--ease-out);
 }
 
@@ -25,7 +34,8 @@ button:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-button:disabled {
+button:disabled,
+button[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -39,8 +49,9 @@ button:disabled {
   background: var(--color-paper-2) !important;
 }
 
-.bg-gray-700 {
-  background: var(--color-paper-2) !important;
+.bg-gray-700,
+.bg-gray-700\/50 {
+  background: var(--color-paper-3) !important;
 }
 
 .border-gray-700,
@@ -64,7 +75,8 @@ button:disabled {
 }
 
 .rounded-lg,
-.rounded {
+.rounded,
+.rounded-full {
   border-radius: var(--radius-pill) !important;
 }
 
@@ -91,42 +103,123 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
-}
-
-::-webkit-scrollbar-corner {
-  background: var(--color-paper);
+  background: var(--color-accent);
 }
 
 .app-toolbar {
-  background: var(--color-paper-3);
+  background: color-mix(in oklab, var(--color-paper-2) 82%, white);
   border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
+.app-toolbar h1 {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
 }
 
 .app-surface {
   background: var(--color-paper-2);
-  border: var(--rule-hair) solid var(--color-rule);
+  border: 0;
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .app-surface-selected {
   background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-}
-
-.app-measured {
-  font-family: var(--font-outlier);
-  font-variant-numeric: tabular-nums slashed-zero;
+  outline: 1.5px solid var(--color-rule-2);
 }
 
 .app-primary {
   background: var(--color-accent) !important;
-  border: var(--rule-hair) solid var(--color-accent) !important;
+  border: 1px solid var(--color-accent) !important;
   color: var(--color-accent-ink) !important;
+  border-radius: var(--radius-pill) !important;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.app-primary:hover:not(:disabled) {
+  background: var(--color-accent-deep) !important;
 }
 
 .app-secondary {
   background: var(--color-paper-2) !important;
-  border: var(--rule-hair) solid var(--color-rule-2) !important;
+  box-shadow: inset 0 0 0 1.5px var(--color-rule-2);
+  border: 0 !important;
   color: var(--color-ink) !important;
+  border-radius: var(--radius-pill) !important;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.app-secondary:hover:not(:disabled) {
+  background: var(--color-accent-soft) !important;
+}
+
+.app-measured {
+  font-family: var(--font-outlier);
+  font-variant-numeric: tabular-nums;
+}
+
+.text-accent {
+  color: var(--color-accent) !important;
+}
+
+.text-cool,
+.text-blue-400,
+.text-blue-300 {
+  color: var(--color-accent) !important;
+}
+
+.text-ok,
+.text-green-400,
+.text-green-300 {
+  color: var(--color-success) !important;
+}
+
+.text-bad,
+.text-red-400,
+.text-red-300 {
+  color: var(--color-error) !important;
+}
+
+.text-muted {
+  color: var(--color-muted) !important;
+}
+
+.text-ink,
+.text-ink-2 {
+  color: var(--color-ink) !important;
+}
+
+.bg-accent-soft,
+.bg-blue-500\/10,
+.bg-blue-600\/30,
+.bg-purple-600\/50 {
+  background: var(--color-accent-soft) !important;
+}
+
+.bg-accent,
+.bg-blue-600,
+.bg-indigo-600,
+.bg-teal-600,
+.bg-purple-600 {
+  background: var(--color-accent) !important;
+  color: var(--color-accent-ink) !important;
+}
+
+.app-surface input,
+.app-surface select,
+.app-surface textarea {
+  background: var(--color-paper) !important;
+  border: 1.5px solid var(--color-rule-2) !important;
+  border-radius: var(--radius-pill) !important;
+  color: var(--color-ink) !important;
+}
+
+.app-surface input:focus-visible,
+.app-surface select:focus-visible,
+.app-surface textarea:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }

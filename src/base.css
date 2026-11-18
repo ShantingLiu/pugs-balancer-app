@@ -21,7 +21,7 @@ button, input, select, textarea { font: inherit; }
 [data-slot] > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 [data-slot]:has(> img) > :not(img):not([data-keep]) { display: none !important; }
 @media (prefers-reduced-motion: reduce) { *:not(.keep-motion), *:not(.keep-motion)::before, *:not(.keep-motion)::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
-/* photographs: duotone paper-3 ink */
-[data-slot]:has(> img) { isolation: isolate; background: var(--color-ink); outline: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent); outline-offset: -1px; }
-[data-slot] > img { z-index: 0; filter: grayscale(1) contrast(1.08); mix-blend-mode: multiply; }
-[data-slot]:has(> img)::before { content: ""; position: absolute; inset: 0; z-index: 1; background: var(--color-paper-3); mix-blend-mode: lighten; pointer-events: none; }
+/* photographs: tint accent con=10 */
+[data-slot]:has(> img) { isolation: isolate; background: color-mix(in oklab, var(--color-accent), white 82%); outline: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent); outline-offset: -1px; }
+[data-slot] > img { z-index: 0; filter: grayscale(1) contrast(1.1); mix-blend-mode: multiply; }
+[data-slot]:has(> img)::before { content: ""; position: absolute; inset: 0; z-index: 1; background: color-mix(in oklab, var(--color-accent), black 55%); mix-blend-mode: lighten; pointer-events: none; }
