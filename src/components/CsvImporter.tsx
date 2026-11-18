@@ -47,7 +47,6 @@ function playersToCSV(
   ];
 
   const rows = players.map((p) => {
-    // Calculate total wins per mode = CSV baseline + session wins
     const stadiumTotal = (p.stadiumWins ?? 0) + (sessionWins.stadium_5v5.get(p.battletag) ?? 0);
     const regular5v5Total = (p.regular5v5Wins ?? 0) + (sessionWins.regular_5v5.get(p.battletag) ?? 0);
     const regular6v6Total = (p.regular6v6Wins ?? 0) + (sessionWins.regular_6v6.get(p.battletag) ?? 0);
@@ -85,7 +84,7 @@ export function CsvImporter() {
   const [successDetails, setSuccessDetails] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const setPlayers = usePlayerStore((state) => state.setPlayers);
   const playerCount = usePlayerStore((state) => state.players.size);
   const players = usePlayerStore((state) => state.players);
@@ -137,7 +136,6 @@ export function CsvImporter() {
         return;
       }
 
-      // Confirm before replacing existing players
       if (playerCount > 0) {
         const confirmed = window.confirm(
           `This will replace ${playerCount} existing player(s) with ${result.valid.length} new player(s) and clear session stats. Continue?`
@@ -145,7 +143,6 @@ export function CsvImporter() {
         if (!confirmed) return;
       }
 
-      // Clear session state when importing new CSV
       clearSessionStats();
       clearLobby();
       setLastResult(null);
@@ -206,7 +203,6 @@ export function CsvImporter() {
         };
         reader.readAsText(file);
       }
-      // Reset input so same file can be selected again
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -234,7 +230,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     setError(null);
     setSuccessMessage(null);
     setSuccessDetails(null);
-    
+
     try {
       const response = await fetch("/sample-players.csv");
       if (!response.ok) throw new Error("Failed to fetch sample data");
@@ -255,7 +251,6 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     const csvContent = playersToCSV(playerArray, sessionWins);
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    // Include mode in filename (e.g., "pugs-players-stadium-2026-03-06.csv")
     const modeSlug = gameMode.replace("_", "-");
     const filename = `pugs-players-${modeSlug}-${new Date().toISOString().split("T")[0]}.csv`;
     const a = document.createElement("a");
@@ -266,13 +261,12 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Count how many players have session wins (across all modes)
-    const hasAnySessionWins = (bt: string) => 
-      sessionWins.stadium_5v5.has(bt) || 
-      sessionWins.regular_5v5.has(bt) || 
+    const hasAnySessionWins = (bt: string) =>
+      sessionWins.stadium_5v5.has(bt) ||
+      sessionWins.regular_5v5.has(bt) ||
       sessionWins.regular_6v6.has(bt);
-    const playersWithSessionWins = playerArray.filter(p => hasAnySessionWins(p.battletag)).length;
-    const sessionWinsMsg = playersWithSessionWins > 0 
+    const playersWithSessionWins = playerArray.filter((p) => hasAnySessionWins(p.battletag)).length;
+    const sessionWinsMsg = playersWithSessionWins > 0
       ? ` (${playersWithSessionWins} with session wins)`
       : "";
     setSuccessMessage(`Exported ${playerArray.length} players${sessionWinsMsg}`);
@@ -283,58 +277,62 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
   return (
     <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-ink">Player Data</h2>
         {playerCount > 0 && (
-          <span className="text-xs app-badge px-2.5 py-0.5 app-measured">
+          <span className="text-xs font-semibold text-sky-ink bg-sky-soft border border-sky-edge px-2.5 py-0.5 rounded-pill app-measured">
             {playerCount} players
           </span>
         )}
       </div>
 
       {/* Drop zone for import */}
-      <div
+      <button
+        type="button"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border border-dashed rounded-[var(--radius-card)] p-6 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 ${
+        className={`w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-2 app-nowrap ${
           isDragging
-            ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
-            : "border-[var(--color-rule-2)] hover:border-[var(--color-accent)] bg-[var(--color-paper-3)]"
+            ? "border-pink-edge bg-pink-soft"
+            : "border-sky-edge bg-paper-3 hover:bg-sky-soft"
         }`}
       >
-        <Upload className="h-6 w-6 text-accent" aria-hidden="true" />
-        <div className="text-sm text-ink-2 font-medium">Drop CSV file or click to import</div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-      </div>
+        <Upload className="h-5 w-5 text-sky-ink" aria-hidden="true" />
+        <span className="text-sm text-ink-2 font-semibold">Drop or click for CSV</span>
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
       {/* Action buttons - 2x2 grid */}
       <div className="grid grid-cols-2 gap-2">
         <button
+          type="button"
           onClick={handleExportCSV}
           disabled={playerCount === 0}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
         >
           <Download className="h-4 w-4" aria-hidden="true" />
           <span>Export</span>
         </button>
         <button
+          type="button"
           onClick={handleDownloadTemplate}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
         >
           <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
           <span>Template</span>
         </button>
         <button
+          type="button"
           onClick={handleLoadSampleData}
-          className="app-secondary col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium"
+          className="app-sky col-span-2 flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
         >
           <Gamepad2 className="h-4 w-4" aria-hidden="true" />
           <span>Load Sample Data</span>
@@ -343,20 +341,21 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
 
       {/* Error message */}
       {error && (
-        <div className="p-3 app-alert-error text-sm text-bad whitespace-pre-wrap">
+        <div className="p-3 bg-bad-soft border border-bad-edge rounded-well text-sm text-bad whitespace-pre-wrap">
           {error}
         </div>
       )}
 
       {/* Success message */}
       {successMessage && (
-        <div className="p-3 app-alert-success text-sm text-ink">
-          <div className="flex items-center justify-between">
+        <div className="p-3 bg-ok-soft border border-ok-edge rounded-well text-sm text-ok">
+          <div className="flex items-center justify-between gap-2">
             <span>{successMessage}</span>
             {successDetails && (
               <button
+                type="button"
                 onClick={() => setShowDetails(!showDetails)}
-                className="ml-2 text-ok hover:underline font-medium transition-colors"
+                className="ml-2 font-semibold underline shrink-0"
                 title={showDetails ? "Hide details" : "Show details"}
               >
                 {showDetails ? "Hide" : "Details"}
@@ -364,7 +363,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
             )}
           </div>
           {showDetails && successDetails && (
-            <div className="mt-2 pt-2 border-t border-[var(--color-rule)] text-xs text-muted whitespace-pre-wrap">
+            <div className="mt-2 pt-2 border-t border-ok-edge text-xs text-ink-2 whitespace-pre-wrap">
               {successDetails}
             </div>
           )}

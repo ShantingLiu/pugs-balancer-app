@@ -34,9 +34,9 @@ export function SyncButton({ onClick }: SyncButtonProps) {
     <div className="flex items-center gap-2">
       {/* Connection status */}
       {isConnected ? (
-        <span className="text-xs text-muted truncate max-w-[200px]">
+        <span className="text-xs text-ink-2 truncate max-w-[200px]">
           {sheetName ?? "Connected"}
-          {lastSyncedAt && <> · {formatRelativeTime(lastSyncedAt)}</>}
+          {lastSyncedAt && <> ({formatRelativeTime(lastSyncedAt)})</>}
         </span>
       ) : (
         <span className="text-xs text-muted">Not connected</span>
@@ -44,20 +44,19 @@ export function SyncButton({ onClick }: SyncButtonProps) {
 
       {/* Sync button with unsync badge */}
       <button
+        type="button"
         onClick={onClick}
         disabled={isDisabled}
-        className={`relative px-3 py-2 text-sm font-medium inline-flex items-center gap-1.5 transition-colors ${
-          isDisabled
-            ? "app-secondary opacity-60 cursor-not-allowed"
-            : "app-primary"
+        className={`relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-sm font-semibold ${
+          isDisabled ? "app-quiet" : "app-sky"
         }`}
       >
         <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-        Sync
+        <span>Sync</span>
         {hasUnsyncedChanges && !isDisabled && (
           <span
             data-testid="unsync-badge"
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 app-unsync-dot rounded-full"
+            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent border border-pink-edge rounded-pill"
           />
         )}
       </button>

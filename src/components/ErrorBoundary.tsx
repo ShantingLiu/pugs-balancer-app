@@ -26,7 +26,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    // Clear localStorage and reload
     localStorage.clear();
     window.location.reload();
   };
@@ -34,21 +33,22 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex items-center justify-center p-8">
-          <div className="max-w-lg text-center space-y-4">
+        <div className="min-h-dvh bg-paper text-ink flex items-center justify-center p-8">
+          <div className="app-surface max-w-lg w-full p-8 text-center space-y-4">
             <AlertOctagon className="h-12 w-12 mx-auto text-bad" aria-hidden="true" />
-            <h1 className="text-2xl font-bold text-bad">Something went wrong</h1>
-            <p className="text-muted">
+            <h1 className="text-2xl font-semibold text-bad mx-auto">Something went wrong</h1>
+            <p className="text-ink-2">
               The app encountered an error. This might be due to corrupted saved data.
             </p>
             {this.state.error && (
-              <pre className="text-left text-xs app-card p-4 overflow-auto max-h-48 text-bad">
+              <pre className="text-left text-xs bg-bad-soft border border-bad-edge p-4 rounded-well overflow-auto max-h-48 text-bad">
                 {this.state.error.message}
               </pre>
             )}
             <button
+              type="button"
               onClick={this.handleReset}
-              className="app-primary px-6 py-3 font-medium"
+              className="app-primary px-6 py-3 rounded-pill font-semibold"
             >
               Clear Data &amp; Reload
             </button>

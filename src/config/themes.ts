@@ -47,49 +47,95 @@ export interface ModeTheme {
   };
 }
 
-const ULTRAVIOLET_THEME_BASE: Omit<ModeTheme, "id"> = {
-  accent: {
-    bg: "app-primary",
-    bgHover: "",
-    bgActive: "",
-    text: "text-accent",
-    border: "border-[var(--color-rule-2)]",
-  },
-  primary: {
-    bg: "app-primary",
-    bgHover: "",
-    bgActive: "",
-  },
-  secondary: {
-    bg: "app-secondary",
-    bgHover: "",
-    bgActive: "",
-  },
-  header: {
-    bg: "app-toolbar",
-    border: "border-[var(--color-rule)]",
-  },
-  badge: {
-    bg: "bg-accent-soft",
-    text: "text-accent",
-  },
-};
-
 /**
- * Theme configurations for all supported game modes
+ * Theme configurations for all supported game modes (mapped to Hallmark pastel tokens)
  */
 export const MODE_THEMES: Record<GameMode, ModeTheme> = {
   stadium_5v5: {
     id: "stadium_5v5",
-    ...ULTRAVIOLET_THEME_BASE,
+    accent: {
+      bg: "bg-sky",
+      bgHover: "hover:bg-sky-hover",
+      bgActive: "",
+      text: "text-sky-ink",
+      border: "border-sky-edge",
+    },
+    primary: {
+      bg: "app-primary",
+      bgHover: "",
+      bgActive: "",
+    },
+    secondary: {
+      bg: "app-sky",
+      bgHover: "",
+      bgActive: "",
+    },
+    header: {
+      bg: "bg-paper-2",
+      border: "border-sky-edge",
+    },
+    badge: {
+      bg: "bg-sky-soft border border-sky-edge",
+      text: "text-sky-ink",
+    },
   },
+
   regular_5v5: {
     id: "regular_5v5",
-    ...ULTRAVIOLET_THEME_BASE,
+    accent: {
+      bg: "bg-sup-soft",
+      bgHover: "",
+      bgActive: "",
+      text: "text-sup",
+      border: "border-sup-edge",
+    },
+    primary: {
+      bg: "app-primary",
+      bgHover: "",
+      bgActive: "",
+    },
+    secondary: {
+      bg: "app-sky",
+      bgHover: "",
+      bgActive: "",
+    },
+    header: {
+      bg: "bg-paper-2",
+      border: "border-sup-edge",
+    },
+    badge: {
+      bg: "bg-sup-soft border border-sup-edge",
+      text: "text-sup",
+    },
   },
+
   regular_6v6: {
     id: "regular_6v6",
-    ...ULTRAVIOLET_THEME_BASE,
+    accent: {
+      bg: "bg-pink-soft",
+      bgHover: "",
+      bgActive: "",
+      text: "text-pink-ink",
+      border: "border-pink-edge",
+    },
+    primary: {
+      bg: "app-primary",
+      bgHover: "",
+      bgActive: "",
+    },
+    secondary: {
+      bg: "app-sky",
+      bgHover: "",
+      bgActive: "",
+    },
+    header: {
+      bg: "bg-paper-2",
+      border: "border-pink-edge",
+    },
+    badge: {
+      bg: "bg-pink-soft border border-pink-edge",
+      text: "text-pink-ink",
+    },
   },
 };
 

@@ -1,5 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
 import { useSessionStore } from "@store/sessionStore";
 import { getEffectiveSR } from "@utils/rankMapper";
 import type { LobbyPlayer, Role } from "@engine/types";
@@ -49,47 +48,34 @@ export function WeightAdjuster({ player, onClose }: WeightAdjusterProps) {
 
   const presets = [-200, -100, -50, 0, 50, 100, 200];
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   return (
     <div
       className="fixed inset-0 app-backdrop flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
-        className="app-modal p-6 max-w-md w-full mx-4"
+        className="app-modal p-6 max-w-sm w-full mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-ink">
-            Adjust Weight: {player.battletag.split("#")[0]}
-          </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="text-muted hover:text-ink p-1"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+        <h3 className="text-lg font-semibold text-ink mb-3">
+          Adjust Weight: {player.battletag.split("#")[0]}
+        </h3>
+
+        <div className="text-sm text-ink-2 mb-4">
+          Base weight modifier:{" "}
+          <span className="app-measured font-semibold">
+            {player.weightModifier > 0 ? "+" : ""}
+            {player.weightModifier}
+          </span>
         </div>
 
-        {/* Current base weight info */}
-        <div className="text-sm text-muted mb-4 app-measured">
-          Base weight modifier: {player.weightModifier > 0 ? "+" : ""}
-          {player.weightModifier}
-        </div>
-
-        {/* Slider */}
         <div className="mb-4">
-          <label className="block text-sm text-ink-2 mb-2 app-measured">
-            Temp Override: {weight > 0 ? "+" : ""}
-            {weight}
+          <label className="block text-sm font-semibold text-ink-2 mb-2">
+            Temp Override:{" "}
+            <span className="app-measured text-pink-ink">
+              {weight > 0 ? "+" : ""}
+              {weight}
+            </span>
           </label>
           <input
             type="range"
@@ -98,18 +84,21 @@ export function WeightAdjuster({ player, onClose }: WeightAdjusterProps) {
             step={10}
             value={weight}
             onChange={(e) => setWeight(Number(e.target.value))}
-            className="w-full"
+            aria-label="Temporary weight override"
+            className="w-full accent-focus"
           />
         </div>
 
-        {/* Presets */}
-        <div className="grid grid-cols-7 gap-1 mb-4">
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {presets.map((preset) => (
             <button
+              type="button"
               key={preset}
               onClick={() => setWeight(preset)}
-              className={`px-1 py-1 text-xs app-measured transition-colors text-center ${
-                weight === preset ? "app-chip-active" : "app-chip"
+              className={`px-2.5 py-1 text-xs font-semibold rounded-pill border app-measured ${
+                weight === preset
+                  ? "app-primary"
+                  : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft"
               }`}
             >
               {preset > 0 ? "+" : ""}
@@ -118,40 +107,40 @@ export function WeightAdjuster({ player, onClose }: WeightAdjusterProps) {
           ))}
         </div>
 
-        {/* Effective SR preview */}
-        <div className="app-subsurface p-3 mb-4">
-          <div className="text-sm text-muted mb-2">Effective SR Preview:</div>
+        <div className="app-well p-3 mb-4">
+          <div className="text-xs font-semibold text-ink-2 mb-2">Effective SR Preview</div>
           <div className="space-y-1">
             {effectiveSRs.map(({ role, sr }) => (
               <div key={role} className="flex justify-between text-sm">
                 <span
-                  className={
+                  className={`font-semibold ${
                     role === "Tank"
-                      ? "role-text-tank font-medium"
+                      ? "text-tank"
                       : role === "DPS"
-                      ? "role-text-dps font-medium"
-                      : "role-text-support font-medium"
-                  }
+                      ? "text-dps"
+                      : "text-sup"
+                  }`}
                 >
-                  {role}:
+                  {role}
                 </span>
-                <span className="app-measured text-ink">{sr.toLocaleString()}</span>
+                <span className="app-measured font-semibold text-ink">{sr.toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5">
           <button
+            type="button"
             onClick={handleClear}
-            className="flex-1 py-2 px-4 app-secondary text-sm transition-colors"
+            className="flex-1 py-2 px-4 app-secondary rounded-pill text-sm font-semibold"
           >
             Clear Override
           </button>
           <button
+            type="button"
             onClick={handleApply}
-            className="flex-1 py-2 px-4 app-primary text-sm font-medium transition-colors"
+            className="flex-1 py-2 px-4 app-primary rounded-pill text-sm font-semibold"
           >
             Apply
           </button>

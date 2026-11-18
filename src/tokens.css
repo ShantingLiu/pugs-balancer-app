@@ -14,29 +14,85 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --color-error: oklch(52% 0.19 27);
-  --color-success: oklch(50% 0.12 150);
-  --color-paper: oklch(95% 0.02 300);
-  --color-paper-2: oklch(92% 0.03 300);
-  --color-paper-3: oklch(89% 0.035 300);
-  --color-ink: oklch(18% 0.02 300);
-  --color-ink-2: oklch(28% 0.03 300);
-  --color-muted: oklch(46% 0.05 300);
-  --color-rule: oklch(84% 0.04 300);
-  --color-rule-2: oklch(70% 0.08 295);
-  --color-accent: oklch(50% 0.25 290);
-  --color-accent-deep: oklch(43% 0.22 290);
-  --color-accent-soft: oklch(86% 0.08 295);
-  --color-accent-ink: oklch(97% 0.01 300);
-  --color-focus: oklch(50% 0.25 290);
-  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Onest", ui-sans-serif, sans-serif;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Pastel Sky & Cotton Candy Paper Ladder */
+  --color-paper: oklch(96.8% 0.016 225);
+  --color-paper-2: oklch(99.2% 0.006 350);
+  --color-paper-3: oklch(93.8% 0.028 225);
+  --color-ink: oklch(24% 0.032 260);
+  --color-ink-2: oklch(35% 0.028 258);
+  --color-muted: oklch(50% 0.028 252);
+  --color-rule: oklch(87% 0.03 230);
+  --color-rule-2: oklch(64% 0.035 235);
+  --color-shadow: oklch(86% 0.035 230);
+
+  /* Cotton Candy Pink (Primary Accent & Team 1) */
+  --color-accent: oklch(84% 0.105 355);
+  --color-accent-hover: oklch(79.5% 0.125 355);
+  --color-accent-ink: oklch(23% 0.055 352);
+  --color-accent-soft: oklch(94.5% 0.038 355);
+  --color-pink-soft: oklch(94.5% 0.038 355);
+  --color-pink-edge: oklch(73% 0.125 355);
+  --color-pink-ink: oklch(38% 0.145 355);
+
+  /* Pastel Sky Blue (Secondary Accent & Team 2) */
+  --color-sky: oklch(85% 0.088 225);
+  --color-sky-hover: oklch(80.5% 0.105 225);
+  --color-sky-soft: oklch(93.6% 0.04 225);
+  --color-sky-edge: oklch(73% 0.095 225);
+  --color-sky-ink: oklch(35% 0.115 232);
+  --color-cool: oklch(42% 0.12 232);
+  --color-cool-soft: oklch(93.6% 0.04 225);
+
+  /* Focus Ring */
+  --color-focus: oklch(48% 0.17 354);
+
+  /* Semantic Status & Pastel Role Tokens */
+  --color-ok: oklch(35% 0.11 155);
+  --color-ok-soft: oklch(93.5% 0.045 155);
+  --color-ok-edge: oklch(74% 0.095 155);
+  --color-success: oklch(35% 0.11 155);
+
+  --color-bad: oklch(39% 0.15 15);
+  --color-bad-soft: oklch(93.5% 0.048 15);
+  --color-bad-edge: oklch(74% 0.11 15);
+  --color-error: oklch(39% 0.15 15);
+
+  --color-warn: oklch(37% 0.1 68);
+  --color-warn-soft: oklch(93.5% 0.058 78);
+  --color-warn-edge: oklch(76% 0.105 74);
+
+  --color-tank: oklch(36% 0.1 72);
+  --color-tank-soft: oklch(93% 0.062 82);
+  --color-tank-edge: oklch(77% 0.105 78);
+
+  --color-dps: oklch(38% 0.14 12);
+  --color-dps-soft: oklch(92.5% 0.058 10);
+  --color-dps-edge: oklch(75% 0.11 12);
+
+  --color-sup: oklch(34% 0.11 155);
+  --color-sup-soft: oklch(93% 0.058 155);
+  --color-sup-edge: oklch(75% 0.095 155);
+
+  --color-lock: oklch(36% 0.125 305);
+  --color-lock-soft: oklch(92.5% 0.055 305);
+  --color-lock-edge: oklch(76% 0.095 305);
+
+  /* Typography */
+  --font-display: "Fredoka", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
   --font-outlier: "JetBrains Mono", ui-monospace, monospace;
-  --radius-card: 16px;
+
+  /* Geometry */
+  --radius-card: 18px;
+  --radius-well: 14px;
+  --radius-input: 12px;
   --radius-pill: 999px;
-  --shadow-card: 0 1px 2px oklch(18% 0.02 300 / 0.06);
-  --tracking-display: -0.03em;
+  --shadow-card: 0 3px 0 var(--color-shadow);
+  --tracking-display: -0.02em;
 }
+
 :root {
   color-scheme: light;
   --space-3xs: 2px;
@@ -53,8 +109,8 @@
   --dur-short: 220ms;
   --dur-long: 420ms;
   --container: 1440px;
-  --gutter: 64px;
-  --gap-columns: 32px;
+  --gutter: 40px;
+  --gap-columns: 24px;
   --section-gap-s: 120px;
   --section-gap: 144px;
   --section-gap-l: 176px;
@@ -67,7 +123,24 @@
   --z-toast: 500;
   --z-tooltip: 600;
   --rule-hair: 1px;
-  --display-weight: 500;
+  --display-weight: 600;
 }
-@media (max-width: 60rem) { :root { --gutter: 24px; --section-gap-s: 80px; --section-gap: 96px; --section-gap-l: 120px; } }
-@media (max-width: 40rem) { :root { --gutter: 16px; --section-gap-s: 56px; --section-gap: 72px; --section-gap-l: 96px; --gap-columns: 16px; } }
+
+@media (max-width: 60rem) {
+  :root {
+    --gutter: 20px;
+    --section-gap-s: 80px;
+    --section-gap: 96px;
+    --section-gap-l: 120px;
+  }
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --gutter: 16px;
+    --section-gap-s: 56px;
+    --section-gap: 72px;
+    --section-gap-l: 96px;
+    --gap-columns: 16px;
+  }
+}

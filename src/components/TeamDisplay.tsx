@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Users, RefreshCw, MapPin, Scale, Trophy } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Users, RefreshCw, MapPin, Scale } from "lucide-react";
 import type { TeamAssignment, Player, RoleAssignment, LobbyPlayer, GameMode } from "@engine/types";
 import { TeamColumn } from "./TeamColumn";
 import { WarningsPanel } from "./WarningsPanel";
@@ -52,16 +52,17 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   const swapPlayerRoles = useSessionStore((state) => state.swapPlayerRoles);
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
-  const [postMatchSnapshot, setPostMatchSnapshot] = useState<{
-    active: boolean;
-    resultAtConfirm: TeamAssignment | null;
-  }>({ active: false, resultAtConfirm: null });
+  const [postMatchPending, setPostMatchPending] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null);
 
-  // Bug #27 fix: post-match state clears automatically if result changes to a new non-null assignment (e.g., Reshuffle)
-  const postMatchPending =
-    postMatchSnapshot.active &&
-    (result === null || result === postMatchSnapshot.resultAtConfirm);
+  const prevResultRef = useRef<TeamAssignment | null>(null);
+
+  useEffect(() => {
+    if (result !== prevResultRef.current && result !== null) {
+      setPostMatchPending(false);
+    }
+    prevResultRef.current = result;
+  }, [result]);
 
   const requiredPlayers = getRequiredPlayers(gameMode);
 
@@ -89,18 +90,18 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
     loserAdj?: number
   ) => {
     confirmMatchScore(winnerScore, loserScore, team1Cash, team2Cash, winnerAdj, loserAdj);
-    setPostMatchSnapshot({ active: true, resultAtConfirm: result });
+    setPostMatchPending(true);
   };
 
   const handleAutoBalanceNext = () => {
-    setPostMatchSnapshot({ active: false, resultAtConfirm: null });
+    setPostMatchPending(false);
     setTimeout(() => {
       autoBalanceAfterMatch();
     }, 0);
   };
 
   const handleDraftNext = () => {
-    setPostMatchSnapshot({ active: false, resultAtConfirm: null });
+    setPostMatchPending(false);
     clearTeams();
     setDraftMode(true);
   };
@@ -120,7 +121,6 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
     }
   };
 
-  // Build preview from pre-assigned players (both team + role locked)
   const getLobbyPlayers = useSessionStore((state) => state.getLobbyPlayers);
   useSessionStore((state) => state.lockedTeam1);
   useSessionStore((state) => state.lockedTeam2);
@@ -133,25 +133,26 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
     return new Map(lobbyPlayers.map((lp) => [lp.battletag, lp]));
   }, [getLobbyPlayers]);
 
-  // If post-match pending but no result (teams were cleared), show post-match buttons
   if (!result && postMatchPending) {
     return (
       <div className="space-y-4">
-        <div className="app-subsurface p-4 text-center">
-          <div className="text-lg font-semibold text-ink mb-4">Match Complete!</div>
-          <div className="flex gap-4 justify-center">
+        <div className="app-well p-5 text-center">
+          <div className="text-lg font-semibold text-ink mb-4">Match Complete</div>
+          <div className="flex flex-wrap gap-3 justify-center">
             <button
+              type="button"
               onClick={handleAutoBalanceNext}
-              className="flex-1 py-2 px-4 app-primary font-medium transition-colors"
+              className="flex-1 py-2.5 px-4 app-primary rounded-pill font-semibold inline-flex items-center justify-center gap-2"
             >
-              <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
               Auto-Balance Next Game
             </button>
             <button
+              type="button"
               onClick={handleDraftNext}
-              className="flex-1 py-2 px-4 app-secondary font-medium transition-colors"
+              className="flex-1 py-2.5 px-4 app-sky rounded-pill font-semibold inline-flex items-center justify-center gap-2"
             >
-              <Users className="inline h-4 w-4 mr-2" aria-hidden="true" />
+              <Users className="h-4 w-4" aria-hidden="true" />
               Draft Next Game
             </button>
           </div>
@@ -168,16 +169,18 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
     if (preAssigned.length === 0) {
       return (
-        <div className="flex items-center justify-center h-64 text-muted">
-          <div className="text-center">
-            <Scale className="h-10 w-10 mx-auto mb-2 text-muted" aria-hidden="true" />
-            <div className="font-medium text-ink">No teams generated yet</div>
-            <div className="text-sm mt-1">
+        <div className="flex items-center justify-center py-14 text-muted">
+          <div className="text-center space-y-2">
+            <span className="inline-flex items-center justify-center w-12 h-12 rounded-pill bg-sky-soft border border-sky-edge mx-auto">
+              <Scale className="h-6 w-6 text-sky-ink" aria-hidden="true" />
+            </span>
+            <div className="text-base font-semibold text-ink">No teams generated yet</div>
+            <p className="text-sm text-ink-2">
               Add at least {requiredPlayers} players to lobby and click Balance
-            </div>
-            <div className="text-xs mt-2 text-muted">
+            </p>
+            <p className="text-xs text-muted">
               Tip: Lock a player to a team + role in the lobby to preview them here
-            </div>
+            </p>
           </div>
         </div>
       );
@@ -200,13 +203,13 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
     return (
       <div className="space-y-4">
-        <div className="app-subsurface p-3 text-center border-dashed border-[var(--color-rule-2)]">
-          <span className="text-ink-2 text-sm inline-flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-accent" aria-hidden="true" />
+        <div className="app-well p-3 text-center border-dashed border-sky-edge">
+          <span className="text-sky-ink font-semibold text-sm inline-flex items-center gap-2">
+            <MapPin className="h-4 w-4" aria-hidden="true" />
             Preview: {preAssigned.length} player{preAssigned.length !== 1 ? "s" : ""} pre-assigned
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TeamColumn
             teamNumber={1}
             assignments={team1Preview}
@@ -238,55 +241,52 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
   const { team1, team2, warnings } = result;
   const hasTeams = team1.length > 0 && team2.length > 0;
-
   const team1AvgSR = calculateTeamAvgSR(team1, lobbyMap, gameMode);
   const team2AvgSR = calculateTeamAvgSR(team2, lobbyMap, gameMode);
   const srDifference = Math.abs(team1AvgSR - team2AvgSR);
 
   return (
     <div className="space-y-4">
-      {/* Score summary */}
-      <div className="app-subsurface p-4">
-        <div className="flex items-center justify-center gap-8">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-accent" title={`${team1AvgSR.toFixed(0)} SR`}>
+      {/* Matchup summary bar */}
+      <div className="app-well p-4">
+        <div className="grid grid-cols-3 items-center gap-4 text-center">
+          <div>
+            <div className="text-2xl font-semibold text-pink-ink" title={`${team1AvgSR.toFixed(0)} SR`}>
               {formatRankOnly(team1AvgSR, gameMode)}
             </div>
-            <div className="text-sm text-muted">Team 1</div>
-            <div className="text-xs mt-1 h-4">
+            <div className="text-xs font-semibold text-ink-2">Team 1</div>
+            <div className="text-xs mt-1 min-h-4">
               {team1AvgSR > team2AvgSR && srDifference >= 25 && (
-                <span className="text-ok font-medium">Favored</span>
+                <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
               )}
             </div>
           </div>
-          <div className="text-center">
+
+          <div>
             <div
-              className={`text-xl font-bold app-measured ${
+              className={`text-xl font-semibold app-measured ${
                 srDifference <= 50
                   ? "text-ok"
                   : srDifference <= 100
-                  ? "text-accent"
+                  ? "text-warn"
                   : "text-bad"
               }`}
               title={`${srDifference.toFixed(0)} SR difference`}
             >
-              {srDifference < 25 ? (
-                <span>Even</span>
-              ) : (
-                <span>Delta {srDifference.toFixed(0)} SR</span>
-              )}
+              {srDifference < 25 ? <span>Even</span> : <span>Delta {srDifference.toFixed(0)} SR</span>}
             </div>
-            <div className="text-sm text-muted">Difference</div>
-            <div className="h-4"></div>
+            <div className="text-xs font-semibold text-muted">Difference</div>
+            <div className="min-h-4" />
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-accent" title={`${team2AvgSR.toFixed(0)} SR`}>
+
+          <div>
+            <div className="text-2xl font-semibold text-sky-ink" title={`${team2AvgSR.toFixed(0)} SR`}>
               {formatRankOnly(team2AvgSR, gameMode)}
             </div>
-            <div className="text-sm text-muted">Team 2</div>
-            <div className="text-xs mt-1 h-4">
+            <div className="text-xs font-semibold text-ink-2">Team 2</div>
+            <div className="text-xs mt-1 min-h-4">
               {team2AvgSR > team1AvgSR && srDifference >= 25 && (
-                <span className="text-ok font-medium">Favored</span>
+                <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
               )}
             </div>
           </div>
@@ -299,7 +299,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
       {/* Team columns */}
       {hasTeams ? (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TeamColumn
               teamNumber={1}
               assignments={team1}
@@ -318,49 +318,49 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
             />
           </div>
 
-          {/* Post-match choice or Team Won buttons */}
           {postMatchPending ? (
-            <div className="flex gap-4 pt-2">
+            <div className="flex flex-wrap gap-3 pt-1">
               <button
+                type="button"
                 onClick={handleAutoBalanceNext}
-                className="flex-1 py-2 px-4 app-primary font-medium transition-colors"
+                className="flex-1 py-2.5 px-4 app-primary rounded-pill font-semibold inline-flex items-center justify-center gap-2"
               >
-                <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 Auto-Balance Next Game
               </button>
               <button
+                type="button"
                 onClick={handleDraftNext}
-                className="flex-1 py-2 px-4 app-secondary font-medium transition-colors"
+                className="flex-1 py-2.5 px-4 app-sky rounded-pill font-semibold inline-flex items-center justify-center gap-2"
               >
-                <Users className="inline h-4 w-4 mr-2" aria-hidden="true" />
+                <Users className="h-4 w-4" aria-hidden="true" />
                 Draft Next Game
               </button>
             </div>
           ) : (
-            <div className="flex gap-4 pt-2">
+            <div className="flex flex-wrap gap-3 pt-1">
               <HoldButton
                 onConfirm={() => handleTeamWon(1)}
-                className="flex-1 py-2 px-4 app-primary font-medium transition-colors"
+                className="flex-1 py-2.5 px-4 app-primary rounded-pill font-semibold"
                 title="Hold for 1 second to confirm Team 1 won"
               >
-                <Trophy className="inline h-4 w-4 mr-2" aria-hidden="true" />
                 Team 1 Won
               </HoldButton>
               <HoldButton
                 onConfirm={() => handleTeamWon(2)}
-                className="flex-1 py-2 px-4 app-primary font-medium transition-colors"
+                className="flex-1 py-2.5 px-4 app-sky rounded-pill font-semibold"
                 title="Hold for 1 second to confirm Team 2 won"
               >
-                <Trophy className="inline h-4 w-4 mr-2" aria-hidden="true" />
                 Team 2 Won
               </HoldButton>
               {!pendingMatchResult && (
                 <button
+                  type="button"
                   onClick={handleNewGame}
-                  className="py-2 px-4 app-secondary font-medium transition-colors"
+                  className="py-2.5 px-4 app-secondary rounded-pill font-semibold inline-flex items-center gap-2"
                   title="Clear teams without recording a result"
                 >
-                  <RefreshCw className="inline h-4 w-4 mr-2" aria-hidden="true" />
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   New Game
                 </button>
               )}

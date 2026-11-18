@@ -22,7 +22,6 @@ export function ConstraintsPanel() {
   const lobbyBattletags = useSessionStore((state) => state.lobbyBattletags);
   const players = usePlayerStore((state) => state.players);
 
-  // Get players in lobby for dropdown
   const lobbyPlayers = useMemo(() => {
     const lobbySet = new Set(lobbyBattletags);
     return Array.from(players.values()).filter((p) => lobbySet.has(p.battletag));
@@ -45,53 +44,53 @@ export function ConstraintsPanel() {
   }, [playerA, playerB, constraintType, isHard, addSoftConstraint]);
 
   const handleRemove = useCallback(
-    (players: [string, string]) => {
-      removeSoftConstraint(players);
+    (pair: [string, string]) => {
+      removeSoftConstraint(pair);
     },
     [removeSoftConstraint]
   );
 
   const formatPlayerName = (battletag: string) => battletag.split("#")[0];
 
-  // Count hard vs soft constraints
-  const hardCount = softConstraints.filter(c => c.hard).length;
+  const hardCount = softConstraints.filter((c) => c.hard).length;
   const softCount = softConstraints.length - hardCount;
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-ink-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-ink">
           Constraints
           {softConstraints.length > 0 && (
             <span className="ml-2 text-xs font-normal text-muted">
-              ({hardCount > 0 && <span className="text-accent">{hardCount} hard</span>}
+              ({hardCount > 0 && <span className="text-warn font-semibold">{hardCount} hard</span>}
               {hardCount > 0 && softCount > 0 && ", "}
               {softCount > 0 && <span>{softCount} soft</span>})
             </span>
           )}
         </h3>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2">
           {softConstraints.length > 0 && (
             <button
+              type="button"
               onClick={clearSoftConstraints}
-              className="text-xs text-muted hover:text-bad transition-colors"
+              className="text-xs font-semibold text-bad hover:underline"
             >
               Clear all
             </button>
           )}
           <button
+            type="button"
             onClick={() => setIsAdding(true)}
-            className="text-xs px-2.5 py-1 app-primary transition-colors"
+            className="text-xs font-semibold px-3 py-1 app-sky rounded-pill"
           >
             + Add
           </button>
         </div>
       </div>
 
-      {/* Existing constraints */}
       {softConstraints.length === 0 && !isAdding && (
         <p className="text-xs text-muted">
-          No constraints set. Add "together" or "apart" pairs (soft = prefer, hard = must).
+          No constraints set. Add “together” or “apart” pairs (soft = prefer, hard = must).
         </p>
       )}
 
@@ -99,37 +98,38 @@ export function ConstraintsPanel() {
         {softConstraints.map((constraint, idx) => (
           <div
             key={idx}
-            className={`flex items-center justify-between p-2 text-sm ${
+            className={`flex items-center justify-between px-3 py-2 rounded-well text-sm border ${
               constraint.hard
-                ? "app-alert-accent"
-                : "app-card"
+                ? "bg-warn-soft border-warn-edge"
+                : "bg-paper-3 border-rule"
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {constraint.hard && (
-                <span className="text-xs px-2 py-0.5 app-chip-active font-bold">
-                  MUST
+                <span className="text-xs px-2 py-0.5 bg-paper-2 border border-warn-edge text-warn rounded-pill font-semibold">
+                  Must
                 </span>
               )}
-              <span className="font-medium text-ink">
+              <span className="font-semibold text-ink">
                 {formatPlayerName(constraint.players[0])}
               </span>
               <span
-                className={`text-xs px-2 py-0.5 ${
+                className={`text-xs font-semibold px-2 py-0.5 rounded-pill border ${
                   constraint.type === "together"
-                    ? "app-alert-success"
-                    : "app-alert-error"
+                    ? "bg-ok-soft border-ok-edge text-ok"
+                    : "bg-bad-soft border-bad-edge text-bad"
                 }`}
               >
                 {constraint.type === "together" ? "↔ together" : "↮ apart"}
               </span>
-              <span className="font-medium text-ink">
+              <span className="font-semibold text-ink">
                 {formatPlayerName(constraint.players[1])}
               </span>
             </div>
             <button
+              type="button"
               onClick={() => handleRemove(constraint.players)}
-              className="text-muted hover:text-bad text-xs p-1"
+              className="text-muted hover:text-bad p-1 rounded-pill"
               aria-label="Remove constraint"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -138,14 +138,13 @@ export function ConstraintsPanel() {
         ))}
       </div>
 
-      {/* Add constraint form */}
       {isAdding && (
-        <div className="p-3 app-subsurface space-y-3">
-          {/* Player A */}
+        <div className="p-3.5 app-well space-y-3">
           <select
             value={playerA}
             onChange={(e) => setPlayerA(e.target.value)}
-            className="w-full px-3 py-1.5 text-sm app-input"
+            aria-label="Select player 1"
+            className="app-input w-full px-3 py-2 text-sm"
           >
             <option value="">Select player 1…</option>
             {lobbyPlayers.map((p) => (
@@ -155,35 +154,36 @@ export function ConstraintsPanel() {
             ))}
           </select>
 
-          {/* Constraint type */}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setConstraintType("together")}
-              className={`flex-1 py-1.5 text-sm transition-colors ${
+              className={`flex-1 py-1.5 text-sm font-semibold rounded-pill border ${
                 constraintType === "together"
-                  ? "app-chip-active"
-                  : "app-chip"
+                  ? "bg-ok-soft border-ok-edge text-ok"
+                  : "bg-paper-2 border-rule text-ink-2 hover:bg-ok-soft"
               }`}
             >
               ↔ Together
             </button>
             <button
+              type="button"
               onClick={() => setConstraintType("apart")}
-              className={`flex-1 py-1.5 text-sm transition-colors ${
+              className={`flex-1 py-1.5 text-sm font-semibold rounded-pill border ${
                 constraintType === "apart"
-                  ? "app-chip-active"
-                  : "app-chip"
+                  ? "bg-bad-soft border-bad-edge text-bad"
+                  : "bg-paper-2 border-rule text-ink-2 hover:bg-bad-soft"
               }`}
             >
               ↮ Apart
             </button>
           </div>
 
-          {/* Player B */}
           <select
             value={playerB}
             onChange={(e) => setPlayerB(e.target.value)}
-            className="w-full px-3 py-1.5 text-sm app-input"
+            aria-label="Select player 2"
+            className="app-input w-full px-3 py-2 text-sm"
           >
             <option value="">Select player 2…</option>
             {lobbyPlayers
@@ -195,16 +195,15 @@ export function ConstraintsPanel() {
               ))}
           </select>
 
-          {/* Hard/Soft toggle */}
-          <div className="flex items-center gap-3 p-2 app-card">
+          <div className="flex items-center gap-3 p-2.5 bg-paper-2 border border-rule rounded-well">
             <label className="flex items-center gap-2 cursor-pointer flex-1">
               <input
                 type="checkbox"
                 checked={isHard}
                 onChange={(e) => setIsHard(e.target.checked)}
-                className="w-4 h-4"
+                className="w-4 h-4 accent-focus"
               />
-              <span className={`text-sm ${isHard ? "text-accent font-semibold" : "text-ink-2"}`}>
+              <span className={`text-sm font-semibold ${isHard ? "text-warn" : "text-ink-2"}`}>
                 Hard constraint
               </span>
             </label>
@@ -213,21 +212,26 @@ export function ConstraintsPanel() {
             </span>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => {
                 setIsAdding(false);
                 setIsHard(false);
               }}
-              className="flex-1 py-1.5 text-sm app-secondary transition-colors"
+              className="flex-1 py-2 text-sm font-semibold app-secondary rounded-pill"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleAdd}
               disabled={!playerA || !playerB || playerA === playerB}
-              className="flex-1 py-1.5 text-sm app-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex-1 py-2 text-sm font-semibold rounded-pill ${
+                isHard
+                  ? "bg-warn-soft border border-warn-edge text-warn"
+                  : "app-primary"
+              }`}
             >
               Add {isHard ? "Hard" : "Soft"} Constraint
             </button>

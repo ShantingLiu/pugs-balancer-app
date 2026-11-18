@@ -17,31 +17,40 @@ const ROLE_ORDER: Role[] = ["Tank", "DPS", "Support"];
 function getRoleBadgeColor(role: Role): string {
   switch (role) {
     case "Tank":
-      return "role-badge-tank";
+      return "role-tank";
     case "DPS":
-      return "role-badge-dps";
+      return "role-dps";
     case "Support":
-      return "role-badge-support";
+      return "role-support";
   }
 }
 
 function getRoleTextColor(role: Role): string {
   switch (role) {
     case "Tank":
-      return "role-text-tank";
+      return "text-tank";
     case "DPS":
-      return "role-text-dps";
+      return "text-dps";
     case "Support":
-      return "role-text-support";
+      return "text-sup";
   }
 }
 
-/** Role icon letters */
+function getRoleBorderColor(role: Role): string {
+  switch (role) {
+    case "Tank":
+      return "border-tank-edge";
+    case "DPS":
+      return "border-dps-edge";
+    case "Support":
+      return "border-sup-edge";
+  }
+}
+
 function getRoleLabel(role: Role): string {
   return role.charAt(0);
 }
 
-/** Get willing role icons for a player */
 function RoleBadges({
   roles,
   player,
@@ -52,7 +61,7 @@ function RoleBadges({
   gameMode?: import("@engine/types").GameMode;
 }) {
   return (
-    <span className="flex flex-wrap gap-1 justify-end">
+    <span className="flex flex-wrap gap-1">
       {roles.map((role) => {
         let rankDisplay: string | null = null;
         if (player && gameMode) {
@@ -66,12 +75,10 @@ function RoleBadges({
         return (
           <span
             key={role}
-            className={`px-1.5 py-0.5 text-xs font-bold inline-flex items-center gap-1 whitespace-nowrap ${getRoleBadgeColor(role)}`}
+            className={`px-2 py-0.5 text-xs font-semibold rounded-pill inline-flex items-center gap-1 ${getRoleBadgeColor(role)}`}
           >
             {getRoleLabel(role)}
-            {rankDisplay && (
-              <span className="font-normal opacity-85 text-[11px]">{rankDisplay}</span>
-            )}
+            {rankDisplay && <span className="font-normal text-[11px]">{rankDisplay}</span>}
           </span>
         );
       })}
@@ -79,7 +86,6 @@ function RoleBadges({
   );
 }
 
-/** Get open (unfilled) roles for a team given current assignments and mode config */
 function getOpenRoles(players: LobbyPlayer[], gameMode: string): Set<Role> {
   const config = getModeConfig(gameMode as import("@engine/types").GameMode);
   const roleCounts: Record<Role, number> = {
@@ -100,7 +106,6 @@ function getOpenRoles(players: LobbyPlayer[], gameMode: string): Set<Role> {
   return open;
 }
 
-/** Check if a team has a composition conflict (more players in a role than allowed) */
 function getCompositionWarning(players: LobbyPlayer[], gameMode: string): string | null {
   const config = getModeConfig(gameMode as import("@engine/types").GameMode);
   const roleCounts: Record<Role, number> = {
@@ -133,10 +138,6 @@ function getCompositionWarning(players: LobbyPlayer[], gameMode: string): string
   return null;
 }
 
-// =============================================================================
-// DraftPlayerCard - Compact card for draft panels
-// =============================================================================
-
 interface DraftPlayerCardProps {
   player: LobbyPlayer;
   onClick: (e: React.MouseEvent) => void;
@@ -164,43 +165,36 @@ function DraftPlayerCard({
   const displayRole = assignedRole ?? player.lockedToRole;
   const sr = displayRole ? getEffectiveSR(player, displayRole, gameMode) : null;
 
-  // Calculate modifier breakdown for display
   const adaptiveWeight = player.adaptiveWeight ?? 0;
   const manualMod = (player.tempWeightOverride ?? 0) + (player.weightModifier ?? 0);
   const totalModifier = adaptiveWeight + manualMod;
 
-  // Format SR display with rank name and modifiers
   const formatSRDisplay = () => {
     if (sr === null) return null;
-
     const baseRank = formatRankOnly(sr - totalModifier, gameMode);
 
     if (totalModifier === 0) {
-      return <span className="text-sm text-muted">{baseRank}</span>;
+      return <span className="text-xs text-ink-2">{baseRank}</span>;
     }
 
     const showManual = showWeightModifiers && manualMod !== 0;
     const showAdaptive = adaptiveWeight !== 0;
 
     if (!showManual && !showAdaptive) {
-      return <span className="text-sm text-muted">{baseRank}</span>;
+      return <span className="text-xs text-ink-2">{baseRank}</span>;
     }
 
     return (
-      <span className="text-sm text-muted">
+      <span className="text-xs text-ink-2">
         {baseRank}
         {showManual && (
           <span className={`app-measured ${manualMod > 0 ? "text-ok" : "text-bad"}`}>
-            {" "}
-            {manualMod > 0 ? "+" : ""}
-            {manualMod}
+            {" "}{manualMod > 0 ? "+" : ""}{manualMod}
           </span>
         )}
         {showAdaptive && (
-          <span className={`app-measured ${adaptiveWeight > 0 ? "text-accent" : "text-bad"}`}>
-            {" "}
-            {adaptiveWeight > 0 ? "+" : ""}
-            {adaptiveWeight}
+          <span className={`app-measured ${adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink"}`}>
+            {" "}{adaptiveWeight > 0 ? "+" : ""}{adaptiveWeight}
           </span>
         )}
       </span>
@@ -209,13 +203,9 @@ function DraftPlayerCard({
 
   return (
     <div
-      className={`
-        flex items-center justify-between gap-2 px-3 py-2 app-card
-        hover:border-[var(--color-accent)] cursor-pointer transition-colors select-none
-        ${player.mustPlay ? "outline outline-2 outline-[var(--color-accent)]" : ""}
-        ${player.isAfk ? "opacity-50" : ""}
-        ${dimmed ? "opacity-40" : ""}
-      `}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-well bg-paper-2 border hover:border-pink-edge cursor-pointer select-none ${
+        player.mustPlay ? "border-warn-edge ring-1 ring-warn-edge" : "border-rule"
+      } ${player.isAfk ? "opacity-55" : ""} ${dimmed ? "opacity-45" : ""}`}
       onClick={(e) => onClick(e)}
       draggable={isDraggable}
       onDragStart={(e) => {
@@ -229,11 +219,10 @@ function DraftPlayerCard({
       {displayRole ? (
         <>
           <button
-            className={`
-              px-2 py-1 text-xs font-bold
-              ${getRoleBadgeColor(displayRole)}
-              ${canCycleRole ? "cursor-pointer" : ""}
-            `}
+            type="button"
+            className={`px-2 py-0.5 text-xs font-semibold rounded-pill inline-flex items-center gap-1 ${getRoleBadgeColor(
+              displayRole
+            )} ${canCycleRole ? "hover:opacity-85 cursor-pointer" : ""}`}
             onClick={(e) => {
               if (canCycleRole && onCycleRole) {
                 e.stopPropagation();
@@ -243,24 +232,20 @@ function DraftPlayerCard({
             title={canCycleRole ? "Click to cycle role" : undefined}
           >
             {getRoleLabel(displayRole)}
-            {canCycleRole && <span className="ml-0.5 text-[8px]">⟳</span>}
+            {canCycleRole && <RefreshCw className="h-2.5 w-2.5" aria-hidden="true" />}
           </button>
-          <span className="flex-1 font-medium text-ink">{name}</span>
+          <span className="flex-1 font-semibold text-ink truncate">{name}</span>
           {formatSRDisplay()}
         </>
       ) : (
         <>
-          <span className="font-medium text-ink truncate min-w-0">{name}</span>
+          <span className="font-semibold text-ink">{name}</span>
           <RoleBadges roles={player.rolesWilling} player={player} gameMode={gameMode} />
         </>
       )}
     </div>
   );
 }
-
-// =============================================================================
-// AssignPopup - Inline popup for team assignment
-// =============================================================================
 
 interface AssignPopupProps {
   anchorRect: DOMRect;
@@ -300,19 +285,22 @@ function AssignPopup({
   };
 
   return (
-    <div ref={popupRef} style={style} className="app-modal p-2 flex gap-3">
+    <div ref={popupRef} style={style} className="app-modal p-2.5 flex gap-3">
       <div className="text-center">
-        <div className="text-[10px] text-muted mb-1">← Team 1</div>
+        <div className="text-xs font-semibold text-pink-ink mb-1.5">← Team 1</div>
         <div className="flex gap-1">
           {roles.map((role) => {
             const open = team1OpenRoles.has(role);
             return (
               <button
+                type="button"
                 key={`t1-${role}`}
                 onClick={() => open && onAssign(1, role)}
                 disabled={!open}
-                className={`px-2 py-1 text-xs font-bold transition-colors ${
-                  open ? getRoleBadgeColor(role) : "app-chip cursor-not-allowed"
+                className={`px-2.5 py-1 text-xs font-semibold rounded-pill ${
+                  open
+                    ? getRoleBadgeColor(role)
+                    : "bg-paper-3 border border-rule text-muted cursor-not-allowed"
                 }`}
                 title={open ? undefined : `${role} is full on Team 1`}
               >
@@ -322,19 +310,22 @@ function AssignPopup({
           })}
         </div>
       </div>
-      <div className="w-px bg-[var(--color-rule)]" />
+      <div className="w-px bg-rule" />
       <div className="text-center">
-        <div className="text-[10px] text-muted mb-1">Team 2 →</div>
+        <div className="text-xs font-semibold text-sky-ink mb-1.5">Team 2 →</div>
         <div className="flex gap-1">
           {roles.map((role) => {
             const open = team2OpenRoles.has(role);
             return (
               <button
+                type="button"
                 key={`t2-${role}`}
                 onClick={() => open && onAssign(2, role)}
                 disabled={!open}
-                className={`px-2 py-1 text-xs font-bold transition-colors ${
-                  open ? getRoleBadgeColor(role) : "app-chip cursor-not-allowed"
+                className={`px-2.5 py-1 text-xs font-semibold rounded-pill ${
+                  open
+                    ? getRoleBadgeColor(role)
+                    : "bg-paper-3 border border-rule text-muted cursor-not-allowed"
                 }`}
                 title={open ? undefined : `${role} is full on Team 2`}
               >
@@ -347,10 +338,6 @@ function AssignPopup({
     </div>
   );
 }
-
-// =============================================================================
-// TeamPanel - Shows assigned players grouped by role with empty slot placeholders
-// =============================================================================
 
 interface TeamPanelProps {
   players: LobbyPlayer[];
@@ -409,16 +396,16 @@ function TeamPanel({
 
   return (
     <div
-      className={`space-y-3 rounded-[var(--radius-card)] p-1 transition-colors ${
-        dragOver ? "bg-accent-soft outline outline-1 outline-[var(--color-accent)]" : ""
+      className={`space-y-3 rounded-well p-1 ${
+        dragOver ? "bg-paper-2 ring-2 ring-focus" : ""
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {compositionWarning && (
-        <div className="text-xs app-alert-accent px-2 py-1 flex items-center gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+        <div className="text-xs text-warn bg-warn-soft border border-warn-edge rounded-well px-2.5 py-1.5 flex items-center gap-2 font-semibold">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {compositionWarning}
         </div>
       )}
@@ -428,10 +415,10 @@ function TeamPanel({
 
         return (
           <div key={role}>
-            <div className={`text-xs font-medium mb-1 ${getRoleTextColor(role)}`}>
+            <div className={`text-xs font-semibold mb-1.5 ${getRoleTextColor(role)}`}>
               {role} ({playersInRole.length}/{roleCounts[role]})
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {playersInRole.map((player) => (
                 <DraftPlayerCard
                   key={player.battletag}
@@ -447,7 +434,9 @@ function TeamPanel({
               {Array.from({ length: emptySlots }).map((_, i) => (
                 <div
                   key={`empty-${role}-${i}`}
-                  className="flex items-center justify-center px-2.5 py-2.5 rounded-[var(--radius-card)] border border-dashed role-slot text-xs whitespace-nowrap"
+                  className={`flex items-center justify-center px-3 py-2 rounded-well bg-paper-2/70 border border-dashed ${getRoleBorderColor(
+                    role
+                  )} text-xs text-muted`}
                 >
                   Open {role} slot
                 </div>
@@ -459,10 +448,6 @@ function TeamPanel({
     </div>
   );
 }
-
-// =============================================================================
-// DraftView - Main 3-panel draft component
-// =============================================================================
 
 export function DraftView() {
   const gameMode = useSessionStore((state) => state.gameMode);
@@ -480,7 +465,6 @@ export function DraftView() {
   const balanceDraftedPlayers = useSessionStore((state) => state.balanceDraftedPlayers);
   const config = getModeConfig(gameMode);
 
-  // Re-render when locks change
   useSessionStore((state) => state.lockedTeam1);
   useSessionStore((state) => state.lockedTeam2);
   useSessionStore((state) => state.lockedRoles);
@@ -601,7 +585,7 @@ export function DraftView() {
     cycleRole(battletag);
   };
 
-  const handleDragStart = () => {};
+  const handleDragStart = (_battletag: string) => {};
 
   const handleDragEnd = () => {
     setDragOverTeam1(false);
@@ -626,97 +610,87 @@ export function DraftView() {
   return (
     <div className="space-y-4" onDragEnd={handleDragEnd}>
       {/* Team SR Comparison */}
-      {team1.length > 0 &&
-        team2.length > 0 &&
-        (() => {
-          const team1AvgSR =
-            team1.length > 0
-              ? Math.round(
-                  team1.reduce(
-                    (sum, p) =>
-                      sum +
-                      getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
-                    0
-                  ) / team1.length
-                )
-              : 0;
-          const team2AvgSR =
-            team2.length > 0
-              ? Math.round(
-                  team2.reduce(
-                    (sum, p) =>
-                      sum +
-                      getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
-                    0
-                  ) / team2.length
-                )
-              : 0;
-          const srDiff = Math.abs(team1AvgSR - team2AvgSR);
+      {team1.length > 0 && team2.length > 0 && (() => {
+        const team1AvgSR =
+          team1.length > 0
+            ? Math.round(
+                team1.reduce(
+                  (sum, p) => sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
+                  0
+                ) / team1.length
+              )
+            : 0;
+        const team2AvgSR =
+          team2.length > 0
+            ? Math.round(
+                team2.reduce(
+                  (sum, p) => sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
+                  0
+                ) / team2.length
+              )
+            : 0;
+        const srDiff = Math.abs(team1AvgSR - team2AvgSR);
 
-          return (
-            <div className="app-subsurface p-4">
-              <div className="flex items-center justify-center gap-8">
-                <div className="text-center">
-                  <div className="text-xl font-bold text-accent" title={`${team1AvgSR} SR`}>
-                    {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
-                  </div>
-                  <div className="text-xs text-muted">Team 1</div>
-                  <div className="text-xs mt-1 h-4">
-                    {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
-                      <span className="text-ok font-medium">Favored</span>
-                    )}
-                    {team1AvgSR < team2AvgSR && srDiff >= 25 && team1.length > 0 && (
-                      <span className="text-bad font-medium">Underdog</span>
-                    )}
-                  </div>
+        return (
+          <div className="app-well p-3">
+            <div className="grid grid-cols-3 items-center gap-4 text-center">
+              <div>
+                <div className="text-xl font-semibold text-pink-ink" title={`${team1AvgSR} SR`}>
+                  {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
                 </div>
-                <div className="text-center">
-                  {team1.length > 0 && team2.length > 0 ? (
-                    <div
-                      className={`text-lg font-bold app-measured ${
-                        srDiff <= 50 ? "text-ok" : srDiff <= 100 ? "text-accent" : "text-bad"
-                      }`}
-                      title={`${srDiff} SR difference`}
-                    >
-                      {srDiff < 25 ? <span>Even</span> : <span>Delta {srDiff} SR</span>}
-                    </div>
-                  ) : (
-                    <div className="text-lg text-muted">vs</div>
+                <div className="text-xs font-semibold text-ink-2">Team 1</div>
+                <div className="text-xs mt-1 min-h-4">
+                  {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
                   )}
-                  <div className="text-xs text-muted">Difference</div>
+                  {team1AvgSR < team2AvgSR && srDiff >= 25 && team1.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-pill bg-bad-soft text-bad font-semibold">Underdog</span>
+                  )}
                 </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-accent" title={`${team2AvgSR} SR`}>
-                    {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
+              </div>
+              <div>
+                {team1.length > 0 && team2.length > 0 ? (
+                  <div
+                    className={`text-lg font-semibold app-measured ${
+                      srDiff <= 50 ? "text-ok" : srDiff <= 100 ? "text-warn" : "text-bad"
+                    }`}
+                    title={`${srDiff} SR difference`}
+                  >
+                    {srDiff < 25 ? <span>Even</span> : <span>Delta {srDiff} SR</span>}
                   </div>
-                  <div className="text-xs text-muted">Team 2</div>
-                  <div className="text-xs mt-1 h-4">
-                    {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
-                      <span className="text-ok font-medium">Favored</span>
-                    )}
-                    {team2AvgSR < team1AvgSR && srDiff >= 25 && team2.length > 0 && (
-                      <span className="text-bad font-medium">Underdog</span>
-                    )}
-                  </div>
+                ) : (
+                  <div className="text-lg text-muted">vs</div>
+                )}
+                <div className="text-xs font-semibold text-muted">Difference</div>
+              </div>
+              <div>
+                <div className="text-xl font-semibold text-sky-ink" title={`${team2AvgSR} SR`}>
+                  {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
+                </div>
+                <div className="text-xs font-semibold text-ink-2">Team 2</div>
+                <div className="text-xs mt-1 min-h-4">
+                  {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
+                  )}
+                  {team2AvgSR < team1AvgSR && srDiff >= 25 && team2.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-pill bg-bad-soft text-bad font-semibold">Underdog</span>
+                  )}
                 </div>
               </div>
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
       {/* 3-panel grid */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,280px)_minmax(0,1fr)] gap-4 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4">
         {/* Team 1 */}
-        <div className="app-subsurface p-4">
-          <h3 className="text-sm font-bold text-accent mb-3 text-center">
+        <div className="app-team-1 p-4">
+          <h3 className="text-sm font-semibold text-pink-ink mb-3 text-center">
             Team 1
             <span
               className={`ml-2 text-xs font-normal app-measured ${
-                team1.length === teamSize
-                  ? "text-ok"
-                  : team1.length > 0
-                  ? "text-accent"
-                  : "text-muted"
+                team1.length === teamSize ? "text-ok" : team1.length > 0 ? "text-pink-ink" : "text-muted"
               }`}
             >
               ({team1.length}/{teamSize})
@@ -736,8 +710,8 @@ export function DraftView() {
 
         {/* Unassigned Pool */}
         <div
-          className={`app-subsurface p-4 min-w-[220px] transition-colors ${
-            dragOverPool ? "bg-accent-soft outline outline-1 outline-[var(--color-accent)]" : ""
+          className={`app-well p-4 min-w-[220px] ${
+            dragOverPool ? "ring-2 ring-focus bg-sky-soft" : ""
           }`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -747,30 +721,34 @@ export function DraftView() {
           onDragLeave={() => setDragOverPool(false)}
           onDrop={handlePoolDrop}
         >
-          <h3 className="text-sm font-bold text-ink-2 mb-2 text-center">
+          <h3 className="text-sm font-semibold text-ink mb-1 text-center">
             Unassigned
             <span className="ml-2 text-xs font-normal text-muted app-measured">
               ({sortedUnassigned.length})
             </span>
           </h3>
-          <div className="flex justify-center gap-1.5 mb-3 whitespace-nowrap">
+          <div className="flex justify-center gap-1.5 mb-3">
             {(["Tank", "DPS", "Support"] as Role[]).map((role) => (
               <button
+                type="button"
                 key={role}
                 onClick={() => setRoleFilter(roleFilter === role ? null : role)}
-                className={`
-                  px-2.5 py-0.5 text-xs font-bold transition-colors
-                  ${roleFilter === role ? getRoleBadgeColor(role) : "app-chip"}
-                `}
+                className={`px-2.5 py-0.5 text-xs font-semibold rounded-pill border ${
+                  roleFilter === role
+                    ? getRoleBadgeColor(role)
+                    : "bg-paper-2 border-rule text-ink-2 hover:bg-sky-soft"
+                }`}
               >
                 {getRoleLabel(role)}
               </button>
             ))}
           </div>
           {sortedUnassigned.length === 0 ? (
-            <div className="text-center text-muted text-sm py-8">All players assigned</div>
+            <div className="text-center text-muted text-sm py-8">
+              All players assigned
+            </div>
           ) : (
-            <div className="space-y-1 max-h-[540px] overflow-y-auto overflow-x-hidden pr-1">
+            <div className="space-y-1.5">
               {sortedUnassigned.map((player) => (
                 <DraftPlayerCard
                   key={player.battletag}
@@ -786,16 +764,12 @@ export function DraftView() {
         </div>
 
         {/* Team 2 */}
-        <div className="app-subsurface p-4">
-          <h3 className="text-sm font-bold text-accent mb-3 text-center">
+        <div className="app-team-2 p-4">
+          <h3 className="text-sm font-semibold text-sky-ink mb-3 text-center">
             Team 2
             <span
               className={`ml-2 text-xs font-normal app-measured ${
-                team2.length === teamSize
-                  ? "text-ok"
-                  : team2.length > 0
-                  ? "text-accent"
-                  : "text-muted"
+                team2.length === teamSize ? "text-ok" : team2.length > 0 ? "text-sky-ink" : "text-muted"
               }`}
             >
               ({team2.length}/{teamSize})
@@ -814,18 +788,19 @@ export function DraftView() {
         </div>
       </div>
 
-      {/* Fill Remaining / Shuffle Drafted buttons */}
+      {/* Fill Remaining / Shuffle Drafted */}
       {showFillRemaining && (
         <div className="text-center">
           <button
+            type="button"
             onClick={handleFillRemaining}
-            className="px-6 py-2 app-primary font-medium transition-colors"
+            className="px-6 py-2.5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
           >
-            <Zap className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+            <Zap className="w-4 h-4" aria-hidden="true" />
             Fill Remaining
           </button>
           {fillError && (
-            <div className="mt-2 text-sm app-alert-error px-3 py-1.5 inline-block">
+            <div className="mt-2 text-sm text-bad bg-bad-soft border border-bad-edge rounded-well px-3 py-1.5 inline-block">
               {fillError}
             </div>
           )}
@@ -835,15 +810,16 @@ export function DraftView() {
       {teamsAreFull && !postMatchPending && (
         <div className="text-center">
           <button
+            type="button"
             onClick={handleShuffleDrafted}
-            className="px-6 py-2 app-secondary font-medium transition-colors"
+            className="px-6 py-2.5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
             title="Auto-balance just the drafted players"
           >
-            <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
             Shuffle Drafted
           </button>
           {shuffleError && (
-            <div className="mt-2 text-sm app-alert-error px-3 py-1.5 inline-block">
+            <div className="mt-2 text-sm text-bad bg-bad-soft border border-bad-edge rounded-well px-3 py-1.5 inline-block">
               {shuffleError}
             </div>
           )}
@@ -854,46 +830,49 @@ export function DraftView() {
       {(hasAssigned || postMatchPending) && (
         <div className="text-center">
           {postMatchPending ? (
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-wrap gap-3 justify-center">
               <button
+                type="button"
                 onClick={handleAutoBalanceNext}
-                className="py-2 px-4 app-primary font-medium transition-colors"
+                className="py-2.5 px-5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
               >
-                <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 Auto-Balance Next Game
               </button>
               <button
+                type="button"
                 onClick={handleDraftNext}
-                className="py-2 px-4 app-secondary font-medium transition-colors"
+                className="py-2.5 px-5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
               >
-                <Users className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                <Users className="w-4 h-4" aria-hidden="true" />
                 Draft Next Game
               </button>
             </div>
           ) : (
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-wrap gap-3 justify-center">
               <HoldButton
                 onConfirm={() => handleTeamWon(1)}
-                className="py-2 px-4 app-primary font-medium transition-colors"
+                className="py-2.5 px-5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
                 title="Hold for 1 second to confirm Team 1 won"
               >
-                <Trophy className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                <Trophy className="inline-block w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />
                 Team 1 Won
               </HoldButton>
               <HoldButton
                 onConfirm={() => handleTeamWon(2)}
-                className="py-2 px-4 app-primary font-medium transition-colors"
+                className="py-2.5 px-5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
                 title="Hold for 1 second to confirm Team 2 won"
               >
-                <Trophy className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                <Trophy className="inline-block w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />
                 Team 2 Won
               </HoldButton>
               <button
+                type="button"
                 onClick={handleNewGame}
-                className="py-2 px-4 app-secondary font-medium transition-colors"
+                className="py-2.5 px-5 app-secondary rounded-pill font-semibold inline-flex items-center gap-2"
                 title="Clear teams without recording a result"
               >
-                <RefreshCw className="inline-block w-5 h-5 mr-1 -mt-0.5" aria-hidden="true" />
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 New Game
               </button>
             </div>
@@ -910,20 +889,19 @@ export function DraftView() {
       />
 
       {/* Assign popup */}
-      {popup &&
-        (() => {
-          const popupPlayer = unassigned.find((p) => p.battletag === popup.battletag);
-          return (
-            <AssignPopup
-              anchorRect={popup.rect}
-              roles={popupPlayer?.rolesWilling ?? []}
-              team1OpenRoles={team1OpenRoles}
-              team2OpenRoles={team2OpenRoles}
-              onAssign={handleAssign}
-              onClose={() => setPopup(null)}
-            />
-          );
-        })()}
+      {popup && (() => {
+        const popupPlayer = unassigned.find((p) => p.battletag === popup.battletag);
+        return (
+          <AssignPopup
+            anchorRect={popup.rect}
+            roles={popupPlayer?.rolesWilling ?? []}
+            team1OpenRoles={team1OpenRoles}
+            team2OpenRoles={team2OpenRoles}
+            onAssign={handleAssign}
+            onClose={() => setPopup(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

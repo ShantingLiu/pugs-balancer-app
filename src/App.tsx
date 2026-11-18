@@ -79,37 +79,62 @@ function App() {
     [spreadsheetId],
   );
 
-  // Scale root font size so ALL rem-based Tailwind classes (text-xs, text-sm, etc.) scale up
+  // Scale root font size so ALL rem-based Tailwind classes scale up cleanly
   useEffect(() => {
     const sizes = { normal: "16px", large: "20px", "x-large": "24px" };
     document.documentElement.style.fontSize = sizes[fontScale];
-    return () => { document.documentElement.style.fontSize = ""; };
+    return () => {
+      document.documentElement.style.fontSize = "";
+    };
   }, [fontScale]);
 
   const fontLabel = fontScale === "large" ? "A+" : fontScale === "x-large" ? "A++" : "A";
 
   return (
-    <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)]">
-      <header className="app-toolbar px-6 py-3">
-        <div className="container flex items-center justify-between gap-6 px-0">
-          <div className="min-w-0">
-            <h1 className="text-xl font-medium">
+    <div className="min-h-dvh bg-paper text-ink">
+      <header className="app-toolbar py-3">
+        <div className="container flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <span
+              className="inline-flex items-center justify-center w-9 h-9 rounded-pill bg-pink-soft border border-pink-edge shrink-0"
+              aria-hidden="true"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7.5 16.5h9a3.5 3.5 0 0 0 .4-6.98A4.8 4.8 0 0 0 7.6 8.4a3.6 3.6 0 0 0-.1 8.1Z"
+                  fill="var(--color-sky)"
+                  stroke="var(--color-ink)"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+                <circle cx="15.5" cy="9.5" r="2.2" fill="var(--color-accent)" />
+              </svg>
+            </span>
+            <h1 className="text-xl font-semibold text-ink truncate">
               Swoo’s PUGs Balancer
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowSheetSetup(true)}
-              className="app-secondary px-3 py-2 text-sm font-medium"
+              className="app-secondary px-3.5 py-2 rounded-pill text-sm font-semibold"
             >
               Sheets
             </button>
             <SyncButton onClick={handleSync} />
             <ModeSelector />
             <button
+              type="button"
               onClick={cycleFontScale}
-              className="app-secondary px-3 py-2 text-sm font-medium min-w-10"
-              aria-label={`Font size: ${fontScale} (click to cycle)`}
+              className="app-secondary px-3 py-2 rounded-pill text-sm font-semibold min-w-10"
               title={`Font size: ${fontScale} (click to cycle)`}
             >
               {fontLabel}
@@ -120,12 +145,12 @@ function App() {
 
       {/* Sync error / info toast */}
       {syncError && (
-        <div className="container pt-3">
+        <div className="container pt-4">
           <div
-            className={`px-3 py-2 text-sm flex items-center justify-between ${
+            className={`px-4 py-2.5 rounded-well text-sm flex items-center justify-between border ${
               syncError === "Everything is up to date."
-                ? "app-alert-success"
-                : "app-alert-error"
+                ? "border-ok-edge text-ok bg-ok-soft"
+                : "border-bad-edge text-bad bg-bad-soft"
             }`}
           >
             <span>
@@ -133,8 +158,12 @@ function App() {
                 <>
                   Please{" "}
                   <button
-                    onClick={() => { setSyncError(null); setShowSheetSetup(true); }}
-                    className="underline text-accent font-medium"
+                    type="button"
+                    onClick={() => {
+                      setSyncError(null);
+                      setShowSheetSetup(true);
+                    }}
+                    className="underline font-semibold text-sky-ink"
                   >
                     sign in with Google
                   </button>
@@ -145,8 +174,9 @@ function App() {
               )}
             </span>
             <button
+              type="button"
               onClick={() => setSyncError(null)}
-              className="ml-4 text-muted hover:text-ink"
+              className="ml-4 font-semibold underline"
               aria-label="Dismiss sync message"
             >
               Dismiss
@@ -169,39 +199,44 @@ function App() {
         />
       )}
 
-      {/* Main content */}
+      {/* Main workbench */}
       <main className="container py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left column: Import & Lobby (4 cols) */}
-          <div className="lg:col-span-4 space-y-4">
-            <section className="app-surface p-4">
+          <div className="lg:col-span-4 space-y-5">
+            <section className="app-surface p-5">
               <CsvImporter />
             </section>
-            <section className="app-surface p-4">
+            <section className="app-surface p-5">
               <LobbySelector />
             </section>
           </div>
 
-          {/* Center/Right: Balance + Team Composition + Constraints (8 cols) */}
-          <div className="lg:col-span-8 space-y-4">
-            {/* Draft/Balance toggle */}
-            <nav className="app-surface flex gap-1 p-1" aria-label="Team planning mode">
+          {/* Right column: Mode Switcher, Balance / Draft, Spectators, Constraints, Stats (8 cols) */}
+          <div className="lg:col-span-8 space-y-5">
+            {/* Draft/Balance pill switcher */}
+            <nav
+              className="app-well flex gap-1.5 p-1.5 rounded-pill"
+              aria-label="Team planning mode"
+            >
               <button
+                type="button"
                 onClick={() => setDraftMode(false)}
-                className={`flex-1 py-2 px-4 text-sm font-medium ${
+                className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
                   !draftMode
                     ? "app-primary"
-                    : "text-muted hover:text-ink"
+                    : "text-ink-2 hover:bg-paper-2"
                 }`}
               >
                 Balance
               </button>
               <button
+                type="button"
                 onClick={() => setDraftMode(true)}
-                className={`flex-1 py-2 px-4 text-sm font-medium ${
+                className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
                   draftMode
-                    ? "app-primary"
-                    : "text-muted hover:text-ink"
+                    ? "app-sky"
+                    : "text-ink-2 hover:bg-paper-2"
                 }`}
               >
                 Draft
@@ -209,28 +244,31 @@ function App() {
             </nav>
 
             {draftMode ? (
-              <section className="app-surface p-4">
+              <section className="app-surface p-5">
                 <DraftView />
               </section>
             ) : (
               <>
-                <section className="app-surface p-3">
+                <div>
                   <BalanceButton />
-                </section>
-                <section className="app-surface p-4">
+                </div>
+                <section className="app-surface p-5">
                   <TeamDisplay result={lastResult} />
                 </section>
               </>
             )}
+
             <SpectatorsList />
-            <section className="app-surface p-4">
+
+            <section className="app-surface p-5">
               <ConstraintsPanel />
             </section>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <section className="app-surface p-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <section className="app-surface p-5">
                 <StatsPanel />
               </section>
-              <section className="app-surface p-4">
+              <section className="app-surface p-5">
                 <Leaderboard />
               </section>
             </div>

@@ -8,8 +8,10 @@ import type { GameMode } from "@engine/types";
 // Leaderboard - Shows top 10 players by total wins for current mode
 // =============================================================================
 
-/** Get mode-specific baseline wins from player */
-function getBaselineWins(player: { stadiumWins?: number; regular5v5Wins?: number; regular6v6Wins?: number }, mode: GameMode): number {
+function getBaselineWins(
+  player: { stadiumWins?: number; regular5v5Wins?: number; regular6v6Wins?: number },
+  mode: GameMode
+): number {
   switch (mode) {
     case "stadium_5v5":
       return player.stadiumWins ?? 0;
@@ -22,7 +24,6 @@ function getBaselineWins(player: { stadiumWins?: number; regular5v5Wins?: number
   }
 }
 
-/** Get display name for mode */
 function getModeName(mode: GameMode): string {
   switch (mode) {
     case "stadium_5v5":
@@ -44,8 +45,7 @@ export function Leaderboard() {
   const topPlayers = useMemo(() => {
     const allPlayers = Array.from(players.values());
     const modeSessionWins = sessionWins[gameMode];
-    
-    // Calculate total wins for current mode = CSV baseline + session wins
+
     const playersWithTotals = allPlayers.map((p) => {
       const baseline = getBaselineWins(p, gameMode);
       const session = modeSessionWins.get(p.battletag) ?? 0;
@@ -58,7 +58,6 @@ export function Leaderboard() {
       };
     });
 
-    // Filter to players with at least 1 win, sort by total wins descending
     return playersWithTotals
       .filter((p) => p.totalWins > 0)
       .sort((a, b) => b.totalWins - a.totalWins)
@@ -72,8 +71,8 @@ export function Leaderboard() {
   if (topPlayers.length === 0) {
     return (
       <div className="space-y-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-2">
-          <Trophy className="h-4 w-4" aria-hidden="true" />
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <Trophy className="h-4 w-4 text-pink-ink" aria-hidden="true" />
           Leaderboard
         </h3>
         <p className="text-xs text-muted">No wins recorded yet.</p>
@@ -83,35 +82,34 @@ export function Leaderboard() {
 
   return (
     <div className="space-y-2">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-2">
-        <Trophy className="h-4 w-4" aria-hidden="true" />
-        {getModeName(gameMode)} Leaderboard
-      </h3>
-      <p className="text-xs text-muted mb-2">Top 10 by {getModeName(gameMode)} wins</p>
-      
-      <div className="max-h-72 overflow-y-auto">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <Trophy className="h-4 w-4 text-pink-ink" aria-hidden="true" />
+          {getModeName(gameMode)} Leaderboard
+        </h3>
+        <span className="text-xs text-muted">Top 10</span>
+      </div>
+
+      <div className="max-h-48 overflow-y-auto">
         <table className="w-full text-xs">
-          <thead className="text-muted sticky top-0 bg-[var(--color-paper-2)]">
+          <thead className="text-muted sticky top-0 bg-paper-2 border-b border-rule">
             <tr>
-              <th className="text-center py-1 px-1 w-8">#</th>
-              <th className="text-left py-1 px-1">Player</th>
-              <th className="text-center py-1 px-1 text-accent">Wins</th>
+              <th className="text-center py-1.5 px-1 font-semibold w-8">#</th>
+              <th className="text-left py-1.5 px-1 font-semibold">Player</th>
+              <th className="text-center py-1.5 px-1 font-semibold text-pink-ink">Wins</th>
             </tr>
           </thead>
-          <tbody className="text-ink-2">
+          <tbody className="text-ink-2 divide-y divide-rule">
             {topPlayers.map((player) => (
-              <tr 
-                key={player.battletag}
-                className="hover:bg-[var(--color-paper-3)] transition-colors"
-              >
-                <td className="text-center py-0.5 px-1 text-muted app-measured">
+              <tr key={player.battletag} className="hover:bg-pink-soft/50">
+                <td className="text-center py-1.5 px-1 text-muted app-measured">
                   {player.rank}
                 </td>
-                <td className="py-0.5 px-1 truncate max-w-[100px]" title={player.battletag}>
+                <td className="py-1.5 px-1 font-semibold text-ink truncate max-w-[110px]" title={player.battletag}>
                   {player.name}
                 </td>
-                <td 
-                  className="text-center py-0.5 px-1 text-accent font-medium app-measured"
+                <td
+                  className="text-center py-1.5 px-1 text-pink-ink font-semibold app-measured"
                   title={`CSV: ${player.baselineWins} + Session: ${player.sessionWins} = ${player.totalWins}`}
                 >
                   {player.sessionWins > 0 ? (

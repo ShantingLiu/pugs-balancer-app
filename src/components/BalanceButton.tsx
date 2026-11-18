@@ -35,9 +35,14 @@ export function BalanceButton() {
   return (
     <div className="space-y-2">
       <button
+        type="button"
         onClick={handleBalance}
         disabled={!canBalance}
-        className="w-full py-4 text-xl font-bold app-primary transition-colors"
+        className={`w-full py-3.5 px-6 text-lg font-semibold rounded-card ${
+          canBalance
+            ? "app-primary"
+            : "bg-paper-3 border border-rule text-muted"
+        }`}
       >
         {canBalance ? (
           <span className="inline-flex items-center justify-center gap-2">

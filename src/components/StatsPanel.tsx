@@ -40,7 +40,7 @@ export function StatsPanel() {
   const stats = useMemo((): PlayerStats[] => {
     const modeWins = totalWins[gameMode];
     const modeLosses = totalLosses[gameMode];
-    
+
     return lobbyBattletags.map((battletag) => {
       const wins = modeWins.get(battletag) || 0;
       const losses = modeLosses.get(battletag) || 0;
@@ -60,25 +60,21 @@ export function StatsPanel() {
     });
   }, [lobbyBattletags, gameMode, totalWins, totalLosses, totalSatOut]);
 
-  // Sort by most wins first, then by fewest losses as tiebreaker
   const sortedStats = useMemo(() => {
     return [...stats].sort((a, b) => {
-      // Primary: most wins first
       if (b.wins !== a.wins) {
         return b.wins - a.wins;
       }
-      // Tiebreaker: fewer losses first
       return a.losses - b.losses;
     });
   }, [stats]);
 
-  // Check if there's any data to show
   const hasData = stats.some((s) => s.gamesPlayed > 0 || s.satOut > 0);
 
   if (!hasData) {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-ink-2">Session Stats</h3>
+        <h3 className="text-sm font-semibold text-ink">Session Stats</h3>
         <p className="text-xs text-muted">
           Stats will appear after games are played.
         </p>
@@ -88,59 +84,58 @@ export function StatsPanel() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-ink-2">Session Stats</h3>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-ink">Session Stats</h3>
+        <div className="flex gap-3">
           {adaptiveWeights.size > 0 && (
             <button
+              type="button"
               onClick={handleClearAdaptive}
-              className="text-xs text-muted hover:text-accent transition-colors"
+              className="text-xs font-semibold text-pink-ink hover:underline"
               title="Reset Auto-SR adjustments only"
             >
               Reset Auto-SR
             </button>
           )}
           <button
+            type="button"
             onClick={handleClear}
-            className="text-xs text-muted hover:text-bad transition-colors"
+            className="text-xs font-semibold text-bad hover:underline"
           >
             Clear
           </button>
         </div>
       </div>
-      
-      <div className="max-h-72 overflow-y-auto">
+
+      <div className="max-h-48 overflow-y-auto">
         <table className="w-full text-xs">
-          <thead className="text-muted sticky top-0 bg-[var(--color-paper-2)]">
+          <thead className="text-muted sticky top-0 bg-paper-2 border-b border-rule">
             <tr>
-              <th className="text-left py-1 px-1">Player</th>
-              <th className="text-center py-1 px-1 text-ok" title="Wins">W</th>
-              <th className="text-center py-1 px-1 text-bad" title="Losses">L</th>
-              <th className="text-center py-1 px-1 text-accent" title="Sat Out">S</th>
-              <th className="text-center py-1 px-1" title="Win Rate">%</th>
+              <th className="text-left py-1.5 px-1 font-semibold">Player</th>
+              <th className="text-center py-1.5 px-1 font-semibold text-ok" title="Wins">W</th>
+              <th className="text-center py-1.5 px-1 font-semibold text-bad" title="Losses">L</th>
+              <th className="text-center py-1.5 px-1 font-semibold text-warn" title="Sat Out">S</th>
+              <th className="text-center py-1.5 px-1 font-semibold" title="Win Rate">%</th>
             </tr>
           </thead>
-          <tbody className="text-ink-2">
+          <tbody className="text-ink-2 divide-y divide-rule">
             {sortedStats.map((player) => (
-              <tr 
-                key={player.battletag}
-                className="hover:bg-[var(--color-paper-3)] transition-colors"
-              >
-                <td className="py-0.5 px-1 truncate max-w-[80px]" title={player.name}>
+              <tr key={player.battletag} className="hover:bg-sky-soft/60">
+                <td className="py-1.5 px-1 font-semibold text-ink truncate max-w-[96px]" title={player.name}>
                   {player.name}
                 </td>
-                <td className="text-center py-0.5 px-1 text-ok app-measured">
+                <td className="text-center py-1.5 px-1 text-ok font-semibold app-measured">
                   {player.wins || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1 text-bad app-measured">
+                <td className="text-center py-1.5 px-1 text-bad font-semibold app-measured">
                   {player.losses || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1 text-accent app-measured">
+                <td className="text-center py-1.5 px-1 text-warn font-semibold app-measured">
                   {player.satOut || "-"}
                 </td>
-                <td className="text-center py-0.5 px-1 app-measured">
+                <td className="text-center py-1.5 px-1 app-measured">
                   {player.gamesPlayed > 0 ? (
-                    <span className={player.winRate >= 50 ? "text-ok" : "text-bad"}>
+                    <span className={`font-semibold ${player.winRate >= 50 ? "text-ok" : "text-bad"}`}>
                       {player.winRate}%
                     </span>
                   ) : "-"}

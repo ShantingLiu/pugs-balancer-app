@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState } from "react";
 import type { SyncDiff, PlayerDiff, FieldDiff, DiffType } from "@services/diffEngine";
 
 // =============================================================================
@@ -15,7 +14,6 @@ interface SyncDiffModalProps {
 export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
   const [resolvedDiff, setResolvedDiff] = useState<SyncDiff>(structuredClone(diff));
 
-  // P1-034: Bulk-set all field choices to one side
   const acceptAll = (side: "local" | "remote") => {
     setResolvedDiff((prev) => ({
       ...prev,
@@ -26,7 +24,6 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
     }));
   };
 
-  // P1-035: Update field choices for a single player
   const updateDiff = (battletag: string, fieldName: string, side: "local" | "remote") => {
     setResolvedDiff((prev) => ({
       ...prev,
@@ -43,7 +40,6 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
     }));
   };
 
-  // P1-036: Toggle import/push for new players
   const toggleSelected = (battletag: string, type: DiffType) => {
     const key = type === "new_remote" ? "newRemote" : "newLocal";
     setResolvedDiff((prev) => ({
@@ -54,71 +50,46 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
     }));
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
-
   return (
-    <div
-      className="fixed inset-0 app-backdrop flex items-center justify-center z-50"
-      onClick={onCancel}
-    >
-      <div
-        className="app-modal p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-ink">Sync Changes</h2>
-          <button
-            onClick={onCancel}
-            aria-label="Close"
-            className="text-muted hover:text-ink p-1"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
+      <div className="app-modal p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto mx-4">
+        <h2 className="text-xl font-semibold text-ink mb-4">Sync Changes</h2>
 
-        {/* P1-038: First-sync banner */}
         {diff.isFirstSync && (
-          <div className="app-alert-accent p-3 mb-4 text-sm">
+          <div className="bg-sky-soft border border-sky-edge rounded-well p-3 mb-4 text-sm text-sky-ink font-semibold">
             This is your first sync. The sheet roster will replace your local data.
             You can review individual changes below.
           </div>
         )}
 
-        {/* No changes message */}
         {!resolvedDiff.hasChanges && (
           <p className="text-muted text-sm mb-4">
             No changes detected. Your local data matches the sheet.
           </p>
         )}
 
-        {/* Bulk actions */}
         {resolvedDiff.modified.length > 0 && (
           <div className="flex gap-2 mb-4">
             <button
+              type="button"
               onClick={() => acceptAll("local")}
-              className="px-3 py-1.5 text-sm app-secondary transition-colors"
+              className="px-3.5 py-1.5 text-sm font-semibold app-secondary rounded-pill"
             >
               Accept All Local
             </button>
             <button
+              type="button"
               onClick={() => acceptAll("remote")}
-              className="px-3 py-1.5 text-sm app-secondary transition-colors"
+              className="px-3.5 py-1.5 text-sm font-semibold app-sky rounded-pill"
             >
               Accept All Remote
             </button>
           </div>
         )}
 
-        {/* Modified Players section */}
         {resolvedDiff.modified.length > 0 && (
           <section className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-ink">
+            <h3 className="text-base font-semibold text-ink mb-3">
               Modified Players ({resolvedDiff.modified.length})
             </h3>
             {resolvedDiff.modified.map((pd) => (
@@ -131,10 +102,9 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
           </section>
         )}
 
-        {/* New from Sheet section */}
         {resolvedDiff.newRemote.length > 0 && (
           <section className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-ink">
+            <h3 className="text-base font-semibold text-ink mb-3">
               New from Sheet ({resolvedDiff.newRemote.length})
             </h3>
             {resolvedDiff.newRemote.map((pd) => (
@@ -147,10 +117,9 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
           </section>
         )}
 
-        {/* New Locally section */}
         {resolvedDiff.newLocal.length > 0 && (
           <section className="mb-6">
-            <h3 className="text-lg font-semibold mb-3 text-ink">
+            <h3 className="text-base font-semibold text-ink mb-3">
               New Locally ({resolvedDiff.newLocal.length})
             </h3>
             {resolvedDiff.newLocal.map((pd) => (
@@ -163,17 +132,18 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
           </section>
         )}
 
-        {/* Footer buttons */}
-        <div className="flex gap-3 pt-4 border-t border-[var(--color-rule)]">
+        <div className="flex gap-3 pt-4 border-t border-rule">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 py-2 px-4 app-secondary transition-colors"
+            className="flex-1 py-2.5 px-4 app-secondary rounded-pill text-sm font-semibold"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={() => onApply(resolvedDiff)}
-            className="flex-1 py-2 px-4 app-primary font-medium transition-colors"
+            className="flex-1 py-2.5 px-4 app-primary rounded-pill text-sm font-semibold"
           >
             Apply Changes
           </button>
@@ -183,10 +153,6 @@ export function SyncDiffModal({ diff, onApply, onCancel }: SyncDiffModalProps) {
   );
 }
 
-// =============================================================================
-// ModifiedPlayerCard — shows field diffs for one player
-// =============================================================================
-
 function ModifiedPlayerCard({
   player,
   onFieldChoice,
@@ -195,18 +161,18 @@ function ModifiedPlayerCard({
   onFieldChoice: (field: string, side: "local" | "remote") => void;
 }) {
   return (
-    <div className="mb-3 app-subsurface p-3">
-      <div className="font-medium text-ink mb-2">{player.battletag}</div>
+    <div className="mb-3 app-well p-3">
+      <div className="font-semibold text-ink mb-2">{player.battletag}</div>
 
       {player.validationWarnings.length > 0 && (
-        <div className="mb-2 p-2 app-alert-accent text-xs">
+        <div className="mb-2 p-2 bg-warn-soft border border-warn-edge rounded-well text-warn text-xs">
           {player.validationWarnings.map((w, i) => (
             <div key={i}>{w}</div>
           ))}
         </div>
       )}
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {player.fields.map((fd) => (
           <FieldDiffRow
             key={fd.field}
@@ -219,10 +185,6 @@ function ModifiedPlayerCard({
     </div>
   );
 }
-
-// =============================================================================
-// P1-037: FieldDiffRow — side-by-side local/remote with click-to-choose
-// =============================================================================
 
 function FieldDiffRow({
   battletag,
@@ -238,12 +200,14 @@ function FieldDiffRow({
 
   return (
     <div className="flex items-center text-sm gap-2">
-      <span className="w-40 text-muted truncate">{diff.header}</span>
+      <span className="w-40 text-ink-2 truncate">{diff.header}</span>
       <span
         data-testid={`local-value-${battletag}-${diff.field}`}
         onClick={() => onChoose("local")}
-        className={`flex-1 px-2.5 py-0.5 cursor-pointer text-center truncate transition-colors ${
-          localActive ? "app-chip-active" : "app-chip"
+        className={`flex-1 px-2.5 py-1 rounded-pill cursor-pointer text-center truncate border ${
+          localActive
+            ? "bg-ok-soft border-ok-edge text-ok font-semibold"
+            : "bg-paper-2 border-rule text-muted hover:bg-ok-soft"
         }`}
       >
         {diff.localValue || "(empty)"}
@@ -252,8 +216,10 @@ function FieldDiffRow({
       <span
         data-testid={`remote-value-${battletag}-${diff.field}`}
         onClick={() => onChoose("remote")}
-        className={`flex-1 px-2.5 py-0.5 cursor-pointer text-center truncate transition-colors ${
-          remoteActive ? "app-chip-active" : "app-chip"
+        className={`flex-1 px-2.5 py-1 rounded-pill cursor-pointer text-center truncate border ${
+          remoteActive
+            ? "bg-sky-soft border-sky-edge text-sky-ink font-semibold"
+            : "bg-paper-2 border-rule text-muted hover:bg-sky-soft"
         }`}
       >
         {diff.remoteValue || "(empty)"}
@@ -261,10 +227,6 @@ function FieldDiffRow({
     </div>
   );
 }
-
-// =============================================================================
-// NewPlayerRow — checkbox toggle for importing/pushing a player
-// =============================================================================
 
 function NewPlayerRow({
   player,
@@ -274,17 +236,17 @@ function NewPlayerRow({
   onToggle: () => void;
 }) {
   return (
-    <label className="flex items-center gap-3 py-1.5 px-2 rounded-[var(--radius-card)] hover:bg-[var(--color-paper-2)] cursor-pointer">
+    <label className="flex items-center gap-3 py-1.5 px-2.5 rounded-well hover:bg-sky-soft/60 cursor-pointer">
       <input
         type="checkbox"
         checked={player.selected}
         onChange={onToggle}
         aria-label={player.battletag}
-        className="w-4 h-4"
+        className="w-4 h-4 accent-focus"
       />
-      <span className="font-medium text-ink">{player.battletag}</span>
+      <span className="font-semibold text-ink">{player.battletag}</span>
       {player.validationWarnings.length > 0 && (
-        <span className="text-accent text-xs ml-auto">
+        <span className="text-warn text-xs font-semibold ml-auto">
           {player.validationWarnings.length} warning(s)
         </span>
       )}

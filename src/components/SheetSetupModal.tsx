@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FilePlus2, Link2, Upload, PlugZap, X } from "lucide-react";
 import { useSheetStore } from "@store/sheetStore";
 import { usePlayerStore } from "@store/playerStore";
@@ -42,7 +42,6 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
-  // P2-014: Disconnect flow
   const handleDisconnect = () => {
     if (hasUnsyncedChanges) {
       setConfirmDisconnect(true);
@@ -57,7 +56,6 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
     onClose();
   };
 
-  // P2-005: Sign-in gate
   const handleSignIn = async () => {
     setLoading(true);
     setError(null);
@@ -70,7 +68,6 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
     }
   };
 
-  // P2-002: Create New Sheet flow
   const handleCreate = async () => {
     setLoading(true);
     setError(null);
@@ -88,7 +85,6 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
     }
   };
 
-  // P2-003: Connect Existing Sheet flow
   const handleConnect = async () => {
     setError(null);
     const id = extractSheetId(url);
@@ -116,7 +112,6 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
     }
   };
 
-  // P2-004: Upload Roster to New Sheet flow
   const handleUpload = async () => {
     setLoading(true);
     setError(null);
@@ -146,30 +141,17 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
     setError(null);
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 app-backdrop flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="app-modal p-6 w-full max-w-lg max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
+      <div className="app-modal p-6 w-full max-w-lg max-h-[90vh] flex flex-col mx-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 shrink-0">
-          <h2 className="text-xl font-bold text-ink">Google Sheets</h2>
+          <h2 className="text-xl font-semibold text-ink">Google Sheets</h2>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-muted hover:text-ink p-1"
+            className="text-muted hover:text-ink p-1.5 rounded-pill"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -177,175 +159,183 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
 
         {/* Error display */}
         {error && (
-          <div className="app-alert-error p-3 mb-4 text-sm text-bad max-h-32 overflow-y-auto shrink-0">
+          <div className="bg-bad-soft border border-bad-edge rounded-well p-3 mb-4 text-sm text-bad max-h-32 overflow-y-auto shrink-0">
             {error}
           </div>
         )}
 
         {/* Content */}
         {!isAuth ? (
-          // P2-005: Sign-in gate
           <div className="text-center py-4">
-            <p className="text-muted mb-4">
+            <p className="text-ink-2 mb-4 text-sm">
               Sign in to access Google Sheets sync.
             </p>
             <button
+              type="button"
               onClick={handleSignIn}
               disabled={loading}
-              className="px-4 py-2 app-primary disabled:opacity-50 font-medium"
+              className="px-5 py-2.5 app-primary rounded-pill font-semibold text-sm"
             >
               {loading ? "Signing in…" : "Sign in with Google"}
             </button>
           </div>
         ) : !mode ? (
-          // P2-001: Mode selector
           <div>
             {spreadsheetId && (
-              <div className="app-subsurface p-3 mb-4 text-sm text-ink-2">
+              <div className="app-well p-3 mb-4 text-sm text-ink-2">
                 Connected to{" "}
-                <span className="font-medium text-ink">{sheetName}</span>
+                <span className="font-semibold text-ink">{sheetName}</span>
                 {spreadsheetUrl && (
                   <button
+                    type="button"
                     onClick={() => open(spreadsheetUrl)}
-                    className="ml-2 text-accent hover:underline"
+                    className="ml-2 text-sky-ink font-semibold underline"
                   >
                     Open in Sheets
                   </button>
                 )}
               </div>
             )}
-            {/* P2-015: Disconnect confirmation */}
+
             {confirmDisconnect ? (
-              <div className="app-alert-accent p-4 mb-4">
-                <p className="text-sm text-ink mb-3">
+              <div className="bg-warn-soft border border-warn-edge rounded-well p-4 mb-4">
+                <p className="text-sm text-warn font-semibold mb-3">
                   You have unsynced changes that will be lost if you disconnect.
                 </p>
-                <div className="flex gap-3">
+                <div className="flex gap-2.5">
                   <button
+                    type="button"
                     onClick={handleConfirmDisconnect}
-                    className="px-3 py-1.5 app-danger text-sm font-medium"
+                    className="px-3.5 py-1.5 app-danger rounded-pill text-sm font-semibold"
                   >
                     Disconnect anyway
                   </button>
                   <button
+                    type="button"
                     onClick={() => setConfirmDisconnect(false)}
-                    className="px-3 py-1.5 app-secondary text-sm font-medium"
+                    className="px-3.5 py-1.5 app-secondary rounded-pill text-sm font-semibold"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             ) : null}
-            <div className="flex flex-col gap-3">
+
+            <div className="flex flex-col gap-2.5">
               <button
+                type="button"
                 onClick={() => setMode("create")}
-                className="px-4 py-3 app-secondary text-left flex items-center gap-2"
+                className="px-4 py-3 app-secondary rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
               >
-                <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+                <FilePlus2 className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
                 Create New Sheet
               </button>
               <button
+                type="button"
                 onClick={() => setMode("connect")}
-                className="px-4 py-3 app-secondary text-left flex items-center gap-2"
+                className="px-4 py-3 app-secondary rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
               >
-                <Link2 className="h-4 w-4" aria-hidden="true" />
+                <Link2 className="h-4 w-4 text-sky-ink shrink-0" aria-hidden="true" />
                 Connect Existing Sheet
               </button>
               <button
+                type="button"
                 onClick={() => setMode("upload")}
-                className="px-4 py-3 app-secondary text-left flex items-center gap-2"
+                className="px-4 py-3 app-secondary app-nowrap rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
               >
-                <Upload className="h-4 w-4" aria-hidden="true" />
+                <Upload className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
                 Upload Roster to New Sheet
               </button>
-              {/* P2-014: Disconnect button */}
               {spreadsheetId && (
                 <button
+                  type="button"
                   onClick={handleDisconnect}
-                  className="px-4 py-3 app-secondary text-left text-bad flex items-center gap-2"
+                  className="px-4 py-3 app-danger rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
                 >
-                  <PlugZap className="h-4 w-4" aria-hidden="true" />
+                  <PlugZap className="h-4 w-4 shrink-0" aria-hidden="true" />
                   Disconnect
                 </button>
               )}
             </div>
           </div>
         ) : mode === "create" ? (
-          // P2-002: Create New Sheet
           <div>
             <button
+              type="button"
               onClick={goBack}
-              className="text-sm text-muted hover:text-ink mb-3"
+              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
             </button>
-            <label className="block text-sm text-ink-2 mb-1">
+            <label className="block text-sm font-semibold text-ink-2 mb-1">
               Sheet title
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full app-input px-3 py-2 mb-4"
+              className="app-input w-full px-3 py-2 mb-4 text-sm"
             />
             <button
+              type="button"
               onClick={handleCreate}
               disabled={loading || !title.trim()}
-              className="w-full px-4 py-2 app-primary disabled:opacity-50 font-medium"
+              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
             >
               {loading ? "Creating…" : "Create"}
             </button>
           </div>
         ) : mode === "connect" ? (
-          // P2-003: Connect Existing Sheet
           <div>
             <button
+              type="button"
               onClick={goBack}
-              className="text-sm text-muted hover:text-ink mb-3"
+              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
             </button>
-            <label className="block text-sm text-ink-2 mb-1">
+            <label className="block text-sm font-semibold text-ink-2 mb-1">
               Paste Google Sheet URL
             </label>
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/…"
-              className="w-full app-input px-3 py-2 mb-4"
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              className="app-input w-full px-3 py-2 mb-4 text-sm"
             />
             <button
+              type="button"
               onClick={handleConnect}
               disabled={loading || !url.trim()}
-              className="w-full px-4 py-2 app-primary disabled:opacity-50 font-medium"
+              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
             >
               {loading ? "Connecting…" : "Connect"}
             </button>
           </div>
         ) : mode === "upload" ? (
-          // P2-004: Upload Roster to New Sheet
           <div>
             <button
+              type="button"
               onClick={goBack}
-              className="text-sm text-muted hover:text-ink mb-3"
+              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
             </button>
-            <p className="text-sm text-muted mb-3">
-              {playerCount} player{playerCount !== 1 ? "s" : ""} will be
-              uploaded to a new sheet.
+            <p className="text-sm text-ink-2 mb-3">
+              {playerCount} player{playerCount !== 1 ? "s" : ""} will be uploaded to a new sheet.
             </p>
-            <label className="block text-sm text-ink-2 mb-1">
+            <label className="block text-sm font-semibold text-ink-2 mb-1">
               Sheet title
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full app-input px-3 py-2 mb-4"
+              className="app-input w-full px-3 py-2 mb-4 text-sm"
             />
             <button
+              type="button"
               onClick={handleUpload}
               disabled={loading || !title.trim()}
-              className="w-full px-4 py-2 app-primary disabled:opacity-50 font-medium"
+              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
             >
               {loading ? "Uploading…" : "Upload"}
             </button>

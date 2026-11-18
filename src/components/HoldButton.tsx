@@ -27,21 +27,20 @@ export function HoldButton({
   const startHolding = useCallback(() => {
     setIsHolding(true);
     startTimeRef.current = Date.now();
-    
+
     intervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
       const newProgress = Math.min((elapsed / holdDuration) * 100, 100);
       setProgress(newProgress);
-      
+
       if (newProgress >= 100) {
-        // Confirmed!
         clearInterval(intervalRef.current!);
         intervalRef.current = null;
         setIsHolding(false);
         setProgress(0);
         onConfirm();
       }
-    }, 16); // ~60fps
+    }, 16);
   }, [holdDuration, onConfirm]);
 
   const stopHolding = useCallback(() => {
@@ -55,6 +54,7 @@ export function HoldButton({
 
   return (
     <button
+      type="button"
       onMouseDown={startHolding}
       onMouseUp={stopHolding}
       onMouseLeave={stopHolding}
@@ -63,14 +63,14 @@ export function HoldButton({
       className={`relative overflow-hidden ${className}`}
       title={title || "Hold to confirm"}
     >
-      {/* Progress overlay */}
+      {/* Progress overlay using transform (no width animation) */}
       {isHolding && (
         <div
-          className="absolute inset-0 app-hold-progress transition-none"
-          style={{ width: `${progress}%` }}
+          className="absolute inset-0 bg-ink/15 origin-left"
+          style={{ transform: `scaleX(${progress / 100})` }}
+          aria-hidden="true"
         />
       )}
-      {/* Button content */}
       <span className="relative z-10">{children}</span>
     </button>
   );

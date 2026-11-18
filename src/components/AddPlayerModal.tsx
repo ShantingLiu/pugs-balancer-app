@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Player, Role } from "@engine/types";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
@@ -18,7 +18,6 @@ interface AddPlayerModalProps {
 
 const ROLES: Role[] = ["Tank", "DPS", "Support"];
 
-// Stadium ranks for dropdowns (5 is lowest, 1 is highest within tier)
 const STADIUM_RANKS = [
   "Rookie 5", "Rookie 4", "Rookie 3", "Rookie 2", "Rookie 1",
   "Novice 5", "Novice 4", "Novice 3", "Novice 2", "Novice 1",
@@ -29,7 +28,6 @@ const STADIUM_RANKS = [
   "Legend 5", "Legend 4", "Legend 3", "Legend 2", "Legend 1",
 ];
 
-// Regular competitive ranks for dropdowns
 const COMP_RANKS = [
   "Bronze 5", "Bronze 4", "Bronze 3", "Bronze 2", "Bronze 1",
   "Silver 5", "Silver 4", "Silver 3", "Silver 2", "Silver 1",
@@ -65,43 +63,16 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
   allTimeWins: 0,
 };
 
-function getRoleBadgeClass(role: Role): string {
-  switch (role) {
-    case "Tank":
-      return "role-badge-tank";
-    case "DPS":
-      return "role-badge-dps";
-    case "Support":
-      return "role-badge-support";
-  }
-}
-
 export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalProps) {
-  if (!isOpen) return null;
-  return (
-    <AddPlayerModalContent
-      key={editPlayer?.battletag ?? "__new__"}
-      onClose={onClose}
-      editPlayer={editPlayer}
-    />
-  );
-}
-
-function AddPlayerModalContent({
-  onClose,
-  editPlayer,
-}: Omit<AddPlayerModalProps, "isOpen">) {
   const upsertPlayer = usePlayerStore((state) => state.upsertPlayer);
   const removePlayer = usePlayerStore((state) => state.removePlayer);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
   const renamePlayerInSession = useSessionStore((state) => state.renamePlayerInSession);
   const gameMode = useSessionStore((state) => state.gameMode);
 
-  const [battletag, setBattletag] = useState(() => editPlayer?.battletag ?? "");
-  const [originalBattletag] = useState(() => editPlayer?.battletag ?? "");
-  const [form, setForm] = useState<Omit<Player, "battletag">>(() =>
-    editPlayer ? { ...editPlayer } : { ...EMPTY_FORM }
-  );
+  const [battletag, setBattletag] = useState("");
+  const [originalBattletag, setOriginalBattletag] = useState("");
+  const [form, setForm] = useState<Omit<Player, "battletag">>(EMPTY_FORM);
   const [errors, setErrors] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -115,6 +86,22 @@ function AddPlayerModalContent({
     }),
     [gameMode]
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editPlayer) {
+        setBattletag(editPlayer.battletag);
+        setOriginalBattletag(editPlayer.battletag);
+        setForm({ ...editPlayer });
+      } else {
+        setBattletag("");
+        setOriginalBattletag("");
+        setForm({ ...EMPTY_FORM });
+      }
+      setErrors([]);
+      setShowDeleteConfirm(false);
+    }
+  }, [isOpen, editPlayer]);
 
   const validate = (): string[] => {
     const errs: string[] = [];
@@ -135,20 +122,14 @@ function AddPlayerModalContent({
     }
 
     for (const role of form.rolesWilling) {
-      const stadiumRankField =
-        role === "Tank" ? "tankRank" : role === "DPS" ? "dpsRank" : "supportRank";
-      const compRankField =
-        role === "Tank" ? "tankCompRank" : role === "DPS" ? "dpsCompRank" : "supportCompRank";
+      const stadiumRankField = role === "Tank" ? "tankRank" : role === "DPS" ? "dpsRank" : "supportRank";
+      const compRankField = role === "Tank" ? "tankCompRank" : role === "DPS" ? "dpsCompRank" : "supportCompRank";
       if (!form[stadiumRankField] && !form[compRankField] && !form.regularCompRank) {
         errs.push(`${role} requires a Stadium rank or Regular Comp rank`);
       }
     }
 
-    const oneTrickHeroes = [
-      form.tankOneTrick,
-      form.dpsOneTrick,
-      form.supportOneTrick,
-    ].filter(Boolean);
+    const oneTrickHeroes = [form.tankOneTrick, form.dpsOneTrick, form.supportOneTrick].filter(Boolean);
     for (const hero of oneTrickHeroes) {
       if (hero && !form.heroPool.includes(hero)) {
         errs.push(`One-trick hero "${hero}" must be in hero pool`);
@@ -169,11 +150,7 @@ function AddPlayerModalContent({
       return;
     }
 
-    const oneTrickHeroes = [
-      form.tankOneTrick,
-      form.dpsOneTrick,
-      form.supportOneTrick,
-    ].filter(Boolean);
+    const oneTrickHeroes = [form.tankOneTrick, form.dpsOneTrick, form.supportOneTrick].filter(Boolean);
     const derivedIsOneTrick = oneTrickHeroes.length > 0;
     const derivedOneTrickHero = oneTrickHeroes[0] || null;
 
@@ -227,7 +204,7 @@ function AddPlayerModalContent({
         : [...prev.rolesWilling, role];
 
       const newPref = prev.rolePreference.filter((r) => newRoles.includes(r));
-      if (newRoles.length > 0 && !newRoles.includes(role) === false && !newPref.includes(role)) {
+      if (newRoles.length > 0 && newRoles.includes(role) && !newPref.includes(role)) {
         newPref.push(role);
       }
 
@@ -267,40 +244,18 @@ function AddPlayerModalContent({
     });
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 app-backdrop flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="app-modal p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-ink">
-            {isEditing ? "Edit Player" : "Add New Player"}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="text-muted hover:text-ink p-1"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
+      <div className="app-modal p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+        <h2 className="text-xl font-semibold text-ink mb-4">
+          {isEditing ? "Edit Player" : "Add New Player"}
+        </h2>
 
-        {/* Errors */}
         {errors.length > 0 && (
-          <div className="mb-4 p-3 app-alert-error">
-            <ul className="text-sm text-bad list-disc list-inside">
+          <div className="mb-4 p-3 bg-bad-soft border border-bad-edge rounded-well">
+            <ul className="text-sm text-bad list-disc list-inside space-y-0.5">
               {errors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
@@ -311,26 +266,33 @@ function AddPlayerModalContent({
         <div className="space-y-4">
           {/* Battletag */}
           <div>
-            <label className="block text-sm font-medium text-ink-2 mb-1">Battletag *</label>
+            <label className="block text-sm font-semibold text-ink-2 mb-1">Battletag *</label>
             <input
               type="text"
               value={battletag}
               onChange={(e) => setBattletag(e.target.value)}
               placeholder="Name or Name#1234"
-              className="w-full px-3 py-2 app-input"
+              className="app-input w-full px-3 py-2 text-sm"
             />
           </div>
 
           {/* Roles Willing */}
           <div>
-            <label className="block text-sm font-medium text-ink-2 mb-1">Roles Willing *</label>
-            <div className="flex gap-2">
+            <label className="block text-sm font-semibold text-ink-2 mb-1.5">Roles Willing *</label>
+            <div className="flex flex-wrap gap-2">
               {ROLES.map((role) => (
                 <button
+                  type="button"
                   key={role}
                   onClick={() => toggleRole(role)}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    form.rolesWilling.includes(role) ? getRoleBadgeClass(role) : "app-chip"
+                  className={`px-4 py-2 rounded-pill text-sm font-semibold border ${
+                    form.rolesWilling.includes(role)
+                      ? role === "Tank"
+                        ? "bg-yellow-600"
+                        : role === "DPS"
+                        ? "role-dps"
+                        : "role-support"
+                      : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft"
                   }`}
                 >
                   {role}
@@ -342,10 +304,10 @@ function AddPlayerModalContent({
           {/* Role Preference Order */}
           {form.rolesWilling.length > 1 && (
             <div>
-              <label className="block text-sm font-medium text-ink-2 mb-1">
+              <label className="block text-sm font-semibold text-ink-2 mb-1.5">
                 Role Preference (first = most preferred)
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2.5">
                 {(form.rolePreference.length === form.rolesWilling.length
                   ? form.rolePreference
                   : form.rolesWilling
@@ -353,8 +315,10 @@ function AddPlayerModalContent({
                   <div key={role} className="flex items-center gap-1">
                     <span className="text-muted text-sm app-measured">{idx + 1}.</span>
                     <span
-                      className={`px-3 py-1 text-sm ${
-                        idx === 0 ? "app-chip-active" : "app-chip"
+                      className={`px-3 py-1 rounded-pill text-sm font-semibold border ${
+                        idx === 0
+                          ? "bg-pink-soft border-pink-edge text-pink-ink"
+                          : "bg-paper-3 border-rule text-ink-2"
                       }`}
                     >
                       {role}
@@ -362,28 +326,32 @@ function AddPlayerModalContent({
                     <div className="flex flex-col">
                       {idx > 0 && (
                         <button
+                          type="button"
                           onClick={() => {
                             const newPref = [...arr];
                             [newPref[idx - 1], newPref[idx]] = [newPref[idx], newPref[idx - 1]];
                             setForm((prev) => ({ ...prev, rolePreference: newPref }));
                           }}
-                          className="text-xs text-muted hover:text-ink px-1"
+                          className="text-muted hover:text-ink px-1"
                           title="Move up"
+                          aria-label={`Move ${role} up`}
                         >
-                          ▲
+                          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       )}
                       {idx < arr.length - 1 && (
                         <button
+                          type="button"
                           onClick={() => {
                             const newPref = [...arr];
                             [newPref[idx], newPref[idx + 1]] = [newPref[idx + 1], newPref[idx]];
                             setForm((prev) => ({ ...prev, rolePreference: newPref }));
                           }}
-                          className="text-xs text-muted hover:text-ink px-1"
+                          className="text-muted hover:text-ink px-1"
                           title="Move down"
+                          aria-label={`Move ${role} down`}
                         >
-                          ▼
+                          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       )}
                     </div>
@@ -395,17 +363,17 @@ function AddPlayerModalContent({
 
           {/* Ranks - Per Role */}
           {form.rolesWilling.length > 0 && (
-            <div className="space-y-4">
-              <div className="text-sm font-medium text-ink-2">
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-ink-2">
                 Ranks per Role
-                <span className="text-xs text-muted ml-2">
+                <span className="text-xs font-normal text-muted ml-2">
                   (Stadium rank preferred, or use Regular Comp rank as fallback)
                 </span>
               </div>
 
               {form.rolesWilling.includes("Tank") && (
-                <div className="p-3 app-subsurface">
-                  <div className="text-sm font-medium role-text-tank mb-2">Tank</div>
+                <div className="p-3 app-well">
+                  <div className="text-sm font-semibold text-tank mb-2">Tank</div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-muted mb-1">Stadium Rank</label>
@@ -414,13 +382,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, tankRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -431,13 +397,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, tankCompRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -446,8 +410,8 @@ function AddPlayerModalContent({
               )}
 
               {form.rolesWilling.includes("DPS") && (
-                <div className="p-3 app-subsurface">
-                  <div className="text-sm font-medium role-text-dps mb-2">DPS</div>
+                <div className="p-3 app-well">
+                  <div className="text-sm font-semibold text-dps mb-2">DPS</div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-muted mb-1">Stadium Rank</label>
@@ -456,13 +420,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, dpsRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -473,13 +435,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, dpsCompRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -488,8 +448,8 @@ function AddPlayerModalContent({
               )}
 
               {form.rolesWilling.includes("Support") && (
-                <div className="p-3 app-subsurface">
-                  <div className="text-sm font-medium role-text-support mb-2">Support</div>
+                <div className="p-3 app-well">
+                  <div className="text-sm font-semibold text-sup mb-2">Support</div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-muted mb-1">Stadium Rank</label>
@@ -498,13 +458,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, supportRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -515,13 +473,11 @@ function AddPlayerModalContent({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, supportCompRank: e.target.value || null }))
                         }
-                        className="w-full px-3 py-2 text-sm app-input"
+                        className="app-input w-full px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>
-                            {rank}
-                          </option>
+                          <option key={rank} value={rank}>{rank}</option>
                         ))}
                       </select>
                     </div>
@@ -533,36 +489,39 @@ function AddPlayerModalContent({
 
           {/* Hero Pool */}
           <div>
-            <label className="block text-sm font-medium text-ink-2 mb-1">
+            <label className="block text-sm font-semibold text-ink-2 mb-1.5">
               Hero Pool * ({form.heroPool.length} selected)
             </label>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {ROLES.map((role) => (
                 <div key={role}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-muted">{role}</span>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-xs font-semibold text-ink-2">{role}</span>
                     <button
                       type="button"
                       onClick={() => selectAllHeroesForRole(role)}
-                      className="text-xs text-accent hover:underline"
+                      className="text-xs font-semibold text-sky-ink hover:underline"
                     >
                       Select All
                     </button>
                     <button
                       type="button"
                       onClick={() => clearHeroesForRole(role)}
-                      className="text-xs text-bad hover:underline"
+                      className="text-xs font-semibold text-bad hover:underline"
                     >
                       Clear
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {HEROES_BY_ROLE[role].map((hero) => (
                       <button
+                        type="button"
                         key={hero}
                         onClick={() => toggleHero(hero)}
-                        className={`px-2.5 py-1 text-xs transition-colors ${
-                          form.heroPool.includes(hero) ? "app-chip-active" : "app-chip"
+                        className={`px-2.5 py-1 rounded-pill text-xs font-semibold border ${
+                          form.heroPool.includes(hero)
+                            ? "bg-pink-soft border-pink-edge text-pink-ink"
+                            : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft"
                         }`}
                       >
                         {hero}
@@ -576,76 +535,64 @@ function AddPlayerModalContent({
 
           {/* One-trick per role */}
           {form.rolesWilling.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-ink-2">
+            <div className="space-y-2.5">
+              <div className="text-sm font-semibold text-ink-2">
                 One-Trick Heroes
-                <span className="text-xs text-muted ml-2">
+                <span className="text-xs font-normal text-muted ml-2">
                   (Select if player only plays one hero for a role)
                 </span>
               </div>
 
               {form.rolesWilling.includes("Tank") && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm role-text-tank w-16">Tank:</span>
+                  <span className="text-sm font-semibold text-tank w-16">Tank</span>
                   <select
                     value={form.tankOneTrick || ""}
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, tankOneTrick: e.target.value || null }))
                     }
-                    className="flex-1 px-3 py-1.5 text-sm app-input"
+                    className="app-input flex-1 px-3 py-1.5 text-sm"
                   >
                     <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["Tank"]
-                      .filter((h) => form.heroPool.includes(h))
-                      .map((hero) => (
-                        <option key={hero} value={hero}>
-                          {hero}
-                        </option>
-                      ))}
+                    {HEROES_BY_ROLE["Tank"].filter((h) => form.heroPool.includes(h)).map((hero) => (
+                      <option key={hero} value={hero}>{hero}</option>
+                    ))}
                   </select>
                 </div>
               )}
 
               {form.rolesWilling.includes("DPS") && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm role-text-dps w-16">DPS:</span>
+                  <span className="text-sm font-semibold text-dps w-16">DPS</span>
                   <select
                     value={form.dpsOneTrick || ""}
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, dpsOneTrick: e.target.value || null }))
                     }
-                    className="flex-1 px-3 py-1.5 text-sm app-input"
+                    className="app-input flex-1 px-3 py-1.5 text-sm"
                   >
                     <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["DPS"]
-                      .filter((h) => form.heroPool.includes(h))
-                      .map((hero) => (
-                        <option key={hero} value={hero}>
-                          {hero}
-                        </option>
-                      ))}
+                    {HEROES_BY_ROLE["DPS"].filter((h) => form.heroPool.includes(h)).map((hero) => (
+                      <option key={hero} value={hero}>{hero}</option>
+                    ))}
                   </select>
                 </div>
               )}
 
               {form.rolesWilling.includes("Support") && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm role-text-support w-16">Support:</span>
+                  <span className="text-sm font-semibold text-sup w-16">Support</span>
                   <select
                     value={form.supportOneTrick || ""}
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, supportOneTrick: e.target.value || null }))
                     }
-                    className="flex-1 px-3 py-1.5 text-sm app-input"
+                    className="app-input flex-1 px-3 py-1.5 text-sm"
                   >
                     <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["Support"]
-                      .filter((h) => form.heroPool.includes(h))
-                      .map((hero) => (
-                        <option key={hero} value={hero}>
-                          {hero}
-                        </option>
-                      ))}
+                    {HEROES_BY_ROLE["Support"].filter((h) => form.heroPool.includes(h)).map((hero) => (
+                      <option key={hero} value={hero}>{hero}</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -654,9 +601,8 @@ function AddPlayerModalContent({
 
           {/* Weight Modifier */}
           <div>
-            <label className="block text-sm font-medium text-ink-2 mb-1 app-measured">
-              Weight Modifier ({form.weightModifier > 0 ? "+" : ""}
-              {form.weightModifier})
+            <label className="block text-sm font-semibold text-ink-2 mb-1">
+              Weight Modifier (<span className="app-measured">{form.weightModifier > 0 ? "+" : ""}{form.weightModifier}</span>)
             </label>
             <input
               type="range"
@@ -667,7 +613,7 @@ function AddPlayerModalContent({
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, weightModifier: parseInt(e.target.value) }))
               }
-              className="w-full"
+              className="w-full accent-focus"
             />
             <div className="flex justify-between text-xs text-muted app-measured">
               <span>-500 (weaker)</span>
@@ -678,42 +624,45 @@ function AddPlayerModalContent({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-ink-2 mb-1">Notes</label>
+            <label className="block text-sm font-semibold text-ink-2 mb-1">Notes</label>
             <textarea
               value={form.notes || ""}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value || null }))
               }
-              placeholder="Optional notes about this player…"
+              placeholder="Optional notes about this player..."
               rows={2}
-              className="w-full px-3 py-2 resize-none"
+              className="app-input w-full px-3 py-2 text-sm resize-none"
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-between mt-6 pt-4 border-t border-[var(--color-rule)]">
+        <div className="flex flex-wrap justify-between gap-3 mt-6 pt-4 border-t border-rule">
           <div>
             {isEditing && !showDeleteConfirm && (
               <button
+                type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2 app-danger transition-colors"
+                className="px-4 py-2 app-danger rounded-pill text-sm font-semibold"
               >
                 Delete Player
               </button>
             )}
             {showDeleteConfirm && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-bad">Are you sure?</span>
+                <span className="text-sm text-bad font-semibold">Are you sure?</span>
                 <button
+                  type="button"
                   onClick={handleDelete}
-                  className="px-3 py-1 app-danger text-sm"
+                  className="px-3 py-1.5 app-danger rounded-pill text-sm font-semibold"
                 >
                   Yes, delete
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-3 py-1 app-secondary text-sm"
+                  className="px-3 py-1.5 app-secondary rounded-pill text-sm font-semibold"
                 >
                   Cancel
                 </button>
@@ -723,14 +672,16 @@ function AddPlayerModalContent({
 
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2 app-secondary transition-colors"
+              className="px-4 py-2 app-secondary rounded-pill text-sm font-semibold"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
-              className="px-4 py-2 app-primary transition-colors"
+              className="px-5 py-2 app-primary rounded-pill text-sm font-semibold"
             >
               {isEditing ? "Save Changes" : "Add Player"}
             </button>

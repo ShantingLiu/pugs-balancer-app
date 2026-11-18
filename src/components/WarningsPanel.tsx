@@ -10,7 +10,6 @@ interface WarningsPanelProps {
   compact?: boolean;
 }
 
-/** Get icon for warning type */
 function WarningIcon({ type }: { type: Warning["type"] }) {
   const props = { className: "h-4 w-4 shrink-0", "aria-hidden": true as const };
   switch (type) {
@@ -39,29 +38,27 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
 
   return (
     <div className="space-y-2">
-      {/* Errors first */}
       {errors.map((warning, idx) => (
         <div
           key={`error-${idx}`}
-          className={`flex items-start gap-2 ${
-            compact ? "p-2 text-xs" : "p-3 text-sm"
-          } app-alert-error`}
+          className={`flex items-start gap-2 rounded-well ${
+            compact ? "p-2.5 text-xs" : "p-3 text-sm"
+          } bg-bad-soft border border-bad-edge text-bad`}
         >
           <WarningIcon type={warning.type} />
-          <span>{warning.message}</span>
+          <span className="text-ink font-semibold">{warning.message}</span>
         </div>
       ))}
 
-      {/* Warnings */}
       {warningItems.map((warning, idx) => (
         <div
           key={`warning-${idx}`}
-          className={`flex items-start gap-2 ${
-            compact ? "p-2 text-xs" : "p-3 text-sm"
-          } app-alert-accent`}
+          className={`flex items-start gap-2 rounded-well ${
+            compact ? "p-2.5 text-xs" : "p-3 text-sm"
+          } bg-warn-soft border border-warn-edge text-warn`}
         >
           <WarningIcon type={warning.type} />
-          <span>{warning.message}</span>
+          <span className="text-ink">{warning.message}</span>
         </div>
       ))}
     </div>
