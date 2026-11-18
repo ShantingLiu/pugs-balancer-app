@@ -260,6 +260,10 @@ Or install via one of the installer packages for Start Menu integration.
 - **Sync**: Google Sheets API (REST, called via Tauri HTTP plugin — no npm Google libs)
 - **Testing**: Vitest
 
+## Beta Testers
+
+Special thanks to **Nerp** and **Critic** for beta testing and feedback!
+
 ## License
 
 MIT

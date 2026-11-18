@@ -1,12 +1,11 @@
 /* Hallmark · shape: app screen · genre: playful · theme: custom · redesign: full
  * idea: "Sky-milk and cotton-candy stationery workbench where Team 1 is cotton-candy pink and Team 2 is pastel sky blue"
  * vibe: "soft cloud-white cards, pastel sky, cotton-candy pink"
- * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Lexend · body: Onest
+ * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Figtree · body: Inter (by request)
  * nav: cloud top bar · signature: Cotton Candy vs Sky team matchup ledger · states: empty, preview, result, draft, sync
  * axes: light/rounded-sans/chromatic-pink · posture: full-palette · modes: light+dark · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: R, pastel sky + cotton-candy pink across 20 components could turn noisy; restrained every surface to sky paper, cloud cards, and purposeful pink-vs-sky team coding */
 /* Hallmark · waive 74 · AddPlayerModal.test.tsx line 206 asserts bg-yellow-600 class on Tank toggle · preserved that single utility on the Tank toggle and styled it through pastel tank tokens */
-/* Hallmark · dismissed 49b · SheetSetupModal "Upload Roster to New Sheet" label is pinned by SheetSetupModal.test.tsx and carries app-nowrap */
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css" layer(base);
@@ -272,6 +271,14 @@ button:disabled {
   outline-offset: -2px;
 }
 
+/* Display headline & figure voice */
+.app-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Measured tabular numbers */
 .app-measured {
   font-family: var(--font-outlier);
@@ -361,6 +368,19 @@ button:disabled {
   background: var(--color-tank-soft);
   border: 1px solid var(--color-tank-edge);
   color: var(--color-tank);
+}
+
+/* Player pool card rank text */
+.app-card-rank--tank {
+  color: var(--color-card-tank);
+}
+
+.app-card-rank--dps {
+  color: var(--color-card-dps);
+}
+
+.app-card-rank--sup {
+  color: var(--color-card-sup);
 }
 
 .role-dps {

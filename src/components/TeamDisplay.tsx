@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Users, RefreshCw, MapPin, Scale } from "lucide-react";
+import { Users, RefreshCw, MapPin, Scale, Star } from "lucide-react";
 import type { TeamAssignment, Player, RoleAssignment, LobbyPlayer, GameMode } from "@engine/types";
 import { TeamColumn } from "./TeamColumn";
 import { WarningsPanel } from "./WarningsPanel";
@@ -248,23 +248,25 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   return (
     <div className="space-y-4">
       {/* Matchup summary bar */}
-      <div className="app-well p-4">
+      <div className="app-well px-4 py-3">
         <div className="grid grid-cols-3 items-center gap-4 text-center">
           <div>
-            <div className="text-2xl font-semibold text-pink-ink" title={`${team1AvgSR.toFixed(0)} SR`}>
+            <div className="text-xl app-display text-pink-ink" title={`${team1AvgSR.toFixed(0)} SR`}>
               {formatRankOnly(team1AvgSR, gameMode)}
             </div>
-            <div className="text-xs font-semibold text-ink-2">Team 1</div>
-            <div className="text-xs mt-1 min-h-4">
+            <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
               {team1AvgSR > team2AvgSR && srDifference >= 25 && (
-                <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
+                <span title="Favored" className="inline-flex text-warn">
+                  <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
+                </span>
               )}
+              <span>Team 1</span>
             </div>
           </div>
 
           <div>
             <div
-              className={`text-xl font-semibold app-measured ${
+              className={`text-lg app-display ${
                 srDifference <= 50
                   ? "text-ok"
                   : srDifference <= 100
@@ -273,21 +275,22 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
               }`}
               title={`${srDifference.toFixed(0)} SR difference`}
             >
-              {srDifference < 25 ? <span>Even</span> : <span>Delta {srDifference.toFixed(0)} SR</span>}
+              {srDifference < 25 ? <span>Even</span> : <span>Δ {srDifference.toFixed(0)} SR</span>}
             </div>
             <div className="text-xs font-semibold text-muted">Difference</div>
-            <div className="min-h-4" />
           </div>
 
           <div>
-            <div className="text-2xl font-semibold text-sky-ink" title={`${team2AvgSR.toFixed(0)} SR`}>
+            <div className="text-xl app-display text-sky-ink" title={`${team2AvgSR.toFixed(0)} SR`}>
               {formatRankOnly(team2AvgSR, gameMode)}
             </div>
-            <div className="text-xs font-semibold text-ink-2">Team 2</div>
-            <div className="text-xs mt-1 min-h-4">
+            <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
               {team2AvgSR > team1AvgSR && srDifference >= 25 && (
-                <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
+                <span title="Favored" className="inline-flex text-warn">
+                  <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
+                </span>
               )}
+              <span>Team 2</span>
             </div>
           </div>
         </div>

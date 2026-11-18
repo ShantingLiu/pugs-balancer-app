@@ -33,12 +33,12 @@ export function BalanceButton() {
   const hasResult = lastResult && lastResult.team1.length > 0;
 
   return (
-    <div className="space-y-2">
+    <div>
       <button
         type="button"
         onClick={handleBalance}
         disabled={!canBalance}
-        className={`w-full py-3.5 px-6 text-lg font-semibold rounded-card ${
+        className={`w-full pt-3.5 pb-2.5 px-6 text-lg font-semibold leading-none rounded-card ${
           canBalance
             ? "app-primary"
             : "bg-paper-3 border border-rule text-muted"
@@ -57,12 +57,6 @@ export function BalanceButton() {
           `Need ${requiredPlayers - lobbyCount} more players`
         )}
       </button>
-
-      {hasResult && (
-        <p className="text-xs text-muted text-center">
-          Locked players stay on their team
-        </p>
-      )}
     </div>
   );
 }

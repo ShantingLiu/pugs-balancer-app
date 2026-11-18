@@ -58,7 +58,7 @@ export function ConstraintsPanel() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">
+        <h3 className="text-sm font-semibold text-heading">
           Constraints
           {softConstraints.length > 0 && (
             <span className="ml-2 text-xs font-normal text-muted">

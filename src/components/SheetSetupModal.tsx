@@ -240,11 +240,11 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("upload")}
                 className="px-4 py-3 app-secondary app-nowrap rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
+                onClick={() => setMode("upload")}
               >
                 <Upload className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
-                Upload Roster to New Sheet
+                Upload to New Sheet
               </button>
               {spreadsheetId && (
                 <button

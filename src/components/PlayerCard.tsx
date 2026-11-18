@@ -46,11 +46,11 @@ function getRoleBadgeColor(role: Role): string {
 function getRoleTextColor(role: Role): string {
   switch (role) {
     case "Tank":
-      return "text-tank";
+      return "app-card-rank--tank";
     case "DPS":
-      return "text-dps";
+      return "app-card-rank--dps";
     case "Support":
-      return "text-sup";
+      return "app-card-rank--sup";
   }
 }
 

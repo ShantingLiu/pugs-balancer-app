@@ -74,7 +74,7 @@ export function StatsPanel() {
   if (!hasData) {
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-ink">Session Stats</h3>
+        <h3 className="text-sm font-semibold text-heading">Session Stats</h3>
         <p className="text-xs text-muted">
           Stats will appear after games are played.
         </p>
@@ -85,7 +85,7 @@ export function StatsPanel() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-ink">Session Stats</h3>
+        <h3 className="text-sm font-semibold text-heading">Session Stats</h3>
         <div className="flex gap-3">
           {adaptiveWeights.size > 0 && (
             <button

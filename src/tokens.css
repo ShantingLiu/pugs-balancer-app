@@ -24,32 +24,34 @@
   --color-card-row-2: oklch(99.2% 0.006 350);
   --color-card-row-hover: oklch(96.8% 0.02 225);
   --color-pink-row-hover: oklch(97% 0.022 355);
-  --color-ink: oklch(24% 0.032 260);
-  --color-ink-2: oklch(35% 0.028 258);
-  --color-muted: oklch(50% 0.028 252);
+  --color-ink: oklch(31% 0.06 236);
+  --color-ink-2: oklch(42% 0.065 232);
+  --color-muted: oklch(50% 0.04 232);
   --color-rule: oklch(87% 0.03 230);
   --color-rule-2: oklch(64% 0.035 235);
   --color-shadow: oklch(86% 0.035 230);
+  --color-footer-note: oklch(54% 0.065 230);
 
   /* Cotton Candy Pink (Primary Accent & Team 1) */
   --color-accent: oklch(84% 0.105 355);
   --color-accent-hover: oklch(75% 0.145 355);
-  --color-accent-hover-ink: oklch(23% 0.055 352);
-  --color-accent-ink: oklch(23% 0.055 352);
+  --color-accent-hover-ink: oklch(35% 0.068 232);
+  --color-accent-ink: oklch(35% 0.068 232);
   --color-accent-soft: oklch(94.5% 0.038 355);
   --color-pink-soft: oklch(94.5% 0.038 355);
   --color-pink-edge: oklch(73% 0.125 355);
   --color-pink-ink: oklch(38% 0.145 355);
   --color-wordmark: oklch(56% 0.185 354);
+  --color-heading: oklch(47% 0.095 232);
 
   /* Pastel Sky Blue (Secondary Accent & Team 2) */
   --color-sky: oklch(85% 0.088 225);
   --color-sky-hover: oklch(75% 0.125 225);
-  --color-sky-hover-ink: oklch(23% 0.032 260);
-  --color-sky-btn-ink: oklch(23% 0.032 260);
+  --color-sky-hover-ink: oklch(35% 0.068 232);
+  --color-sky-btn-ink: oklch(35% 0.068 232);
   --color-sky-soft: oklch(93.6% 0.04 225);
   --color-sky-edge: oklch(73% 0.095 225);
-  --color-sky-ink: oklch(35% 0.115 232);
+  --color-sky-ink: oklch(35% 0.068 232);
   --color-cool: oklch(42% 0.12 232);
   --color-cool-soft: oklch(93.6% 0.04 225);
 
@@ -91,9 +93,14 @@
   --color-lock-soft: oklch(92.5% 0.055 305);
   --color-lock-edge: oklch(76% 0.095 305);
 
+  /* Light-mode player card rank text (pastel-friendly cobalt, rose-pink, orchid-lavender) */
+  --color-card-tank: oklch(46% 0.135 252);
+  --color-card-dps: oklch(53% 0.165 348);
+  --color-card-sup: oklch(50% 0.145 305);
+
   /* Typography */
-  --font-display: "Lexend", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-outlier: "JetBrains Mono", ui-monospace, monospace;
 
   /* Geometry */
@@ -102,7 +109,7 @@
   --radius-input: 12px;
   --radius-pill: 999px;
   --shadow-card: 0 3px 0 var(--color-shadow);
-  --tracking-display: -0.02em;
+  --tracking-display: -0.015em;
 }
 
 :root {
@@ -176,24 +183,26 @@
   --color-rule: oklch(33% 0.036 238);
   --color-rule-2: oklch(56% 0.055 235);
   --color-shadow: oklch(10% 0.012 252);
+  --color-footer-note: oklch(64% 0.045 235);
   --shadow-card: none;
 
   /* Sky-Cloud Blue (Primary Accent & Team 1 in night mode) */
   --color-accent: oklch(80% 0.105 228);
   --color-accent-hover: oklch(42% 0.125 232);
   --color-accent-hover-ink: oklch(97% 0.006 235);
-  --color-accent-ink: oklch(14% 0.025 245);
+  --color-accent-ink: oklch(23% 0.056 226);
   --color-accent-soft: oklch(23% 0.056 226);
   --color-pink-soft: oklch(22.5% 0.056 226);
   --color-pink-edge: oklch(66% 0.12 225);
   --color-pink-ink: oklch(90% 0.08 224);
   --color-wordmark: oklch(96.5% 0.006 235);
+  --color-heading: oklch(96.5% 0.006 235);
 
   /* Midnight Black & Ice-Silver Cloud (Secondary & Team 2 in night mode) */
   --color-sky: oklch(76% 0.088 244);
   --color-sky-hover: oklch(36% 0.095 246);
   --color-sky-hover-ink: oklch(97% 0.006 235);
-  --color-sky-btn-ink: oklch(14% 0.025 245);
+  --color-sky-btn-ink: oklch(23% 0.056 226);
   --color-sky-soft: oklch(19% 0.024 248);
   --color-sky-edge: oklch(66% 0.065 240);
   --color-sky-ink: oklch(92% 0.025 235);
@@ -236,6 +245,10 @@
   --color-lock: oklch(84% 0.095 262);
   --color-lock-soft: oklch(24% 0.05 262);
   --color-lock-edge: oklch(56% 0.095 262);
+
+  --color-card-tank: oklch(88% 0.12 88);
+  --color-card-dps: oklch(85% 0.115 34);
+  --color-card-sup: oklch(84% 0.1 162);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -254,20 +267,22 @@
     --color-rule: oklch(33% 0.036 238);
     --color-rule-2: oklch(56% 0.055 235);
     --color-shadow: oklch(10% 0.012 252);
+    --color-footer-note: oklch(64% 0.045 235);
     --shadow-card: none;
     --color-accent: oklch(80% 0.105 228);
     --color-accent-hover: oklch(42% 0.125 232);
     --color-accent-hover-ink: oklch(97% 0.006 235);
-    --color-accent-ink: oklch(14% 0.025 245);
+    --color-accent-ink: oklch(23% 0.056 226);
     --color-accent-soft: oklch(23% 0.056 226);
     --color-pink-soft: oklch(22.5% 0.056 226);
     --color-pink-edge: oklch(66% 0.12 225);
     --color-pink-ink: oklch(90% 0.08 224);
     --color-wordmark: oklch(96.5% 0.006 235);
+    --color-heading: oklch(96.5% 0.006 235);
     --color-sky: oklch(76% 0.088 244);
     --color-sky-hover: oklch(36% 0.095 246);
     --color-sky-hover-ink: oklch(97% 0.006 235);
-    --color-sky-btn-ink: oklch(14% 0.025 245);
+    --color-sky-btn-ink: oklch(23% 0.056 226);
     --color-sky-soft: oklch(19% 0.024 248);
     --color-sky-edge: oklch(66% 0.065 240);
     --color-sky-ink: oklch(92% 0.025 235);
@@ -301,5 +316,8 @@
     --color-lock: oklch(84% 0.095 262);
     --color-lock-soft: oklch(24% 0.05 262);
     --color-lock-edge: oklch(56% 0.095 262);
+    --color-card-tank: oklch(88% 0.12 88);
+    --color-card-dps: oklch(85% 0.115 34);
+    --color-card-sup: oklch(84% 0.1 162);
   }
 }

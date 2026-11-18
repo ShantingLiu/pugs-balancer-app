@@ -63,7 +63,6 @@ export function SpectatorsList() {
               }`}
               title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "")}
             >
-              {isMustPlay && !isAfk && <span className="text-pink-ink mr-1">Must</span>}
               {name}
               {isAfk && <span className="text-muted ml-1">AFK</span>}
             </span>

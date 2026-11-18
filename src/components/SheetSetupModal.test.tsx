@@ -163,7 +163,7 @@ describe("SheetSetupModal", () => {
       renderModal();
       expect(screen.getByText(/Create New Sheet/)).toBeInTheDocument();
       expect(screen.getByText(/Connect Existing Sheet/)).toBeInTheDocument();
-      expect(screen.getByText(/Upload Roster to New Sheet/)).toBeInTheDocument();
+      expect(screen.getByText(/Upload to New Sheet/)).toBeInTheDocument();
     });
 
     it("closes modal when clicking close button", () => {
@@ -330,7 +330,7 @@ describe("SheetSetupModal", () => {
         ["p2", { battletag: "p2" }],
       ]);
       renderModal();
-      fireEvent.click(screen.getByText(/Upload Roster to New Sheet/));
+      fireEvent.click(screen.getByText(/Upload to New Sheet/));
       expect(screen.getByText(/2 player/)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Upload" }),
@@ -352,7 +352,7 @@ describe("SheetSetupModal", () => {
       mockApplyDataValidation.mockResolvedValue(undefined);
 
       renderModal();
-      fireEvent.click(screen.getByText(/Upload Roster to New Sheet/));
+      fireEvent.click(screen.getByText(/Upload to New Sheet/));
       fireEvent.click(screen.getByRole("button", { name: "Upload" }));
 
       await waitFor(() => {
@@ -380,7 +380,7 @@ describe("SheetSetupModal", () => {
       );
 
       renderModal();
-      fireEvent.click(screen.getByText(/Upload Roster to New Sheet/));
+      fireEvent.click(screen.getByText(/Upload to New Sheet/));
       fireEvent.click(screen.getByRole("button", { name: "Upload" }));
 
       await waitFor(() => {

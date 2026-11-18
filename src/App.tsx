@@ -14,6 +14,7 @@ import { SyncButton } from "@components/SyncButton";
 import { SyncDiffModal } from "@components/SyncDiffModal";
 import { SheetSetupModal } from "@components/SheetSetupModal";
 import { DraftView } from "@components/DraftView";
+import { UpdateBanner } from "@components/UpdateBanner";
 import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
 import { performSync, applySyncResult } from "@services/sheetSync";
@@ -108,9 +109,14 @@ function App() {
   );
 
   const lobbySection = (
-    <section className="app-surface p-5">
-      <LobbySelector />
-    </section>
+    <div>
+      <section className="app-surface p-5">
+        <LobbySelector />
+      </section>
+      <p className="text-xs text-footer-note text-center mt-2">
+        © {new Date().getFullYear()} Swoo
+      </p>
+    </div>
   );
 
   const workspaceSection = (
@@ -125,7 +131,7 @@ function App() {
           className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
             !draftMode
               ? "app-primary"
-              : "text-ink-2 hover:bg-card-row hover:text-ink"
+              : "text-sky-ink hover:bg-card-row"
           }`}
         >
           Balance
@@ -136,7 +142,7 @@ function App() {
           className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
             draftMode
               ? "app-sky"
-              : "text-ink-2 hover:bg-card-row hover:text-ink"
+              : "text-sky-ink hover:bg-card-row"
           }`}
         >
           Draft
@@ -242,6 +248,8 @@ function App() {
           </div>
         </div>
       </header>
+
+      <UpdateBanner />
 
       {/* Sync error / info toast */}
       {syncError && (

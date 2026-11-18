@@ -4,6 +4,7 @@ import { parsePlayersCSV } from "@utils/csvParser";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import type { Player, GameMode } from "@engine/types";
+import { CsvImportModal } from "./CsvImportModal";
 
 // =============================================================================
 // CsvImporter - Import/Export players via CSV
@@ -83,6 +84,11 @@ export function CsvImporter() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successDetails, setSuccessDetails] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{
+    incomingPlayers: Player[];
+    missingExisting: Player[];
+    warningCount: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setPlayers = usePlayerStore((state) => state.setPlayers);
@@ -102,6 +108,28 @@ export function CsvImporter() {
       setSuccessDetails(null);
     }
   }, [lastResult]);
+
+  const finalizeImport = useCallback(
+    (incomingPlayers: Player[], keptMissingPlayers: Player[], warningCount: number) => {
+      clearSessionStats();
+      clearLobby();
+      setLastResult(null);
+
+      const merged = [...incomingPlayers, ...keptMissingPlayers];
+      setPlayers(merged);
+
+      const keptNote =
+        keptMissingPlayers.length > 0
+          ? ` (${incomingPlayers.length} from CSV + ${keptMissingPlayers.length} existing kept)`
+          : "";
+      const warningNote = warningCount > 0 ? ` (${warningCount} warnings)` : "";
+      setSuccessMessage(
+        `Imported ${merged.length} players${keptNote}${warningNote}. Session stats and lobby cleared.`
+      );
+      setPendingImport(null);
+    },
+    [setPlayers, clearSessionStats, clearLobby, setLastResult]
+  );
 
   const handleImport = useCallback(
     (csvContent: string) => {
@@ -137,26 +165,24 @@ export function CsvImporter() {
       }
 
       if (playerCount > 0) {
-        const confirmed = window.confirm(
-          `This will replace ${playerCount} existing player(s) with ${result.valid.length} new player(s) and clear session stats. Continue?`
+        const incomingKeys = new Set(
+          result.valid.map((p) => p.battletag.toLowerCase())
         );
-        if (!confirmed) return;
+        const missingExisting = Array.from(players.values())
+          .filter((p) => !incomingKeys.has(p.battletag.toLowerCase()))
+          .sort((a, b) => a.battletag.localeCompare(b.battletag));
+
+        setPendingImport({
+          incomingPlayers: result.valid,
+          missingExisting,
+          warningCount: result.warnings.length,
+        });
+        return;
       }
 
-      clearSessionStats();
-      clearLobby();
-      setLastResult(null);
-
-      setPlayers(result.valid);
-      setSuccessMessage(
-        `Imported ${result.valid.length} players${
-          result.warnings.length > 0
-            ? ` (${result.warnings.length} warnings)`
-            : ""
-        }. Session stats and lobby cleared.`
-      );
+      finalizeImport(result.valid, [], result.warnings.length);
     },
-    [setPlayers, playerCount, clearSessionStats, clearLobby, setLastResult]
+    [playerCount, players, finalizeImport]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -278,7 +304,7 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-ink">Player Data</h2>
+        <h2 className="text-lg font-semibold text-heading">Player Data</h2>
         {playerCount > 0 && (
           <span className="text-xs font-semibold text-sky-ink bg-sky-soft border border-sky-edge px-2.5 py-0.5 rounded-pill app-measured">
             {playerCount} players
@@ -368,6 +394,21 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
             </div>
           )}
         </div>
+      )}
+      {pendingImport && (
+        <CsvImportModal
+          existingCount={playerCount}
+          incomingPlayers={pendingImport.incomingPlayers}
+          missingExisting={pendingImport.missingExisting}
+          onConfirm={(keptMissingPlayers) =>
+            finalizeImport(
+              pendingImport.incomingPlayers,
+              keptMissingPlayers,
+              pendingImport.warningCount
+            )
+          }
+          onCancel={() => setPendingImport(null)}
+        />
       )}
     </div>
   );

@@ -8,6 +8,8 @@
   "permissions": [
     "core:default",
     "shell:allow-open",
+    "updater:default",
+    "process:allow-restart",
     {
       "identifier": "http:default",
       "allow": [

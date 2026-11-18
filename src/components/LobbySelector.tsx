@@ -204,7 +204,7 @@ export function LobbySelector() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-ink">
+        <h2 className="text-lg font-semibold text-heading">
           Lobby ({lobbyBattletags.length - afkPlayers.size} active
           {afkPlayers.size > 0 && <span className="text-muted"> / {afkPlayers.size} AFK</span>})
         </h2>

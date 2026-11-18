@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Users, Zap, RefreshCw, Trophy, AlertTriangle } from "lucide-react";
+import { Users, Zap, RefreshCw, Trophy, AlertTriangle, Star } from "lucide-react";
 import type { LobbyPlayer, Role } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { getModeConfig } from "@engine/modeConfig";
@@ -635,28 +635,27 @@ export function DraftView() {
           <div className="app-well p-3">
             <div className="grid grid-cols-3 items-center gap-4 text-center">
               <div>
-                <div className="text-xl font-semibold text-pink-ink" title={`${team1AvgSR} SR`}>
+                <div className="text-lg app-display text-pink-ink" title={`${team1AvgSR} SR`}>
                   {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
                 </div>
-                <div className="text-xs font-semibold text-ink-2">Team 1</div>
-                <div className="text-xs mt-1 min-h-4">
+                <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
                   {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
+                    <span title="Favored" className="inline-flex text-warn">
+                      <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
+                    </span>
                   )}
-                  {team1AvgSR < team2AvgSR && srDiff >= 25 && team1.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-pill bg-bad-soft text-bad font-semibold">Underdog</span>
-                  )}
+                  <span>Team 1</span>
                 </div>
               </div>
               <div>
                 {team1.length > 0 && team2.length > 0 ? (
                   <div
-                    className={`text-lg font-semibold app-measured ${
+                    className={`text-base app-display ${
                       srDiff <= 50 ? "text-ok" : srDiff <= 100 ? "text-warn" : "text-bad"
                     }`}
                     title={`${srDiff} SR difference`}
                   >
-                    {srDiff < 25 ? <span>Even</span> : <span>Delta {srDiff} SR</span>}
+                    {srDiff < 25 ? <span>Even</span> : <span>Δ {srDiff} SR</span>}
                   </div>
                 ) : (
                   <div className="text-lg text-muted">vs</div>
@@ -664,17 +663,16 @@ export function DraftView() {
                 <div className="text-xs font-semibold text-muted">Difference</div>
               </div>
               <div>
-                <div className="text-xl font-semibold text-sky-ink" title={`${team2AvgSR} SR`}>
+                <div className="text-lg app-display text-sky-ink" title={`${team2AvgSR} SR`}>
                   {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
                 </div>
-                <div className="text-xs font-semibold text-ink-2">Team 2</div>
-                <div className="text-xs mt-1 min-h-4">
+                <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
                   {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-pill bg-ok-soft text-ok font-semibold">Favored</span>
+                    <span title="Favored" className="inline-flex text-warn">
+                      <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
+                    </span>
                   )}
-                  {team2AvgSR < team1AvgSR && srDiff >= 25 && team2.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-pill bg-bad-soft text-bad font-semibold">Underdog</span>
-                  )}
+                  <span>Team 2</span>
                 </div>
               </div>
             </div>
