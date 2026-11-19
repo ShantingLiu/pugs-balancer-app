@@ -386,8 +386,9 @@ input[type="range"].app-range::-moz-range-thumb {
   white-space: nowrap;
 }
 
-/* Smooth hover/focus label reveal for compact icon action buttons */
+/* Stable-size icon action buttons with floating pill label (zero layout shift/flicker) */
 .app-expand-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -395,37 +396,32 @@ input[type="range"].app-range::-moz-range-thumb {
 }
 
 .app-expand-label {
-  display: inline-block;
-  max-width: 0;
-  overflow: hidden;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-rule-2);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-select);
+  font-size: var(--text-xs);
+  font-weight: 600;
   white-space: nowrap;
+  pointer-events: none;
   opacity: 0;
-  transition-property: max-width, opacity;
-  transition-duration: var(--dur-short);
-  transition-timing-function: var(--ease-out);
-}
-
-.app-expand-label > span {
-  display: inline-block;
-  transform: translateX(-4px);
-  transition-property: transform;
-  transition-duration: var(--dur-short);
+  z-index: var(--z-tooltip);
+  transition-property: opacity, transform;
+  transition-duration: var(--dur-micro);
   transition-timing-function: var(--ease-out);
 }
 
 .app-expand-btn:hover .app-expand-label,
 .app-expand-btn:focus-visible .app-expand-label,
-.app-expand-btn[aria-expanded="true"] .app-expand-label,
 .app-expand-btn[data-expanded="true"] .app-expand-label {
-  max-width: 8rem;
   opacity: 1;
-}
-
-.app-expand-btn:hover .app-expand-label > span,
-.app-expand-btn:focus-visible .app-expand-label > span,
-.app-expand-btn[aria-expanded="true"] .app-expand-label > span,
-.app-expand-btn[data-expanded="true"] .app-expand-label > span {
-  transform: translateX(0);
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Team themes: Team 1 = Cozy Strawberry Pink, Team 2 = Powder Sky Blue */
