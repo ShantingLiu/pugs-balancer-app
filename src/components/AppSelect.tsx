@@ -125,7 +125,7 @@ export function AppSelect<T extends string>({
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative flex-1 min-w-0" ref={containerRef}>
       <button
         ref={triggerRef}
         type="button"
@@ -137,11 +137,11 @@ export function AppSelect<T extends string>({
         aria-activedescendant={isOpen ? `${listboxId}-opt-${activeIndex}` : undefined}
         onClick={() => (isOpen ? setIsOpen(false) : openMenu(selectedIndex))}
         onKeyDown={handleTriggerKeyDown}
-        className={`app-input inline-flex items-center justify-between gap-2 px-3 py-1.5 text-sm font-medium app-nowrap ${className}`}
+        className={`app-input w-full min-w-0 inline-flex items-center justify-between gap-1.5 px-3 py-1.5 text-xs font-semibold app-nowrap ${className}`}
       >
         <span className="truncate">{currentOption?.label}</span>
         <ChevronDown
-          className={`h-4 w-4 text-ink-2 shrink-0 transition-transform ${
+          className={`h-3.5 w-3.5 text-ink-2 shrink-0 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
           aria-hidden="true"

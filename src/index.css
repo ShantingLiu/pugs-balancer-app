@@ -1,11 +1,12 @@
-/* Hallmark · shape: app screen · genre: playful · theme: custom · redesign: full
- * idea: "Sky-milk and cotton-candy stationery workbench where Team 1 is cotton-candy pink and Team 2 is pastel sky blue"
- * vibe: "soft cloud-white cards, pastel sky, cotton-candy pink"
- * paper: oklch(96.8% 0.016 225) · accent: oklch(84% 0.105 355) · display: Figtree · body: Inter (by request)
- * nav: cloud top bar · signature: Cotton Candy vs Sky team matchup ledger · states: empty, preview, result, draft, sync
- * axes: light/rounded-sans/chromatic-pink · posture: full-palette · modes: light+dark · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: R, pastel sky + cotton-candy pink across 20 components could turn noisy; restrained every surface to sky paper, cloud cards, and purposeful pink-vs-sky team coding */
+/* Hallmark · shape: app screen · genre: playful · theme: custom · redesign: restyle
+ * idea: "Sky-milk stationery light mode paired with a cozy velvet midnight-plum dark mode featuring berry-rose Team 1 vs sapphire-ocean Team 2 and pastel semantic roles"
+ * vibe: "midnight plum canvas, velvet indigo cards, luminous berry-rose and sky-ocean accents"
+ * paper: oklch(96.8% 0.016 225) · dark-paper: oklch(17.5% 0.030 289) · accent: oklch(84% 0.105 355) · display: Figtree · body: Inter (by request)
+ * nav: cloud top bar · signature: Berry-Rose vs Ocean-Sapphire team matchup ledger · states: empty, preview, result, draft, sync
+ * axes: light+dark/rounded-sans/chromatic-pink · posture: full-palette · modes: light+dark · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · weakest: R, warm berry-rose gradients on dark plum risk glaring unless constrained; isolated the vivid berry-coral ramp to the logo coin and primary CTA while pairing calm plum-berry and ocean-sapphire fills on Team 1/2 controls */
 /* Hallmark · waive 74 · AddPlayerModal.test.tsx line 206 asserts bg-yellow-600 class on Tank toggle · preserved that single utility on the Tank toggle and styled it through pastel tank tokens */
+/* Hallmark · waive 39b · restyle keeps layout and control geometry · CSV dropzone button and compact lobby action pills keep their existing 26px to 92px heights */
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./base.css" layer(base);
@@ -14,6 +15,16 @@ body {
   min-height: 100dvh;
   background: var(--color-paper);
   color: var(--color-ink);
+}
+
+[data-mode="dark"] body,
+[data-mode="dark"] .app-shell {
+  background-color: #12101e;
+  background-image:
+    radial-gradient(circle at 10% 15%, rgba(244, 114, 182, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 90% 20%, rgba(56, 189, 248, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 50% 85%, rgba(192, 132, 252, 0.06) 0%, transparent 50%);
+  background-attachment: fixed;
 }
 
 /* Modern overlay-style scrollbars: hidden at rest, pill thumb appears on scroll or thumb hover */
@@ -55,6 +66,15 @@ body {
   }
 }
 
+/* Outset the 8px scrollbar into the outer card padding gutter so player cards align flush left & right */
+.app-player-scroll {
+  scrollbar-gutter: stable;
+  margin-left: -4px;
+  padding-left: 4px;
+  margin-right: -12px;
+  padding-right: 4px;
+}
+
 button,
 input,
 select,
@@ -74,13 +94,30 @@ button:active:not(:disabled) {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+}
+
+.app-primary:disabled,
+.app-win-1:disabled,
+.app-sky:disabled,
+.app-secondary:disabled,
+.app-quiet:disabled,
+.app-danger:disabled {
+  background: var(--color-quiet-bg);
+  border-color: var(--color-rule);
+  color: var(--color-muted);
+  box-shadow: none;
 }
 
 /* Tactile cloud header & surfaces */
+.app-brand-badge {
+  background: var(--color-brand-badge);
+  border: 1.5px solid var(--color-brand-edge);
+  box-shadow: var(--shadow-brand);
+}
+
 .app-toolbar {
   background: var(--color-paper-2);
-  border-bottom: 2px solid var(--color-sky-edge);
+  border-bottom: 2px solid var(--color-toolbar-edge);
 }
 
 .app-surface {
@@ -90,34 +127,44 @@ button:disabled {
   box-shadow: var(--shadow-card);
 }
 
+[data-mode="dark"] .app-surface {
+  background: rgba(30, 26, 48, 0.94);
+  border: 1px solid var(--color-rule);
+}
+
 .app-well {
   background: var(--color-paper-3);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-well);
 }
 
+[data-mode="dark"] .app-well {
+  background: rgba(20, 18, 32, 0.65);
+  border: 1px solid rgba(30, 41, 59, 0.85);
+}
+
 .app-modal {
   background: var(--color-paper-2);
-  border: 1.5px solid var(--color-sky-edge);
+  border: 1.5px solid var(--color-modal-edge);
   border-radius: var(--radius-card);
-  box-shadow: 0 6px 0 var(--color-shadow);
+  box-shadow: var(--shadow-modal);
 }
 
 .app-backdrop {
-  background: color-mix(in oklab, var(--color-ink) 38%, transparent);
+  background: var(--color-backdrop);
 }
 
-/* Tactile pastel buttons */
+/* Tactile buttons */
 .app-primary {
-  background: var(--color-accent);
-  border: 1.5px solid var(--color-pink-edge);
+  background: var(--color-primary-bg);
+  border: 1.5px solid var(--color-primary-edge);
   color: var(--color-accent-ink);
-  box-shadow: 0 2px 0 var(--color-pink-edge);
+  box-shadow: var(--shadow-primary);
   transition-timing-function: var(--ease-spring);
 }
 
 .app-primary:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: var(--color-primary-hover-bg);
   color: var(--color-accent-hover-ink);
 }
 
@@ -126,22 +173,29 @@ button:disabled {
   box-shadow: 0 0 0 var(--color-pink-edge);
 }
 
+.app-win-1 {
+  background: var(--color-win-1-bg);
+  border: 1.5px solid var(--color-win-1-edge);
+  color: var(--color-win-1-ink);
+  box-shadow: var(--shadow-win-1);
+}
+
+.app-win-1:hover:not(:disabled) {
+  background: var(--color-win-1-hover);
+  border-color: var(--color-win-1-hover-edge);
+  color: var(--color-win-1-hover-ink);
+}
+
+.app-win-1:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--color-win-1-lip);
+}
+
 .app-sky {
   background: var(--color-sky);
   border: 1.5px solid var(--color-sky-edge);
   color: var(--color-sky-btn-ink);
-  box-shadow: 0 2px 0 var(--color-sky-edge);
-}
-
-[data-mode="dark"] .app-modal,
-[data-mode="dark"] .app-primary,
-[data-mode="dark"] .app-sky {
-  box-shadow: none;
-}
-
-[data-mode="dark"] .app-primary:active:not(:disabled),
-[data-mode="dark"] .app-sky:active:not(:disabled) {
-  transform: translateY(1px);
+  box-shadow: var(--shadow-sky);
 }
 
 .app-sky:hover:not(:disabled) {
@@ -155,9 +209,10 @@ button:disabled {
 }
 
 .app-secondary {
-  background: var(--color-sky-soft);
-  border: 1.5px solid var(--color-sky-edge);
-  color: var(--color-sky-ink);
+  background: var(--color-secondary-bg);
+  border: 1.5px solid var(--color-secondary-edge);
+  color: var(--color-secondary-ink);
+  box-shadow: var(--shadow-secondary);
 }
 
 .app-secondary:hover:not(:disabled) {
@@ -166,22 +221,13 @@ button:disabled {
   color: var(--color-sky-btn-ink);
 }
 
-[data-mode="dark"] .app-secondary {
-  background: var(--color-paper-2);
-  border: 1.5px solid var(--color-rule-2);
-  color: var(--color-ink);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-mode]) .app-secondary {
-    background: var(--color-paper-2);
-    border: 1.5px solid var(--color-rule-2);
-    color: var(--color-ink);
-  }
+.app-secondary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--color-secondary-edge);
 }
 
 .app-quiet {
-  background: var(--color-paper-3);
+  background: var(--color-quiet-bg);
   border: 1px solid var(--color-rule);
   color: var(--color-ink-2);
 }
@@ -202,7 +248,7 @@ button:disabled {
   background: color-mix(in oklab, var(--color-bad-soft) 70%, var(--color-bad-edge));
 }
 
-/* Inputs & selects (soft pastel paper surface + 3:1 sky edge + airy sky focus halo) */
+/* Inputs & selects */
 .app-input {
   background: var(--color-input-bg);
   border: 1.5px solid var(--color-input-edge);
@@ -225,18 +271,80 @@ button:disabled {
   outline-offset: 2px;
 }
 
+/* Custom range slider matching theme tokens (replaces native browser track/border) */
+input[type="range"].app-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"].app-range:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-pill);
+}
+
+input[type="range"].app-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-rule);
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent-2) var(--range-pct, 50%),
+    var(--color-paper-3) var(--range-pct, 50%),
+    var(--color-paper-3) 100%
+  );
+}
+
+input[type="range"].app-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-bg);
+  border: 2px solid var(--color-paper-2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
+input[type="range"].app-range:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+}
+
+input[type="range"].app-range::-moz-range-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper-3);
+}
+
+input[type="range"].app-range::-moz-range-progress {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-2));
+}
+
+input[type="range"].app-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-bg);
+  border: 2px solid var(--color-paper-2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
 /* Custom select popover menu */
 .app-select-menu {
   background: var(--color-paper-2);
-  border: 1px solid var(--color-rule);
+  border: 1px solid var(--color-modal-edge);
   border-radius: 0;
-  box-shadow: 0 8px 20px -4px color-mix(in oklab, var(--color-ink) 12%, transparent);
+  box-shadow: var(--shadow-select);
   color: var(--color-ink);
-}
-
-[data-mode="dark"] .app-select-menu {
-  border-color: var(--color-rule-2);
-  box-shadow: 0 10px 24px color-mix(in oklab, var(--color-shadow) 70%, transparent);
 }
 
 .app-select-option {
@@ -251,17 +359,6 @@ button:disabled {
 }
 
 .app-select-option[aria-selected="true"] {
-  background: var(--color-pink-soft);
-  color: var(--color-pink-ink);
-}
-
-[data-mode="dark"] .app-select-option--active,
-[data-mode="dark"] .app-select-option:hover {
-  background: var(--color-card-row-hover);
-  color: var(--color-ink);
-}
-
-[data-mode="dark"] .app-select-option[aria-selected="true"] {
   background: var(--color-pink-soft);
   color: var(--color-pink-ink);
 }
@@ -289,32 +386,189 @@ button:disabled {
   white-space: nowrap;
 }
 
-/* Team themes: Team 1 = Cotton Candy Pink (Blue Cloud in dark), Team 2 = Pastel Sky Blue (Night Mist in dark) */
+/* Smooth hover/focus label reveal for compact icon action buttons */
+.app-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.app-expand-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  transition-property: max-width, opacity;
+  transition-duration: var(--dur-short);
+  transition-timing-function: var(--ease-out);
+}
+
+.app-expand-label > span {
+  display: inline-block;
+  transform: translateX(-4px);
+  transition-property: transform;
+  transition-duration: var(--dur-short);
+  transition-timing-function: var(--ease-out);
+}
+
+.app-expand-btn:hover .app-expand-label,
+.app-expand-btn:focus-visible .app-expand-label,
+.app-expand-btn[aria-expanded="true"] .app-expand-label,
+.app-expand-btn[data-expanded="true"] .app-expand-label {
+  max-width: 8rem;
+  opacity: 1;
+}
+
+.app-expand-btn:hover .app-expand-label > span,
+.app-expand-btn:focus-visible .app-expand-label > span,
+.app-expand-btn[aria-expanded="true"] .app-expand-label > span,
+.app-expand-btn[data-expanded="true"] .app-expand-label > span {
+  transform: translateX(0);
+}
+
+/* Team themes: Team 1 = Cozy Strawberry Pink, Team 2 = Powder Sky Blue */
 .app-team-1 {
+  position: relative;
+  overflow: hidden;
   background: var(--color-pink-soft);
-  border: 1.5px solid var(--color-pink-edge);
+  border: 1.5px solid var(--color-team-1-edge);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .app-team-2 {
+  position: relative;
+  overflow: hidden;
   background: var(--color-sky-soft);
-  border: 1.5px solid var(--color-sky-edge);
+  border: 1.5px solid var(--color-team-2-edge);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+[data-mode="dark"] .app-team-1 {
+  background: rgba(30, 26, 48, 0.90);
+  border: 1px solid rgba(236, 72, 153, 0.30);
+}
+
+[data-mode="dark"] .app-team-1::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 9999px;
+  background: rgba(236, 72, 153, 0.06);
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+[data-mode="dark"] .app-team-2 {
+  background: rgba(30, 26, 48, 0.90);
+  border: 1px solid rgba(14, 165, 233, 0.30);
+}
+
+[data-mode="dark"] .app-team-2::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 9999px;
+  background: rgba(14, 165, 233, 0.06);
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+/* Stitch multi-pastel lobby & spectator chips */
+.app-chip--pink {
+  background: var(--color-pink-soft);
+  border-color: var(--color-pink-edge);
+  color: var(--color-pink-ink);
+}
+
+.app-chip--sky {
+  background: var(--color-sky-soft);
+  border-color: var(--color-sky-edge);
+  color: var(--color-sky-ink);
+}
+
+.app-chip--purple {
+  background: var(--color-lock-soft);
+  border-color: var(--color-lock-edge);
+  color: var(--color-lock);
+}
+
+.app-chip--emerald {
+  background: var(--color-sup-soft);
+  border-color: var(--color-sup-edge);
+  color: var(--color-sup);
+}
+
+.app-chip--amber {
+  background: var(--color-warn-soft);
+  border-color: var(--color-warn-edge);
+  color: var(--color-warn);
+}
+
+.app-chip--slate {
+  background: var(--color-chip-bg);
+  border-color: var(--color-chip-edge);
+  color: var(--color-chip-ink);
+}
+
+[data-mode="dark"] .app-chip--pink {
+  background: #1e1a30;
+  border-color: rgba(244, 114, 182, 0.28);
+  color: #fbcfe8;
+}
+
+[data-mode="dark"] .app-chip--sky {
+  background: #1e1a30;
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #bae6fd;
+}
+
+[data-mode="dark"] .app-chip--purple {
+  background: #1e1a30;
+  border-color: rgba(192, 132, 252, 0.28);
+  color: #e9d5ff;
+}
+
+[data-mode="dark"] .app-chip--emerald {
+  background: #1e1a30;
+  border-color: rgba(52, 211, 153, 0.28);
+  color: #a7f3d0;
+}
+
+[data-mode="dark"] .app-chip--amber {
+  background: #1e1a30;
+  border-color: rgba(251, 191, 36, 0.32);
+  color: #fde68a;
+}
+
+[data-mode="dark"] .app-chip--slate {
+  background: #1e1a30;
+  border-color: rgba(51, 65, 85, 0.90);
+  color: #cbd5e1;
 }
 
 .app-player-row {
   background: var(--color-card-row);
 }
 
-[data-mode="dark"] .app-team-1 .app-player-row {
-  background: var(--color-card-row);
-  border-color: var(--color-pink-edge);
+.app-team-1 .app-player-row {
+  background: var(--color-row-team-1);
+  border-color: var(--color-row-team-1-edge);
   color: var(--color-ink);
 }
 
-[data-mode="dark"] .app-team-2 .app-player-row {
+.app-team-2 .app-player-row {
   background: var(--color-card-row-2);
-  border-color: var(--color-sky-edge);
+  border-color: var(--color-row-team-2-edge);
   color: var(--color-ink);
 }
 
@@ -326,23 +580,13 @@ button:disabled {
 
 .app-lobby-card--selected {
   background: var(--color-cool-soft);
-  border-color: var(--color-sky-edge);
+  border-color: var(--color-team-2-edge);
   color: var(--color-ink);
-}
-
-[data-mode="dark"] .app-lobby-card--selected {
-  border-color: var(--color-pink-edge);
 }
 
 .app-card-interactive:hover {
-  background: var(--color-paper-2);
+  background: var(--color-lobby-hover);
   border-color: var(--color-pink-edge);
-  color: var(--color-ink);
-}
-
-[data-mode="dark"] .app-card-interactive:hover {
-  background: var(--color-card-row-hover);
-  border-color: var(--color-accent);
   color: var(--color-ink);
 }
 
@@ -354,13 +598,6 @@ button:disabled {
 .app-team-2 .app-player-row.app-card-interactive:hover {
   background: var(--color-card-row-hover);
   border-color: var(--color-sky-edge);
-}
-
-[data-mode="dark"] .app-team-1 .app-player-row.app-card-interactive:hover,
-[data-mode="dark"] .app-team-2 .app-player-row.app-card-interactive:hover {
-  background: var(--color-card-row-hover);
-  border-color: var(--color-accent);
-  color: var(--color-ink);
 }
 
 /* Role badges */
@@ -400,4 +637,42 @@ button:disabled {
   background: var(--color-tank-soft) !important;
   border: 1.5px solid var(--color-tank-edge) !important;
   color: var(--color-tank) !important;
+}
+
+/* Windows High Contrast / Forced Colors Mode system fallbacks */
+@media (forced-colors: active) {
+  .app-surface,
+  .app-well,
+  .app-modal,
+  .app-select-menu,
+  .app-team-1,
+  .app-team-2,
+  .app-player-row,
+  .app-lobby-card,
+  .app-input {
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+
+  .app-primary,
+  .app-win-1,
+  .app-sky,
+  .app-secondary,
+  .app-quiet,
+  .app-danger {
+    background: ButtonFace;
+    border-color: ButtonText;
+    color: ButtonText;
+    box-shadow: none;
+  }
+
+  .app-select-option[aria-selected="true"],
+  .app-lobby-card--selected {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
 }

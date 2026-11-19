@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Moon, Sun } from "lucide-react";
 import { CsvImporter } from "@components/CsvImporter";
 import { LobbySelector } from "@components/LobbySelector";
 import { TeamDisplay } from "@components/TeamDisplay";
@@ -29,6 +30,7 @@ function App() {
   const fontScale = useSessionStore((state) => state.fontScale);
   const layoutMode = useSessionStore((state) => state.layoutMode);
   const colorMode = useSessionStore((state) => state.colorMode);
+  const setColorMode = useSessionStore((state) => state.setColorMode);
   const gameMode = useSessionStore((state) => state.gameMode);
   const theme = useTheme();
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
@@ -107,29 +109,29 @@ function App() {
   );
 
   const lobbySection = (
-    <div>
-      <section className="app-surface p-5">
-        <LobbySelector />
-      </section>
-      <p className="text-xs text-footer-note text-center mt-2">
-        © {new Date().getFullYear()} Swoo
-      </p>
-    </div>
+    <section className="app-surface p-5">
+      <LobbySelector />
+      <div className="mt-4 pt-3 border-t border-rule text-center">
+        <p className="text-xs text-footer-note">
+          © {new Date().getFullYear()} Swoo • PUGs Match Engine
+        </p>
+      </div>
+    </section>
   );
 
   const workspaceSection = (
     <>
       <nav
-        className="app-well flex gap-1.5 p-1.5 rounded-pill"
+        className="app-surface flex gap-1.5 p-1.5 rounded-pill"
         aria-label="Team planning mode"
       >
         <button
           type="button"
           onClick={() => setDraftMode(false)}
-          className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
+          className={`flex-1 py-2.5 px-4 rounded-pill text-sm font-bold ${
             !draftMode
               ? "app-primary"
-              : "text-sky-ink hover:bg-card-row"
+              : "text-muted hover:text-ink"
           }`}
         >
           Balance
@@ -137,10 +139,10 @@ function App() {
         <button
           type="button"
           onClick={() => setDraftMode(true)}
-          className={`flex-1 py-2 px-4 rounded-pill text-sm font-semibold ${
+          className={`flex-1 py-2.5 px-4 rounded-pill text-sm font-bold ${
             draftMode
               ? "app-sky"
-              : "text-sky-ink hover:bg-card-row"
+              : "text-muted hover:text-ink"
           }`}
         >
           Draft
@@ -156,9 +158,7 @@ function App() {
           <div>
             <BalanceButton />
           </div>
-          <section className="app-surface p-5">
-            <TeamDisplay result={lastResult} />
-          </section>
+          <TeamDisplay result={lastResult} />
         </>
       )}
 
@@ -185,45 +185,79 @@ function App() {
   );
 
   return (
-    <div className="min-h-dvh bg-paper text-ink">
-      <header className="app-toolbar py-3">
-        <div className="container flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <span
-              className="inline-flex items-center justify-center w-9 h-9 rounded-pill bg-pink-soft border border-pink-edge shrink-0"
-              aria-hidden="true"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
+    <div className="app-shell min-h-dvh bg-paper text-ink flex flex-col justify-between">
+      <div>
+        <header className="app-toolbar py-3 sm:py-3.5">
+          <div className="container flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <span
+                className="app-brand-badge inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-well shrink-0 transform hover:rotate-6 transition-transform"
                 aria-hidden="true"
               >
-                <path
-                  d="M12 6.8C10.5 4.3 7.5 3.8 5.4 5.2C3.2 6.7 2.8 9.9 4.2 12.6C5.8 15.6 9.6 18.4 12 20.2C14.4 18.4 18.2 15.6 19.8 12.6C21.2 9.9 20.8 6.7 18.6 5.2C16.5 3.8 13.5 4.3 12 6.8Z"
-                  fill="var(--color-wordmark)"
-                />
-              </svg>
-            </span>
-            <h1 className="text-xl font-semibold text-wordmark truncate">
-              Swoo’s PUGs Balancer
-            </h1>
-          </div>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                    fill="var(--color-brand-heart)"
+                  />
+                </svg>
+              </span>
+              <h1 className="text-base sm:text-xl lg:text-2xl font-bold app-display text-wordmark truncate">
+                Swoo’s PUGs Balancer
+              </h1>
+            </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span
-              className={`px-3 py-1 text-xs font-semibold rounded-pill ${theme.badge.bg} ${theme.badge.text}`}
-            >
-              {currentModeLabel}
-            </span>
-            <HeaderMenu
-              onOpenSheets={() => setShowSheetSetup(true)}
-              onSync={handleSync}
-            />
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              <span
+                className={`hidden sm:inline-flex px-3.5 py-1.5 text-xs font-bold rounded-pill items-center gap-2 ${theme.badge.bg} ${theme.badge.text}`}
+              >
+                <span className="w-2 h-2 rounded-pill bg-current animate-pulse" aria-hidden="true" />
+                {currentModeLabel}
+              </span>
+              <div
+                className="app-well p-0.5 rounded-pill inline-flex gap-0.5"
+                role="group"
+                aria-label="Color theme"
+              >
+                <button
+                  type="button"
+                  onClick={() => setColorMode("light")}
+                  aria-pressed={colorMode === "light"}
+                  aria-label="Light mode"
+                  title="Light mode"
+                  className={`inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1.5 rounded-pill text-xs font-semibold ${
+                    colorMode === "light" ? "app-primary" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <Sun className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden lg:inline">Light</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setColorMode("dark")}
+                  aria-pressed={colorMode === "dark"}
+                  aria-label="Dark mode"
+                  title="Dark mode"
+                  className={`inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1.5 rounded-pill text-xs font-semibold ${
+                    colorMode === "dark" ? "app-sky" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <Moon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden lg:inline">Dark</span>
+                </button>
+              </div>
+              <HeaderMenu
+                onOpenSheets={() => setShowSheetSetup(true)}
+                onSync={handleSync}
+              />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       <UpdateBanner />
 
@@ -349,6 +383,11 @@ function App() {
           </div>
         )}
       </main>
+      </div>
+
+      <footer className="container pb-6 pt-2 text-center text-xs text-footer-note font-medium">
+        <p>Crafted with love for sweet cozy gaming nights • {currentModeLabel} Match Engine</p>
+      </footer>
     </div>
   );
 }

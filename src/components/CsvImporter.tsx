@@ -304,10 +304,10 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-heading">Player Data</h2>
+        <h2 className="text-lg font-bold text-heading">Player Data</h2>
         {playerCount > 0 && (
-          <span className="text-xs font-semibold text-sky-ink bg-sky-soft border border-sky-edge px-2.5 py-0.5 rounded-pill app-measured">
-            {playerCount} players
+          <span className="text-xs font-bold text-pink-ink bg-pink-soft border border-pink-edge px-3 py-1 rounded-pill">
+            <span className="app-measured">{playerCount}</span> players
           </span>
         )}
       </div>
@@ -319,14 +319,21 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-2 app-nowrap app-card-interactive ${
+        className={`group w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-1.5 text-center app-card-interactive ${
           isDragging
             ? "border-accent bg-card-row text-ink"
-            : "border-sky-edge bg-paper-3 text-ink-2"
+            : "border-rule-2 hover:border-pink-edge bg-paper-3 text-ink"
         }`}
       >
-        <Upload className="h-5 w-5 text-sky-ink" aria-hidden="true" />
-        <span className="text-sm font-semibold">Drop or click for CSV</span>
+        <span className="w-11 h-11 mb-1 rounded-well bg-paper-2 border border-rule inline-flex items-center justify-center text-pink-ink group-hover:scale-105 transition-transform">
+          <Upload className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="text-sm font-bold text-ink group-hover:text-pink-ink">
+          Drop or click for CSV
+        </span>
+        <span className="text-xs text-muted">
+          Supports Discord &amp; Faceit rating rosters
+        </span>
       </button>
       <input
         ref={fileInputRef}
@@ -337,28 +344,28 @@ Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mer
       />
 
       {/* Action buttons - 2x2 grid */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
           onClick={handleExportCSV}
           disabled={playerCount === 0}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
         >
-          <Download className="h-4 w-4" aria-hidden="true" />
+          <Download className="h-3.5 w-3.5 text-pink-ink" aria-hidden="true" />
           <span>Export</span>
         </button>
         <button
           type="button"
           onClick={handleDownloadTemplate}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
+          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
         >
-          <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+          <FileSpreadsheet className="h-3.5 w-3.5 text-sky-ink" aria-hidden="true" />
           <span>Template</span>
         </button>
         <button
           type="button"
           onClick={handleLoadSampleData}
-          className="app-sky col-span-2 flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-pill"
+          className="app-sky col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-extrabold rounded-well"
         >
           <Gamepad2 className="h-4 w-4" aria-hidden="true" />
           <span>Load Sample Data</span>
