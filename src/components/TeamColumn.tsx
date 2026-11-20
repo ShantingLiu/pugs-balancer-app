@@ -120,7 +120,7 @@ interface ExpandActionButtonProps {
   expanded?: boolean;
 }
 
-/** Compact icon button that smoothly expands its text label on hover, focus, or active state. */
+/** Compact icon button with a non-shifting floating pill label on hover, focus, or active state. */
 function ExpandActionButton({
   icon,
   label,
@@ -143,9 +143,7 @@ function ExpandActionButton({
     >
       {icon}
       <span className="app-expand-label" aria-hidden="true">
-        <span>
-          <span className="inline-block pl-1.5">{label}</span>
-        </span>
+        {label}
       </span>
     </button>
   );

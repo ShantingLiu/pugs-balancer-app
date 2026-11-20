@@ -219,10 +219,10 @@ function DraftPlayerCard({
       }}
     >
       {displayRole ? (
-        <>
+        <div className="flex items-center gap-2.5 w-full min-w-0">
           <button
             type="button"
-            className={`px-2 py-0.5 text-xs font-semibold rounded-pill inline-flex items-center gap-1 ${getRoleBadgeColor(
+            className={`px-2 py-1 text-xs font-bold rounded-pill inline-flex items-center gap-1 shrink-0 ${getRoleBadgeColor(
               displayRole
             )} ${canCycleRole ? "hover:opacity-85 cursor-pointer" : ""}`}
             onClick={(e) => {
@@ -236,12 +236,24 @@ function DraftPlayerCard({
             {getRoleLabel(displayRole)}
             {canCycleRole && <RefreshCw className="h-2.5 w-2.5" aria-hidden="true" />}
           </button>
-          <span className={`flex-1 min-w-0 font-semibold break-words ${isSubdued ? "text-muted" : "text-ink"}`}>{name}</span>
-          {formatSRDisplay()}
-        </>
+          <div className="flex-1 min-w-0">
+            <div
+              className={`font-semibold truncate ${isSubdued ? "text-muted" : "text-ink"}`}
+              title={player.battletag}
+            >
+              {name}
+            </div>
+            {formatSRDisplay()}
+          </div>
+        </div>
       ) : (
         <>
-          <span className={`font-semibold ${isSubdued ? "text-muted" : "text-ink"}`}>{name}</span>
+          <span
+            className={`font-semibold truncate max-w-full ${isSubdued ? "text-muted" : "text-ink"}`}
+            title={player.battletag}
+          >
+            {name}
+          </span>
           <RoleBadges roles={player.rolesWilling} player={player} gameMode={gameMode} />
         </>
       )}
@@ -278,10 +290,19 @@ function AssignPopup({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
+  const openAbove =
+    typeof window !== "undefined" && anchorRect.bottom + 110 > window.innerHeight && anchorRect.top > 110;
+  const clampedLeft =
+    typeof window !== "undefined"
+      ? Math.min(Math.max(anchorRect.left + anchorRect.width / 2, 120), window.innerWidth - 120)
+      : anchorRect.left + anchorRect.width / 2;
+
   const style: React.CSSProperties = {
     position: "fixed",
-    top: anchorRect.bottom + 4,
-    left: anchorRect.left + anchorRect.width / 2,
+    ...(openAbove
+      ? { bottom: window.innerHeight - anchorRect.top + 4 }
+      : { top: anchorRect.bottom + 4 }),
+    left: clampedLeft,
     transform: "translateX(-50%)",
     zIndex: 50,
   };
@@ -687,9 +708,9 @@ export function DraftView() {
       })()}
 
       {/* 3-panel grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] gap-3">
         {/* Team 1 */}
-        <div className="app-team-1 p-4">
+        <div className="app-team-1 p-4 min-w-0">
           <h3 className="text-sm font-semibold text-pink-ink mb-3 text-center">
             Team 1
             <span
@@ -714,7 +735,7 @@ export function DraftView() {
 
         {/* Unassigned Pool */}
         <div
-          className={`app-well p-4 min-w-[220px] ${
+          className={`app-well p-4 min-w-0 ${
             dragOverPool ? "ring-2 ring-focus bg-sky-soft" : ""
           }`}
           onDragOver={(e) => {
@@ -768,7 +789,7 @@ export function DraftView() {
         </div>
 
         {/* Team 2 */}
-        <div className="app-team-2 p-4">
+        <div className="app-team-2 p-4 min-w-0">
           <h3 className="text-sm font-semibold text-sky-ink mb-3 text-center">
             Team 2
             <span
