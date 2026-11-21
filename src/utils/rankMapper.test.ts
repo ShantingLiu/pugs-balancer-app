@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { rankToSR, competitiveRankToSR, srToCompetitiveRank, getRoleRankSR, getEffectiveSR } from "@utils/rankMapper";
+import {
+  rankToSR,
+  competitiveRankToSR,
+  srToCompetitiveRank,
+  getRoleRankSR,
+  getRoleRankDisplay,
+  getEffectiveSR,
+} from "@utils/rankMapper";
 import type { LobbyPlayer } from "@engine/types";
 
 describe("rankMapper", () => {
@@ -85,6 +92,47 @@ describe("rankMapper", () => {
       };
 
       expect(getRoleRankSR(player, "Support")).toBe(3800);
+    });
+
+    it("should resolve separate Stadium, 5v5, and 6v6 rankings by game mode", () => {
+      const player = {
+        tankRank: "Pro 3",
+        dpsRank: null,
+        supportRank: null,
+        tankCompRank: "Emerald 3",
+        dpsCompRank: null,
+        supportCompRank: null,
+        tank6v6Rank: "Master 3",
+        dps6v6Rank: null,
+        support6v6Rank: null,
+        regularCompRank: "Gold 3",
+        regular6v6Rank: "Diamond 3",
+      };
+
+      expect(getRoleRankSR(player, "Tank", "stadium_5v5")).toBe(3200);
+      expect(getRoleRankDisplay(player, "Tank", "stadium_5v5")).toBe("Pro 3");
+
+      expect(getRoleRankSR(player, "Tank", "regular_5v5")).toBe(3200);
+      expect(getRoleRankDisplay(player, "Tank", "regular_5v5")).toBe("Emerald 3");
+
+      expect(getRoleRankSR(player, "Tank", "regular_6v6")).toBe(4200);
+      expect(getRoleRankDisplay(player, "Tank", "regular_6v6")).toBe("Master 3");
+
+      expect(getRoleRankSR(player, "DPS", "regular_6v6")).toBe(3700);
+      expect(getRoleRankDisplay(player, "DPS", "regular_6v6")).toBe("Diamond 3");
+    });
+
+    it("should fallback cleanly to 5v5 comp rank in 6v6 mode if no 6v6 rank is set", () => {
+      const player = {
+        tankRank: "Pro 1",
+        dpsRank: null,
+        supportRank: null,
+        tankCompRank: "Emerald 1",
+        regularCompRank: null,
+      };
+
+      expect(getRoleRankSR(player, "Tank", "regular_6v6")).toBe(3400);
+      expect(getRoleRankDisplay(player, "Tank", "regular_6v6")).toBe("Emerald 1");
     });
 
     it("should return null if no rank available", () => {

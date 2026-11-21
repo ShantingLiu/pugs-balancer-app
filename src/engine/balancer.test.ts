@@ -677,4 +677,150 @@ describe("balancer", () => {
       expect(failures).toBe(0);
     });
   });
+
+  describe("actionable error diagnostics & bipartite flex solving", () => {
+    it("reports exact role shortage without vague fallback warning", () => {
+      const players = [
+        createLobbyPlayer("T1#1", ["Tank"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS"]),
+        createLobbyPlayer("D4#1", ["DPS"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+        createLobbyPlayer("D5#1", ["DPS"]),
+      ];
+
+      const result = balanceTeams(players);
+      expect(result.team1).toHaveLength(0);
+      expect(result.team2).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain("Not enough Tank players: have 1, need 2 (1 more needed)");
+      expect(messages.some(m => m.includes("Could not generate any valid team compositions"))).toBe(false);
+    });
+
+    it("detects combined flex-role shortages when individual role counts pass", () => {
+      // Tank willing: 4 (>=2), DPS willing: 4 (>=4), Support willing: 6 (>=4),
+      // yet only 4 total players can fill the 6 combined Tank+DPS slots.
+      const players = [
+        createLobbyPlayer("TD1#1", ["Tank", "DPS"]),
+        createLobbyPlayer("TD2#1", ["Tank", "DPS"]),
+        createLobbyPlayer("TD3#1", ["Tank", "DPS"]),
+        createLobbyPlayer("TD4#1", ["Tank", "DPS"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+        createLobbyPlayer("S5#1", ["Support"]),
+        createLobbyPlayer("S6#1", ["Support"]),
+      ];
+
+      const result = balanceTeams(players);
+      expect(result.team1).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain(
+        "Not enough Tank/DPS players combined: have 4 for 6 combined Tank/DPS slots (2 more needed)"
+      );
+    });
+
+    it("detects too many must-play players restricted to a single role", () => {
+      const players = [
+        createLobbyPlayer("T1#1", ["Tank"]),
+        createLobbyPlayer("T2#1", ["Tank"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS"]),
+        createLobbyPlayer("D4#1", ["DPS"]),
+        createLobbyPlayer("S1#1", ["Support"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("S2#1", ["Support"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("S3#1", ["Support"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("S4#1", ["Support"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("S5#1", ["Support"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("F1#1", ["Tank", "DPS", "Support"]),
+      ];
+
+      const result = balanceTeams(players);
+      expect(result.team1).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain(
+        "Too many Support-only must-play players (5) for 4 Support slots"
+      );
+    });
+
+    it("detects role locks incompatible with willing roles", () => {
+      const players = [
+        createLobbyPlayer("BadLock#1", ["DPS", "Support"], { lockedToRole: "Tank" }),
+        createLobbyPlayer("T2#1", ["Tank"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS"]),
+        createLobbyPlayer("D4#1", ["DPS"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+      ];
+
+      const result = balanceTeams(players);
+      expect(result.team1).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain(
+        "BadLock#1 is locked to Tank, which isn't in their willing roles"
+      );
+      expect(messages).toContain(
+        "Not enough Tank players: have 1, need 2 (1 more needed)"
+      );
+    });
+
+    it("explains when hard together constraint exceeds single-role slots per team", () => {
+      const players = [
+        createLobbyPlayer("T1#1", ["Tank"]),
+        createLobbyPlayer("T2#1", ["Tank"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS"]),
+        createLobbyPlayer("D4#1", ["DPS"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+      ];
+
+      const result = balanceTeams(
+        players,
+        [{ type: "together", players: ["T1#1", "T2#1"], hard: true }],
+        "stadium_5v5"
+      );
+      expect(result.team1).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain(
+        "T1#1 & T2#1 cannot play together: all are limited to Tank, which only has 1 slot per team"
+      );
+    });
+
+    it("reliably solves tight flex-role puzzles via bipartite matching fallback", () => {
+      // Only one valid role configuration: T1,T2 on Tank; TD1,TD2,D1,D2 on DPS; S1..S4 on Support.
+      // Put TD1,TD2 first with Tank listed before DPS so naive greedy would strand T1,T2.
+      const players = [
+        createLobbyPlayer("TD1#1", ["Tank", "DPS"]),
+        createLobbyPlayer("TD2#1", ["Tank", "DPS"]),
+        createLobbyPlayer("T1#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("T2#1", ["Tank"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("D1#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("D2#1", ["DPS"], { mustPlay: true, mustPlayPriority: 2 }),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+      ];
+
+      for (let i = 0; i < 10; i++) {
+        const result = balanceTeams(players);
+        expect(result.team1).toHaveLength(5);
+        expect(result.team2).toHaveLength(5);
+      }
+    });
+  });
 });

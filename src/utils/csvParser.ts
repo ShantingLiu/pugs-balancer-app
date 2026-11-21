@@ -22,6 +22,9 @@ interface RawCsvRow {
   tank_comp_rank?: string;
   dps_comp_rank?: string;
   support_comp_rank?: string;
+  tank_6v6_rank?: string;
+  dps_6v6_rank?: string;
+  support_6v6_rank?: string;
   roles_willing?: string;
   role_preference?: string;
   hero_pool?: string;
@@ -31,6 +34,7 @@ interface RawCsvRow {
   dps_one_trick?: string;
   support_one_trick?: string;
   regular_comp_rank?: string;
+  regular_6v6_rank?: string;
   weight_modifier?: string;
   notes?: string;
   /** @deprecated Use mode-specific wins columns instead */
@@ -141,6 +145,9 @@ function isValidHeader(header: string): boolean {
     "tank_comp_rank",
     "dps_comp_rank",
     "support_comp_rank",
+    "tank_6v6_rank",
+    "dps_6v6_rank",
+    "support_6v6_rank",
     "roles_willing",
     "role_preference",
     "hero_pool",
@@ -150,6 +157,7 @@ function isValidHeader(header: string): boolean {
     "dps_one_trick",
     "support_one_trick",
     "regular_comp_rank",
+    "regular_6v6_rank",
     "weight_modifier",
     "notes",
     "all_time_wins", // deprecated - kept for backwards compatibility
@@ -360,7 +368,11 @@ function validateRow(
   const tankCompRank = parseOptionalString(row.tank_comp_rank);
   const dpsCompRank = parseOptionalString(row.dps_comp_rank);
   const supportCompRank = parseOptionalString(row.support_comp_rank);
+  const tank6v6Rank = parseOptionalString(row.tank_6v6_rank);
+  const dps6v6Rank = parseOptionalString(row.dps_6v6_rank);
+  const support6v6Rank = parseOptionalString(row.support_6v6_rank);
   const regularCompRank = parseOptionalString(row.regular_comp_rank);
+  const regular6v6Rank = parseOptionalString(row.regular_6v6_rank);
 
   // Validate rank formats
   if (tankRank && !isValidRankFormat(tankRank)) {
@@ -379,7 +391,9 @@ function validateRow(
       role === "Tank" ? tankRank : role === "DPS" ? dpsRank : supportRank;
     const roleCompRank =
       role === "Tank" ? tankCompRank : role === "DPS" ? dpsCompRank : supportCompRank;
-    if (!roleRank && !roleCompRank && !regularCompRank) {
+    const role6v6Rank =
+      role === "Tank" ? tank6v6Rank : role === "DPS" ? dps6v6Rank : support6v6Rank;
+    if (!roleRank && !roleCompRank && !role6v6Rank && !regularCompRank && !regular6v6Rank) {
       warnings.push({
         row: rowNum,
         message: `No rank for ${role}, will use default (Elite 5)`,
@@ -475,6 +489,9 @@ function validateRow(
     tankCompRank,
     dpsCompRank,
     supportCompRank,
+    tank6v6Rank,
+    dps6v6Rank,
+    support6v6Rank,
     rolesWilling,
     rolePreference,
     heroPool,
@@ -484,6 +501,7 @@ function validateRow(
     dpsOneTrick,
     supportOneTrick,
     regularCompRank,
+    regular6v6Rank,
     weightModifier,
     notes: parseOptionalString(row.notes),
     stadiumWins,

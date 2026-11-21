@@ -140,5 +140,20 @@ Player2#5678,Elite 1,"DPS",Simple note`;
       expect(result.valid[0].notes).toBe("Line one\nLine two");
       expect(result.valid[1].battletag).toBe("Player2#5678");
     });
+
+    it("should parse separate 6v6 ranks and treat Sombra as Support", () => {
+      const csv = `battletag,tank_rank,tank_comp_rank,tank_6v6_rank,regular_6v6_rank,roles_willing,hero_pool
+SupportPlayer#1111,Pro 2,Emerald 3,Diamond 2,Emerald 1,"Support","Sombra,Ana"
+Flex6v6#2222,,Platinum 1,Emerald 2,,"Tank","Reinhardt"`;
+
+      const result = parsePlayersCSV(csv);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+      expect(result.valid[0].tank6v6Rank).toBe("Diamond 2");
+      expect(result.valid[0].regular6v6Rank).toBe("Emerald 1");
+      expect(result.valid[1].tankCompRank).toBe("Platinum 1");
+      expect(result.valid[1].tank6v6Rank).toBe("Emerald 2");
+    });
   });
 });

@@ -115,7 +115,7 @@ describe("AddPlayerModal", () => {
       fireEvent.click(screen.getByText("Add Player"));
       
       await waitFor(() => {
-        expect(screen.getByText(/Tank requires a Stadium rank or Regular Comp rank/)).toBeInTheDocument();
+        expect(screen.getByText(/Tank requires a Stadium, 5v5, or 6v6 rank/)).toBeInTheDocument();
       });
     });
 

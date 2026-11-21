@@ -24,6 +24,10 @@ export const SHEET_COLUMNS = [
   { header: "Stadium Wins", field: "stadiumWins", required: false },
   { header: "Regular 5v5 Wins", field: "regular5v5Wins", required: false },
   { header: "Regular 6v6 Wins", field: "regular6v6Wins", required: false },
+  { header: "Tank Rank (6v6)", field: "tank6v6Rank", required: false },
+  { header: "DPS Rank (6v6)", field: "dps6v6Rank", required: false },
+  { header: "Support Rank (6v6)", field: "support6v6Rank", required: false },
+  { header: "6v6 Rank (Global)", field: "regular6v6Rank", required: false },
 ] as const;
 
 export const HEADER_TO_FIELD = new Map(
@@ -72,12 +76,14 @@ export function buildTemplateRequest(title: string): object {
                     textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } },
                     backgroundColor: col.header.includes("Stadium")
                       ? { red: 0.2, green: 0.3, blue: 0.5 }
-                      : col.header.includes("Comp") &&
-                          !col.header.includes("Global")
-                        ? { red: 0.2, green: 0.5, blue: 0.3 }
-                        : col.header.includes("Global")
-                          ? { red: 0.3, green: 0.35, blue: 0.4 }
-                          : { red: 0.15, green: 0.15, blue: 0.15 },
+                      : col.header.includes("6v6 Rank")
+                        ? { red: 0.45, green: 0.3, blue: 0.5 }
+                        : col.header.includes("Comp") &&
+                            !col.header.includes("Global")
+                          ? { red: 0.2, green: 0.5, blue: 0.3 }
+                          : col.header.includes("Global")
+                            ? { red: 0.3, green: 0.35, blue: 0.4 }
+                            : { red: 0.15, green: 0.15, blue: 0.15 },
                   },
                 })),
               },
@@ -266,6 +272,9 @@ export function buildDataValidationRequests(sheetId: number): object[] {
   ];
   const compRanks = generateRankOptions(compTiers);
   for (let col = 6; col <= 9; col++) {
+    requests.push(buildDropdownValidation(sheetId, col, compRanks));
+  }
+  for (let col = 19; col <= 22; col++) {
     requests.push(buildDropdownValidation(sheetId, col, compRanks));
   }
 

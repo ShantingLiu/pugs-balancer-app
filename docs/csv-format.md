@@ -31,10 +31,14 @@ Download a template from the app by clicking **📥 Download Template** in the I
 
 | Column | Format | Example | Description |
 |--------|--------|---------|-------------|
-| `tank_comp_rank` | `Tier [1-5]` | `Master 2` | Regular comp rank for Tank role |
-| `dps_comp_rank` | `Tier [1-5]` | `Diamond 1` | Regular comp rank for DPS role |
-| `support_comp_rank` | `Tier [1-5]` | `Grandmaster 3` | Regular comp rank for Support role |
-| `regular_comp_rank` | `Tier [1-5]` | `Diamond 2` | Global fallback rank for all roles |
+| `tank_comp_rank` | `Tier [1-5]` | `Master 2` | Regular 5v5 comp rank for Tank role |
+| `dps_comp_rank` | `Tier [1-5]` | `Diamond 1` | Regular 5v5 comp rank for DPS role |
+| `support_comp_rank` | `Tier [1-5]` | `Grandmaster 3` | Regular 5v5 comp rank for Support role |
+| `regular_comp_rank` | `Tier [1-5]` | `Diamond 2` | Global fallback rank for 5v5 mode |
+| `tank_6v6_rank` | `Tier [1-5]` | `Master 3` | Regular 6v6 rank for Tank role |
+| `dps_6v6_rank` | `Tier [1-5]` | `Emerald 1` | Regular 6v6 rank for DPS role |
+| `support_6v6_rank` | `Tier [1-5]` | `Diamond 2` | Regular 6v6 rank for Support role |
+| `regular_6v6_rank` | `Tier [1-5]` | `Emerald 2` | Global fallback rank for 6v6 mode |
 
 **Valid Competitive Tiers**: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master, Grandmaster, Champion
 

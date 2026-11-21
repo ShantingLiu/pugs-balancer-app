@@ -33,6 +33,9 @@ function playersToCSV(
     "tank_comp_rank",
     "dps_comp_rank",
     "support_comp_rank",
+    "tank_6v6_rank",
+    "dps_6v6_rank",
+    "support_6v6_rank",
     "roles_willing",
     "role_preference",
     "hero_pool",
@@ -40,6 +43,7 @@ function playersToCSV(
     "dps_one_trick",
     "support_one_trick",
     "regular_comp_rank",
+    "regular_6v6_rank",
     "weight_modifier",
     "notes",
     "stadium_wins",
@@ -60,6 +64,9 @@ function playersToCSV(
       escapeCSVField(p.tankCompRank),
       escapeCSVField(p.dpsCompRank),
       escapeCSVField(p.supportCompRank),
+      escapeCSVField(p.tank6v6Rank ?? null),
+      escapeCSVField(p.dps6v6Rank ?? null),
+      escapeCSVField(p.support6v6Rank ?? null),
       escapeCSVField(p.rolesWilling.join(",")),
       escapeCSVField(p.rolePreference.join(",")),
       escapeCSVField(p.heroPool.join(",")),
@@ -67,6 +74,7 @@ function playersToCSV(
       escapeCSVField(p.dpsOneTrick),
       escapeCSVField(p.supportOneTrick),
       escapeCSVField(p.regularCompRank),
+      escapeCSVField(p.regular6v6Rank ?? null),
       String(p.weightModifier || 0),
       escapeCSVField(p.notes),
       String(stadiumTotal),
@@ -237,9 +245,9 @@ export function CsvImporter() {
   );
 
   const handleDownloadTemplate = useCallback(() => {
-    const templateContent = `battletag,tank_rank,dps_rank,support_rank,tank_comp_rank,dps_comp_rank,support_comp_rank,roles_willing,role_preference,hero_pool,tank_one_trick,dps_one_trick,support_one_trick,regular_comp_rank,weight_modifier,notes,stadium_wins,regular_5v5_wins,regular_6v6_wins
-Player1#1234,Pro 2,,Elite 3,,,,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya",,,,0,Example player,0,0,0
-Player2#5678,,Pro 1,Pro 2,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mercy,,0,Support one-trick,0,0,0`;
+    const templateContent = `battletag,tank_rank,dps_rank,support_rank,tank_comp_rank,dps_comp_rank,support_comp_rank,tank_6v6_rank,dps_6v6_rank,support_6v6_rank,roles_willing,role_preference,hero_pool,tank_one_trick,dps_one_trick,support_one_trick,regular_comp_rank,regular_6v6_rank,weight_modifier,notes,stadium_wins,regular_5v5_wins,regular_6v6_wins
+Player1#1234,Pro 2,,Elite 3,,,,,,,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya",,,,,,0,Example player,0,0,0
+Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mercy,,,0,Support one-trick,0,0,0`;
 
     const blob = new Blob([templateContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);

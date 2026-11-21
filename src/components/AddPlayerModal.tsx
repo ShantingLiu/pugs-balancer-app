@@ -47,6 +47,9 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
   tankCompRank: null,
   dpsCompRank: null,
   supportCompRank: null,
+  tank6v6Rank: null,
+  dps6v6Rank: null,
+  support6v6Rank: null,
   rolesWilling: [],
   rolePreference: [],
   heroPool: [],
@@ -56,6 +59,7 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
   dpsOneTrick: null,
   supportOneTrick: null,
   regularCompRank: null,
+  regular6v6Rank: null,
   weightModifier: 0,
   notes: null,
   stadiumWins: 0,
@@ -63,6 +67,18 @@ const EMPTY_FORM: Omit<Player, "battletag"> = {
   regular6v6Wins: 0,
   allTimeWins: 0,
 };
+
+const RANK_ROLE_FIELDS: Array<{
+  role: Role;
+  textColorClass: string;
+  stadiumField: "tankRank" | "dpsRank" | "supportRank";
+  compField: "tankCompRank" | "dpsCompRank" | "supportCompRank";
+  rank6v6Field: "tank6v6Rank" | "dps6v6Rank" | "support6v6Rank";
+}> = [
+  { role: "Tank", textColorClass: "text-tank", stadiumField: "tankRank", compField: "tankCompRank", rank6v6Field: "tank6v6Rank" },
+  { role: "DPS", textColorClass: "text-dps", stadiumField: "dpsRank", compField: "dpsCompRank", rank6v6Field: "dps6v6Rank" },
+  { role: "Support", textColorClass: "text-sup", stadiumField: "supportRank", compField: "supportCompRank", rank6v6Field: "support6v6Rank" },
+];
 
 export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalProps) {
   const upsertPlayer = usePlayerStore((state) => state.upsertPlayer);
@@ -123,10 +139,15 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
     }
 
     for (const role of form.rolesWilling) {
-      const stadiumRankField = role === "Tank" ? "tankRank" : role === "DPS" ? "dpsRank" : "supportRank";
-      const compRankField = role === "Tank" ? "tankCompRank" : role === "DPS" ? "dpsCompRank" : "supportCompRank";
-      if (!form[stadiumRankField] && !form[compRankField] && !form.regularCompRank) {
-        errs.push(`${role} requires a Stadium rank or Regular Comp rank`);
+      const cfg = RANK_ROLE_FIELDS.find((r) => r.role === role)!;
+      if (
+        !form[cfg.stadiumField] &&
+        !form[cfg.compField] &&
+        !form[cfg.rank6v6Field] &&
+        !form.regularCompRank &&
+        !form.regular6v6Rank
+      ) {
+        errs.push(`${role} requires a Stadium, 5v5, or 6v6 rank`);
       }
     }
 
@@ -368,122 +389,63 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
               <div className="text-sm font-semibold text-ink-2">
                 Ranks per Role
                 <span className="text-xs font-normal text-muted ml-2">
-                  (Stadium rank preferred, or use Regular Comp rank as fallback)
+                  (Stadium, 5v5 Comp, or 6v6 Comp rank)
                 </span>
               </div>
 
-              {form.rolesWilling.includes("Tank") && (
-                <div className="p-3 app-well">
-                  <div className="text-sm font-semibold text-tank mb-2">Tank</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Stadium Rank</label>
-                      <select
-                        value={form.tankRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, tankRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Regular Comp Rank</label>
-                      <select
-                        value={form.tankCompRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, tankCompRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {form.rolesWilling.includes("DPS") && (
-                <div className="p-3 app-well">
-                  <div className="text-sm font-semibold text-dps mb-2">DPS</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Stadium Rank</label>
-                      <select
-                        value={form.dpsRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, dpsRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Regular Comp Rank</label>
-                      <select
-                        value={form.dpsCompRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, dpsCompRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
+              {RANK_ROLE_FIELDS.filter(({ role }) => form.rolesWilling.includes(role)).map(
+                ({ role, textColorClass, stadiumField, compField, rank6v6Field }) => (
+                  <div key={role} className="p-3 app-well">
+                    <div className={`text-sm font-semibold ${textColorClass} mb-2`}>{role}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs text-muted mb-1">Stadium Rank</label>
+                        <select
+                          value={form[stadiumField] || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, [stadiumField]: e.target.value || null }))
+                          }
+                          className="app-input w-full px-3 py-2 text-sm"
+                        >
+                          <option value="">None</option>
+                          {STADIUM_RANKS.map((rank) => (
+                            <option key={rank} value={rank}>{rank}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted mb-1">5v5 Comp Rank</label>
+                        <select
+                          value={form[compField] || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, [compField]: e.target.value || null }))
+                          }
+                          className="app-input w-full px-3 py-2 text-sm"
+                        >
+                          <option value="">None</option>
+                          {COMP_RANKS.map((rank) => (
+                            <option key={rank} value={rank}>{rank}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-muted mb-1">6v6 Comp Rank</label>
+                        <select
+                          value={form[rank6v6Field] || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({ ...prev, [rank6v6Field]: e.target.value || null }))
+                          }
+                          className="app-input w-full px-3 py-2 text-sm"
+                        >
+                          <option value="">None</option>
+                          {COMP_RANKS.map((rank) => (
+                            <option key={rank} value={rank}>{rank}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {form.rolesWilling.includes("Support") && (
-                <div className="p-3 app-well">
-                  <div className="text-sm font-semibold text-sup mb-2">Support</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Stadium Rank</label>
-                      <select
-                        value={form.supportRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, supportRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {STADIUM_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Regular Comp Rank</label>
-                      <select
-                        value={form.supportCompRank || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, supportCompRank: e.target.value || null }))
-                        }
-                        className="app-input w-full px-3 py-2 text-sm"
-                      >
-                        <option value="">None</option>
-                        {COMP_RANKS.map((rank) => (
-                          <option key={rank} value={rank}>{rank}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                )
               )}
             </div>
           )}

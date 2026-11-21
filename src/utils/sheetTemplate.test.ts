@@ -39,8 +39,8 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
 
 describe("sheetTemplate", () => {
   describe("SHEET_COLUMNS", () => {
-    it("should have 19 columns", () => {
-      expect(SHEET_COLUMNS).toHaveLength(19);
+    it("should have 23 columns", () => {
+      expect(SHEET_COLUMNS).toHaveLength(23);
     });
 
     it("should have BattleTag as first column", () => {
@@ -66,9 +66,9 @@ describe("sheetTemplate", () => {
   });
 
   describe("HEADER_TO_FIELD / FIELD_TO_HEADER", () => {
-    it("should map all 19 column headers", () => {
-      expect(HEADER_TO_FIELD.size).toBe(19);
-      expect(FIELD_TO_HEADER.size).toBe(19);
+    it("should map all 23 column headers", () => {
+      expect(HEADER_TO_FIELD.size).toBe(23);
+      expect(FIELD_TO_HEADER.size).toBe(23);
     });
 
     it("should be bidirectional inverses", () => {
@@ -88,7 +88,7 @@ describe("sheetTemplate", () => {
   describe("serializePlayerToRow", () => {
     it("should produce array matching SHEET_COLUMNS length", () => {
       const row = serializePlayerToRow(makePlayer());
-      expect(row).toHaveLength(19);
+      expect(row).toHaveLength(23);
     });
 
     it("should serialize string fields", () => {
@@ -171,7 +171,7 @@ describe("sheetTemplate", () => {
       expect(grid.frozenRowCount).toBe(1);
     });
 
-    it("should include all 19 column headers in the first row", () => {
+    it("should include all 23 column headers in the first row", () => {
       const sheets = result.sheets as Array<Record<string, unknown>>;
       const rowData = (
         (sheets[0].data as Array<Record<string, unknown>>)[0] as Record<string, unknown>
@@ -208,8 +208,8 @@ describe("sheetTemplate", () => {
   describe("buildDataValidationRequests", () => {
     const requests = buildDataValidationRequests(0) as Array<Record<string, unknown>>;
 
-    it("should produce 8 validation requests (1 role + 3 stadium + 4 comp)", () => {
-      expect(requests).toHaveLength(8);
+    it("should produce 12 validation requests (1 role + 3 stadium + 4 comp + 4 6v6)", () => {
+      expect(requests).toHaveLength(12);
     });
 
     it("should set setDataValidation wrapper on each request", () => {

@@ -51,14 +51,23 @@ export interface Player {
   /** Stadium rank for Support role */
   supportRank: string | null;
 
-  /** Regular comp rank for Tank role (fallback if no Stadium rank) */
+  /** Regular 5v5 comp rank for Tank role (fallback if no Stadium rank) */
   tankCompRank: string | null;
 
-  /** Regular comp rank for DPS role (fallback if no Stadium rank) */
+  /** Regular 5v5 comp rank for DPS role */
   dpsCompRank: string | null;
 
-  /** Regular comp rank for Support role (fallback if no Stadium rank) */
+  /** Regular 5v5 comp rank for Support role */
   supportCompRank: string | null;
+
+  /** Regular 6v6 rank for Tank role */
+  tank6v6Rank?: string | null;
+
+  /** Regular 6v6 rank for DPS role */
+  dps6v6Rank?: string | null;
+
+  /** Regular 6v6 rank for Support role */
+  support6v6Rank?: string | null;
 
   /** Roles the player is willing to play */
   rolesWilling: Role[];
@@ -84,8 +93,11 @@ export interface Player {
   /** One-trick hero for Support role (null = not a one-trick for this role) */
   supportOneTrick: string | null;
 
-  /** Global fallback rank (regular competitive) if no Stadium or role-specific comp rank */
+  /** Global fallback rank (regular 5v5 competitive) if no Stadium or role-specific rank */
   regularCompRank: string | null;
+
+  /** Global fallback rank for 6v6 mode */
+  regular6v6Rank?: string | null;
 
   /** Manual SR adjustment (-1000 to +1000) */
   weightModifier: number;

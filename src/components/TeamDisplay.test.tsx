@@ -209,5 +209,29 @@ describe("TeamDisplay", () => {
       expect(screen.queryByText("+50")).not.toBeInTheDocument();
       expect(screen.queryByText("-50")).not.toBeInTheDocument();
     });
+
+    it("hides dummy Rookie 5 matchup bar and redundant footer when error warnings are shown", () => {
+      const result: TeamAssignment = {
+        team1: [],
+        team2: [],
+        warnings: [
+          {
+            type: "impossible_composition",
+            message: "Not enough DPS players: have 3, need 4 (1 more needed)",
+            severity: "error",
+          },
+        ],
+        score: { team1SR: 0, team2SR: 0, srDifference: 0, archetypeParityMet: false },
+      };
+
+      render(<TeamDisplay result={result} />);
+      expect(
+        screen.getByText("Not enough DPS players: have 3, need 4 (1 more needed)")
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Rookie 5")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Could not generate valid teams. Check warnings above.")
+      ).not.toBeInTheDocument();
+    });
   });
 });

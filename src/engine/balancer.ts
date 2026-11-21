@@ -19,6 +19,343 @@ import {
 } from "@engine/scoring";
 import { getModeConfig, getValidCompositions } from "@engine/modeConfig";
 
+interface SlotTarget {
+  team: 1 | 2;
+  role: Role;
+}
+
+const ALL_ROLES: Role[] = ["Tank", "DPS", "Support"];
+const ROLE_SUBSETS: Role[][] = [
+  ["Tank"],
+  ["DPS"],
+  ["Support"],
+  ["Tank", "DPS"],
+  ["Tank", "Support"],
+  ["DPS", "Support"],
+  ["Tank", "DPS", "Support"],
+];
+
+function shuffledCopy<T>(items: T[]): T[] {
+  const arr = items.slice();
+  shuffleArray(arr);
+  return arr;
+}
+
+function getEffectiveRoles(player: LobbyPlayer): Role[] {
+  if (player.lockedToRole !== null) {
+    return player.rolesWilling.includes(player.lockedToRole) ? [player.lockedToRole] : [];
+  }
+  return player.rolesWilling;
+}
+
+function canPlayerFillSlot(
+  player: LobbyPlayer,
+  slot: SlotTarget,
+  respectTeamLocks: boolean
+): boolean {
+  if (!player.rolesWilling.includes(slot.role)) return false;
+  if (player.lockedToRole !== null && player.lockedToRole !== slot.role) return false;
+  if (respectTeamLocks && player.lockedToTeam !== null && player.lockedToTeam !== slot.team) {
+    return false;
+  }
+  return true;
+}
+
+function buildSlotsForCompositions(
+  team1Comp: { Tank: number; DPS: number; Support: number },
+  team2Comp: { Tank: number; DPS: number; Support: number }
+): SlotTarget[] {
+  const slots: SlotTarget[] = [];
+  for (const role of ALL_ROLES) {
+    for (let i = 0; i < team1Comp[role]; i++) slots.push({ team: 1, role });
+    for (let i = 0; i < team2Comp[role]; i++) slots.push({ team: 2, role });
+  }
+  return slots;
+}
+
+function solveBipartiteSlots(
+  players: LobbyPlayer[],
+  slots: SlotTarget[],
+  mode: GameMode,
+  respectTeamLocks: boolean,
+  mustPlayBattletags: Set<string>
+): { team1: RoleAssignment[]; team2: RoleAssignment[]; bench: LobbyPlayer[] } | null {
+  const mustPlayIndices: number[] = [];
+  const optionalIndices: number[] = [];
+  players.forEach((p, idx) => {
+    if (mustPlayBattletags.has(p.battletag)) mustPlayIndices.push(idx);
+    else optionalIndices.push(idx);
+  });
+
+  if (mustPlayIndices.length > slots.length) return null;
+
+  const slotToPlayer = new Array<number>(slots.length).fill(-1);
+  const playerToSlot = new Array<number>(players.length).fill(-1);
+  const slotOrder = shuffledCopy(slots.map((_, i) => i));
+
+  const tryMatchPlayer = (pIdx: number, visitedSlots: boolean[]): boolean => {
+    for (const sIdx of slotOrder) {
+      if (visitedSlots[sIdx] || !canPlayerFillSlot(players[pIdx], slots[sIdx], respectTeamLocks)) {
+        continue;
+      }
+      visitedSlots[sIdx] = true;
+      const prevPlayer = slotToPlayer[sIdx];
+      if (prevPlayer === -1 || tryMatchPlayer(prevPlayer, visitedSlots)) {
+        slotToPlayer[sIdx] = pIdx;
+        playerToSlot[pIdx] = sIdx;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (const pIdx of shuffledCopy(mustPlayIndices)) {
+    if (!tryMatchPlayer(pIdx, new Array<boolean>(slots.length).fill(false))) {
+      return null;
+    }
+  }
+
+  // Augment from empty slots to any unmatched optional player; must-play players only shift slots.
+  const allPlayerOrder = shuffledCopy([...optionalIndices, ...mustPlayIndices]);
+  const tryMatchSlot = (sIdx: number, visitedPlayers: boolean[]): boolean => {
+    for (const pIdx of allPlayerOrder) {
+      if (visitedPlayers[pIdx] || !canPlayerFillSlot(players[pIdx], slots[sIdx], respectTeamLocks)) {
+        continue;
+      }
+      visitedPlayers[pIdx] = true;
+      const prevSlot = playerToSlot[pIdx];
+      if (prevSlot === -1 || tryMatchSlot(prevSlot, visitedPlayers)) {
+        slotToPlayer[sIdx] = pIdx;
+        playerToSlot[pIdx] = sIdx;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (let sIdx = 0; sIdx < slots.length; sIdx++) {
+    if (slotToPlayer[sIdx] !== -1) continue;
+    if (!tryMatchSlot(sIdx, new Array<boolean>(players.length).fill(false))) {
+      return null;
+    }
+  }
+
+  const team1: RoleAssignment[] = [];
+  const team2: RoleAssignment[] = [];
+  const used = new Set<string>();
+
+  slots.forEach((slot, sIdx) => {
+    const player = players[slotToPlayer[sIdx]];
+    used.add(player.battletag);
+    const ra = createRoleAssignment(player, slot.role, mode);
+    if (slot.team === 1) team1.push(ra);
+    else team2.push(ra);
+  });
+
+  const bench = players.filter(p => !used.has(p.battletag));
+  return { team1, team2, bench };
+}
+
+function findBipartiteInitialAssignment(
+  players: LobbyPlayer[],
+  mode: GameMode,
+  respectTeamLocks: boolean,
+  mustPlayBattletags: Set<string>
+): { team1: RoleAssignment[]; team2: RoleAssignment[]; bench: LobbyPlayer[] } | null {
+  const validComps = getValidCompositions(mode);
+  const compPairs: Array<{ c1: typeof validComps[number]; c2: typeof validComps[number] }> = [];
+  for (const c1 of validComps) {
+    for (const c2 of validComps) {
+      compPairs.push({ c1, c2 });
+    }
+  }
+  for (const { c1, c2 } of shuffledCopy(compPairs)) {
+    const slots = buildSlotsForCompositions(c1, c2);
+    const result = solveBipartiteSlots(players, slots, mode, respectTeamLocks, mustPlayBattletags);
+    if (result) return result;
+  }
+  return null;
+}
+
+function diagnoseHardConstraintConflict(
+  players: LobbyPlayer[],
+  hardConstraints: SoftConstraint[],
+  mode: GameMode
+): string[] {
+  const messages: string[] = [];
+  const config = getModeConfig(mode);
+  const validComps = getValidCompositions(mode);
+  const maxRolePerTeam = (role: Role): number =>
+    Math.max(...validComps.map(c => c[role]));
+  const playerMap = new Map(players.map(p => [p.battletag, p]));
+
+  for (const hc of hardConstraints) {
+    if (hc.players.length < 2) continue;
+    const activeInConstraint = hc.players.map(bt => playerMap.get(bt)).filter((p): p is LobbyPlayer => !!p);
+    if (activeInConstraint.length < 2) continue;
+
+    if (hc.type === "together" && activeInConstraint.length > config.teamSize) {
+      messages.push(
+        `Too many players constrained together (${activeInConstraint.length}) for a team size of ${config.teamSize}`
+      );
+      continue;
+    }
+
+    if (hc.type === "together") {
+      for (const role of ALL_ROLES) {
+        const lockedToOnlyRole = activeInConstraint.filter(p => {
+          const eff = getEffectiveRoles(p);
+          return eff.length === 1 && eff[0] === role;
+        });
+        const maxSlots = maxRolePerTeam(role);
+        if (lockedToOnlyRole.length > maxSlots) {
+          const names = lockedToOnlyRole.map(p => p.battletag).join(" & ");
+          messages.push(
+            `${names} cannot play together: all are limited to ${role}, which only has ${maxSlots} slot${maxSlots === 1 ? "" : "s"} per team`
+          );
+        }
+      }
+    }
+  }
+
+  if (messages.length === 0 && hardConstraints.length > 0) {
+    messages.push(
+      "Could not satisfy hard together/apart constraints alongside role requirements — try relaxing a pairing constraint"
+    );
+  }
+  return messages;
+}
+
+function diagnoseCompositionFailure(
+  players: LobbyPlayer[],
+  mustPlayBattletags: Set<string>,
+  hardConstraints: SoftConstraint[],
+  mode: GameMode
+): Warning[] {
+  const messages: string[] = [];
+  const addMsg = (msg: string) => {
+    if (!messages.includes(msg)) messages.push(msg);
+  };
+
+  const config = getModeConfig(mode);
+  const requiredTotal = config.teamSize * 2;
+  const validComps = getValidCompositions(mode);
+
+  const minSubsetSlots = (subset: Role[]): number =>
+    2 * Math.min(...validComps.map(c => subset.reduce((s, r) => s + c[r], 0)));
+  const maxSubsetSlots = (subset: Role[]): number =>
+    2 * Math.max(...validComps.map(c => subset.reduce((s, r) => s + c[r], 0)));
+
+  // 1. Role locks incompatible with player's own willing roles
+  for (const p of players) {
+    if (p.lockedToRole !== null && !p.rolesWilling.includes(p.lockedToRole)) {
+      addMsg(`${p.battletag} is locked to ${p.lockedToRole}, which isn't in their willing roles`);
+    }
+  }
+
+  // 2. Role locks exceeding global slots
+  for (const msg of checkRoleLockConflicts(players, mode)) {
+    addMsg(`Cannot balance due to role locks: ${msg}`);
+  }
+
+  // 3. Total player count / must-play count
+  if (players.length < requiredTotal) {
+    addMsg(
+      `Not enough players: have ${players.length}, need ${requiredTotal} (${requiredTotal - players.length} more needed)`
+    );
+  }
+  if (mustPlayBattletags.size > requiredTotal) {
+    addMsg(
+      `Too many must-play players: ${mustPlayBattletags.size} marked must-play for ${requiredTotal} total slots`
+    );
+  }
+
+  // 4. Hall's condition: role subset shortages (accounting for role locks)
+  const failedSingleRoles = new Set<Role>();
+  for (const subset of ROLE_SUBSETS) {
+    if (subset.length > 1 && subset.some(r => failedSingleRoles.has(r))) continue;
+
+    const minNeed = minSubsetSlots(subset);
+    if (minNeed === 0) continue;
+
+    const eligibleWithLocks = players.filter(p =>
+      getEffectiveRoles(p).some(r => subset.includes(r))
+    ).length;
+
+    if (eligibleWithLocks < minNeed) {
+      const eligibleRaw = players.filter(p =>
+        p.rolesWilling.some(r => subset.includes(r))
+      ).length;
+      const lockNote = eligibleRaw >= minNeed ? " — check role locks" : "";
+      const shortage = minNeed - eligibleWithLocks;
+
+      if (subset.length === 1) {
+        const role = subset[0];
+        failedSingleRoles.add(role);
+        addMsg(
+          `Not enough ${role} players: have ${eligibleWithLocks}, need ${minNeed} (${shortage} more needed${lockNote})`
+        );
+      } else if (subset.length === 2) {
+        const label = subset.join("/");
+        addMsg(
+          `Not enough ${label} players combined: have ${eligibleWithLocks} for ${minNeed} combined ${label} slots (${shortage} more needed${lockNote})`
+        );
+      } else {
+        addMsg(
+          `Only ${eligibleWithLocks} eligible players can fill a role for ${minNeed} slots (${shortage} more needed${lockNote})`
+        );
+      }
+    }
+  }
+
+  // 5. Over-subscribed must-play players restricted to a role subset
+  if (mustPlayBattletags.size > 0) {
+    const mustPlayPlayers = players.filter(p => mustPlayBattletags.has(p.battletag));
+    const overflowedSingles = new Set<Role>();
+    for (const subset of ROLE_SUBSETS) {
+      if (subset.length > 1 && subset.some(r => overflowedSingles.has(r))) continue;
+      const maxSlots = maxSubsetSlots(subset);
+      const restrictedCount = mustPlayPlayers.filter(p => {
+        const eff = getEffectiveRoles(p);
+        return eff.length > 0 && eff.every(r => subset.includes(r));
+      }).length;
+
+      if (restrictedCount > maxSlots) {
+        if (subset.length === 1) overflowedSingles.add(subset[0]);
+        const roleLabel = subset.length === 1 ? `${subset[0]}-only` : `${subset.join("/")}-only`;
+        addMsg(
+          `Too many ${roleLabel} must-play players (${restrictedCount}) for ${maxSlots} ${subset.join("/")} slot${maxSlots === 1 ? "" : "s"}`
+        );
+      }
+    }
+  }
+
+  // 6. If role coverage itself is solvable without hard constraints, diagnose hard constraint conflict
+  if (messages.length === 0) {
+    const solvableWithoutHard = findBipartiteInitialAssignment(players, mode, false, mustPlayBattletags);
+    if (solvableWithoutHard && hardConstraints.length > 0) {
+      for (const hcMsg of diagnoseHardConstraintConflict(players, hardConstraints, mode)) {
+        addMsg(hcMsg);
+      }
+    } else if (!solvableWithoutHard) {
+      const counts = ALL_ROLES.map(
+        r => `${r}: ${players.filter(p => getEffectiveRoles(p).includes(r)).length}`
+      ).join(", ");
+      addMsg(
+        `No valid role assignment found with current role locks and must-play constraints (${counts})`
+      );
+    } else {
+      addMsg("Could not generate valid teams — check pairing constraints and role locks");
+    }
+  }
+
+  return messages.map(message => ({
+    type: "impossible_composition",
+    message,
+    severity: "error",
+  }));
+}
+
 // =============================================================================
 // Core Balancer Algorithm for PUGs Balancer
 // =============================================================================
@@ -161,9 +498,13 @@ function generateInitialAssignment(
     }
   }
 
-  // Verify all slots filled and must-play constraints met
-  for (const v of needed.values()) { if (v > 0) return null; }
-  for (const bt of mustPlayBattletags) { if (!used.has(bt)) return null; }
+  // Verify all slots filled and must-play constraints met; fall back to exact bipartite matching on tight flex lobbies
+  for (const v of needed.values()) {
+    if (v > 0) return findBipartiteInitialAssignment(players, mode, respectTeamLocks, mustPlayBattletags);
+  }
+  for (const bt of mustPlayBattletags) {
+    if (!used.has(bt)) return findBipartiteInitialAssignment(players, mode, respectTeamLocks, mustPlayBattletags);
+  }
 
   const bench = players.filter(p => !used.has(p.battletag));
   return { team1, team2, bench };
@@ -605,15 +946,16 @@ export function balanceTeams(
   }
 
   // Check role coverage
-  const { valid: canForm, missingRoles } = canFormValidTeams(activePlayers, mode);
-  if (!canForm) {
-    for (const { role, have, need } of missingRoles) {
-      warnings.push({
-        type: "impossible_composition",
-        message: `Not enough ${role} players: have ${have}, need ${need}`,
-        severity: "error",
-      });
-    }
+  if (!canFormValidTeams(activePlayers, mode).valid) {
+    warnings.push(
+      ...diagnoseCompositionFailure(activePlayers, new Set(), [], mode)
+    );
+    return {
+      team1: [],
+      team2: [],
+      warnings,
+      score: { team1SR: 0, team2SR: 0, srDifference: 0, archetypeParityMet: false },
+    };
   }
 
   // Handle too many must-play players - prioritize those who sat out longest
@@ -814,21 +1156,9 @@ export function balanceTeams(
   }
 
   if (!bestCandidate) {
-    // Check if role locks are the cause of the failure
-    const remainingConflicts = checkRoleLockConflicts(activePlayers, mode);
-    if (remainingConflicts.length > 0) {
-      warnings.push({
-        type: "impossible_composition",
-        message: `Cannot balance due to role locks: ${remainingConflicts.join(", ")}`,
-        severity: "error",
-      });
-    } else {
-      warnings.push({
-        type: "impossible_composition",
-        message: "Could not generate any valid team compositions - check role coverage",
-        severity: "error",
-      });
-    }
+    warnings.push(
+      ...diagnoseCompositionFailure(activePlayers, mustPlayBattletags, hardConstraints, mode)
+    );
 
     return {
       team1: [],

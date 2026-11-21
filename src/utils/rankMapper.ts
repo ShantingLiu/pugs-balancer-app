@@ -1,5 +1,4 @@
 import type { Role, LobbyPlayer, GameMode } from "@engine/types";
-import { getModeConfig } from "@engine/modeConfig";
 import ranksConfig from "@config/ranks.json";
 
 // =============================================================================
@@ -73,140 +72,98 @@ export function competitiveRankToSR(rank: string): number {
   return baseSR + (5 - subRank) * ranksConfig.subRankMultiplier;
 }
 
+type PlayerRankFields = {
+  tankRank: string | null;
+  dpsRank: string | null;
+  supportRank: string | null;
+  tankCompRank?: string | null;
+  dpsCompRank?: string | null;
+  supportCompRank?: string | null;
+  tank6v6Rank?: string | null;
+  dps6v6Rank?: string | null;
+  support6v6Rank?: string | null;
+  regularCompRank: string | null;
+  regular6v6Rank?: string | null;
+};
+
+type RoleRankCandidate = {
+  rank: string | null | undefined;
+  isStadium: boolean;
+};
+
+function getRoleCandidates(
+  player: PlayerRankFields,
+  role: Role,
+  mode: GameMode
+): RoleRankCandidate[] {
+  const stadiumRank =
+    role === "Tank" ? player.tankRank : role === "DPS" ? player.dpsRank : player.supportRank;
+  const compRank =
+    role === "Tank" ? player.tankCompRank : role === "DPS" ? player.dpsCompRank : player.supportCompRank;
+  const rank6v6 =
+    role === "Tank" ? player.tank6v6Rank : role === "DPS" ? player.dps6v6Rank : player.support6v6Rank;
+
+  if (mode === "stadium_5v5") {
+    return [
+      { rank: stadiumRank, isStadium: true },
+      { rank: compRank, isStadium: false },
+      { rank: rank6v6, isStadium: false },
+      { rank: player.regularCompRank, isStadium: false },
+      { rank: player.regular6v6Rank, isStadium: false },
+    ];
+  }
+
+  if (mode === "regular_6v6") {
+    return [
+      { rank: rank6v6, isStadium: false },
+      { rank: player.regular6v6Rank, isStadium: false },
+      { rank: compRank, isStadium: false },
+      { rank: player.regularCompRank, isStadium: false },
+      { rank: stadiumRank, isStadium: true },
+    ];
+  }
+
+  return [
+    { rank: compRank, isStadium: false },
+    { rank: player.regularCompRank, isStadium: false },
+    { rank: rank6v6, isStadium: false },
+    { rank: player.regular6v6Rank, isStadium: false },
+    { rank: stadiumRank, isStadium: true },
+  ];
+}
+
 /**
- * Get the SR for a player's rank in a specific role
- * Mode-aware: Stadium mode uses stadium ranks first, Regular mode uses comp ranks first
- *
- * @param player - Player or LobbyPlayer
- * @param role - Role to get SR for
- * @param mode - Game mode (defaults to stadium_5v5 for backward compatibility)
- * @returns SR value or null if no rank available
+ * Get the SR for a player's rank in a specific role.
+ * Mode-aware across all three rank sets: Stadium, Regular 5v5, and Regular 6v6.
  */
 export function getRoleRankSR(
-  player: { 
-    tankRank: string | null; 
-    dpsRank: string | null; 
-    supportRank: string | null; 
-    tankCompRank?: string | null;
-    dpsCompRank?: string | null;
-    supportCompRank?: string | null;
-    regularCompRank: string | null;
-  },
+  player: PlayerRankFields,
   role: Role,
   mode: GameMode = "stadium_5v5"
 ): number | null {
-  const modeConfig = getModeConfig(mode);
-  
-  // Get role-specific ranks
-  const stadiumRank =
-    role === "Tank"
-      ? player.tankRank
-      : role === "DPS"
-        ? player.dpsRank
-        : player.supportRank;
-
-  const compRank =
-    role === "Tank"
-      ? player.tankCompRank
-      : role === "DPS"
-        ? player.dpsCompRank
-        : player.supportCompRank;
-
-  if (modeConfig.useStadiumRanks) {
-    // Stadium mode: Stadium rank → comp rank → global fallback
-    if (stadiumRank) {
-      try {
-        return rankToSR(stadiumRank);
-      } catch {
-        // Invalid rank format, fall through
-      }
-    }
-
-    if (compRank) {
-      try {
-        return competitiveRankToSR(compRank);
-      } catch {
-        // Invalid rank format, fall through
-      }
-    }
-  } else {
-    // Regular mode: Comp rank → Stadium rank (as fallback) → global fallback
-    if (compRank) {
-      try {
-        return competitiveRankToSR(compRank);
-      } catch {
-        // Invalid rank format, fall through
-      }
-    }
-
-    // Use Stadium rank as fallback in regular mode (better than nothing)
-    if (stadiumRank) {
-      try {
-        return rankToSR(stadiumRank);
-      } catch {
-        // Invalid rank format, fall through
-      }
-    }
-  }
-
-  // Global regular comp rank as final fallback
-  if (player.regularCompRank) {
+  for (const { rank, isStadium } of getRoleCandidates(player, role, mode)) {
+    if (!rank) continue;
     try {
-      return competitiveRankToSR(player.regularCompRank);
+      return isStadium ? rankToSR(rank) : competitiveRankToSR(rank);
     } catch {
-      // Invalid rank format, return null
+      // Invalid rank format, fall through to next priority candidate
     }
   }
-
   return null;
 }
 
 /**
- * Get the rank display string for a player in a specific role (mode-aware)
- * Returns the appropriate rank string based on game mode preferences.
- *
- * @param player - Player object
- * @param role - Role to get rank for
- * @param mode - Game mode (defaults to stadium_5v5)
- * @returns Rank string or null if not available
+ * Get the rank display string for a player in a specific role (mode-aware).
  */
 export function getRoleRankDisplay(
-  player: { 
-    tankRank: string | null; 
-    dpsRank: string | null; 
-    supportRank: string | null; 
-    tankCompRank?: string | null;
-    dpsCompRank?: string | null;
-    supportCompRank?: string | null;
-    regularCompRank: string | null;
-  },
+  player: PlayerRankFields,
   role: Role,
   mode: GameMode = "stadium_5v5"
 ): string | null {
-  const modeConfig = getModeConfig(mode);
-  
-  // Get role-specific ranks
-  const stadiumRank =
-    role === "Tank"
-      ? player.tankRank
-      : role === "DPS"
-        ? player.dpsRank
-        : player.supportRank;
-
-  const compRank =
-    role === "Tank"
-      ? player.tankCompRank
-      : role === "DPS"
-        ? player.dpsCompRank
-        : player.supportCompRank;
-
-  if (modeConfig.useStadiumRanks) {
-    // Stadium mode: Stadium rank → comp rank → global fallback
-    return stadiumRank || compRank || player.regularCompRank || null;
-  } else {
-    // Regular mode: comp rank → global fallback → stadium rank
-    return compRank || player.regularCompRank || stadiumRank || null;
+  for (const { rank } of getRoleCandidates(player, role, mode)) {
+    if (rank) return rank;
   }
+  return null;
 }
 
 /**
@@ -241,16 +198,7 @@ export function getEffectiveSR(player: LobbyPlayer, role: Role, mode: GameMode =
  * @param mode - Game mode (defaults to stadium_5v5)
  */
 export function getDisplaySR(
-  player: { 
-    tankRank: string | null; 
-    dpsRank: string | null; 
-    supportRank: string | null;
-    tankCompRank?: string | null;
-    dpsCompRank?: string | null;
-    supportCompRank?: string | null;
-    regularCompRank: string | null; 
-    rolePreference: Role[];
-  },
+  player: PlayerRankFields & { rolePreference: Role[] },
   mode: GameMode = "stadium_5v5"
 ): number {
   // Use first preferred role

@@ -30,7 +30,6 @@
     "Reaper": { "role": "DPS", "stadiumEligible": true },
     "Sojourn": { "role": "DPS", "stadiumEligible": true },
     "Soldier: 76": { "role": "DPS", "stadiumEligible": true },
-    "Sombra": { "role": "DPS", "stadiumEligible": false },
     "Symmetra": { "role": "DPS", "stadiumEligible": false },
     "Torbjorn": { "role": "DPS", "stadiumEligible": true },
     "Tracer": { "role": "DPS", "stadiumEligible": true },
@@ -50,6 +49,7 @@
     "Mercy": { "role": "Support", "stadiumEligible": true },
     "Mizuki": { "role": "Support", "stadiumEligible": false },
     "Moira": { "role": "Support", "stadiumEligible": true },
+    "Sombra": { "role": "Support", "stadiumEligible": false },
     "Wuyang": { "role": "Support", "stadiumEligible": true },
     "Zenyatta": { "role": "Support", "stadiumEligible": true }
   }

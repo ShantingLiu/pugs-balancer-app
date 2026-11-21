@@ -245,9 +245,12 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   const team2AvgSR = calculateTeamAvgSR(team2, lobbyMap, gameMode);
   const srDifference = Math.abs(team1AvgSR - team2AvgSR);
 
+  const hasErrorWarnings = warnings.some((w) => w.severity === "error");
+
   return (
     <div className="space-y-5">
       {/* Matchup summary bar */}
+      {hasTeams && (
       <div className="app-surface p-5">
         <div className="grid grid-cols-3 items-center gap-4 text-center">
           <div>
@@ -296,6 +299,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
           </div>
         </div>
       </div>
+      )}
 
       {/* Warnings */}
       {warnings.length > 0 && <WarningsPanel warnings={warnings} compact />}
@@ -377,7 +381,7 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
             </div>
           )}
         </>
-      ) : (
+      ) : hasErrorWarnings ? null : (
         <div className="app-surface p-5 text-center text-muted py-8">
           Could not generate valid teams. Check warnings above.
         </div>
