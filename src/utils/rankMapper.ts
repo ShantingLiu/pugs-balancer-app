@@ -280,6 +280,7 @@ const COMPETITIVE_TIERS: CompetitiveRankTier[] = [
   "Silver",
   "Gold",
   "Platinum",
+  "Emerald",
   "Diamond",
   "Master",
   "Grandmaster",
@@ -321,8 +322,8 @@ export function srToRank(sr: number): string {
  * @returns Rank string (e.g., "Diamond 3")
  */
 export function srToCompetitiveRank(sr: number): string {
-  // Clamp SR to valid range
-  const clampedSR = Math.max(1000, Math.min(4900, sr));
+  // Clamp SR to valid range (Bronze 5 = 1000 .. Champion 1 = 5400)
+  const clampedSR = Math.max(1000, Math.min(5400, sr));
   
   // Find the appropriate tier
   let tier: CompetitiveRankTier = "Bronze";

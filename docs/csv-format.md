@@ -36,7 +36,7 @@ Download a template from the app by clicking **📥 Download Template** in the I
 | `support_comp_rank` | `Tier [1-5]` | `Grandmaster 3` | Regular comp rank for Support role |
 | `regular_comp_rank` | `Tier [1-5]` | `Diamond 2` | Global fallback rank for all roles |
 
-**Valid Competitive Tiers**: Bronze, Silver, Gold, Platinum, Diamond, Master, Grandmaster, Champion
+**Valid Competitive Tiers**: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master, Grandmaster, Champion
 
 **Rank Resolution (Regular 5v5 mode)**:
 1. Role-specific comp rank (e.g., `tank_comp_rank`)

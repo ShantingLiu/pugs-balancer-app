@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankToSR, competitiveRankToSR, getRoleRankSR, getEffectiveSR } from "@utils/rankMapper";
+import { rankToSR, competitiveRankToSR, srToCompetitiveRank, getRoleRankSR, getEffectiveSR } from "@utils/rankMapper";
 import type { LobbyPlayer } from "@engine/types";
 
 describe("rankMapper", () => {
@@ -37,10 +37,25 @@ describe("rankMapper", () => {
   });
 
   describe("competitiveRankToSR", () => {
-    it("should convert competitive ranks", () => {
-      expect(competitiveRankToSR("Diamond 3")).toBe(3200);
-      expect(competitiveRankToSR("Master 1")).toBe(3900);
+    it("should convert competitive ranks including Emerald between Platinum and Diamond", () => {
       expect(competitiveRankToSR("Gold 5")).toBe(2000);
+      expect(competitiveRankToSR("Platinum 1")).toBe(2900);
+      expect(competitiveRankToSR("Emerald 5")).toBe(3000);
+      expect(competitiveRankToSR("Emerald 3")).toBe(3200);
+      expect(competitiveRankToSR("Emerald 1")).toBe(3400);
+      expect(competitiveRankToSR("Diamond 5")).toBe(3500);
+      expect(competitiveRankToSR("Diamond 3")).toBe(3700);
+      expect(competitiveRankToSR("Master 1")).toBe(4400);
+      expect(competitiveRankToSR("Champion 1")).toBe(5400);
+    });
+
+    it("should round-trip SR values cleanly across Platinum, Emerald, Diamond, and Champion", () => {
+      expect(srToCompetitiveRank(2900)).toBe("Platinum 1");
+      expect(srToCompetitiveRank(3000)).toBe("Emerald 5");
+      expect(srToCompetitiveRank(3200)).toBe("Emerald 3");
+      expect(srToCompetitiveRank(3400)).toBe("Emerald 1");
+      expect(srToCompetitiveRank(3500)).toBe("Diamond 5");
+      expect(srToCompetitiveRank(5400)).toBe("Champion 1");
     });
 
     it("should throw for stadium ranks", () => {
@@ -69,7 +84,7 @@ describe("rankMapper", () => {
         regularCompRank: "Diamond 2",
       };
 
-      expect(getRoleRankSR(player, "Support")).toBe(3300);
+      expect(getRoleRankSR(player, "Support")).toBe(3800);
     });
 
     it("should return null if no rank available", () => {

@@ -136,7 +136,7 @@ export function buildTemplateRequest(title: string): object {
                   {
                     userEnteredValue: {
                       stringValue:
-                        "Valid Comp tiers: Bronze, Silver, Gold, Platinum, Diamond, Master, Grandmaster, Champion (sub-rank 1-5)",
+                        "Valid Comp tiers: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master, Grandmaster, Champion (sub-rank 1-5)",
                     },
                   },
                 ],
@@ -258,6 +258,7 @@ export function buildDataValidationRequests(sheetId: number): object[] {
     "Silver",
     "Gold",
     "Platinum",
+    "Emerald",
     "Diamond",
     "Master",
     "Grandmaster",

@@ -49,7 +49,7 @@ Stadium uses different rank names than regular competitive.
 
 **Stadium Tiers**: Rookie, Novice, Contender, Elite, Pro, All-Star, Legend
 
-**NOT**: Bronze, Silver, Gold, Platinum, Diamond, Master (these are competitive ranks)
+**NOT**: Bronze, Silver, Gold, Platinum, Emerald, Diamond, Master (these are competitive ranks)
 
 ### CSV not importing at all
 

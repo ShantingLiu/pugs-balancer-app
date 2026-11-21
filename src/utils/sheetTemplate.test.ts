@@ -251,14 +251,15 @@ describe("sheetTemplate", () => {
       }
     });
 
-    it("should produce 40 comp rank options (8 tiers × 5)", () => {
+    it("should produce 45 comp rank options (9 tiers × 5)", () => {
       const compReq = (requests[4] as Record<string, unknown>)
         .setDataValidation as Record<string, unknown>;
       const values = (
         (compReq.rule as Record<string, unknown>).condition as Record<string, unknown>
       ).values as Array<Record<string, string>>;
-      expect(values).toHaveLength(40);
+      expect(values).toHaveLength(45);
       expect(values[0].userEnteredValue).toBe("Bronze 1");
+      expect(values.some((v) => v.userEnteredValue === "Emerald 3")).toBe(true);
       expect(values[values.length - 1].userEnteredValue).toBe("Champion 5");
     });
 

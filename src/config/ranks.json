@@ -13,10 +13,11 @@
     "Silver": 1500,
     "Gold": 2000,
     "Platinum": 2500,
-    "Diamond": 3000,
-    "Master": 3500,
-    "Grandmaster": 4000,
-    "Champion": 4400
+    "Emerald": 3000,
+    "Diamond": 3500,
+    "Master": 4000,
+    "Grandmaster": 4500,
+    "Champion": 5000
   },
   "subRankMultiplier": 100,
   "defaultSubRank": 3,
