@@ -1,6 +1,8 @@
 mod keychain;
 mod oauth_listener;
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -19,9 +21,15 @@ pub fn run() {
     ))
     .setup(|app| {
       #[cfg(desktop)]
-      app
-        .handle()
-        .plugin(tauri_plugin_updater::Builder::new().build())?;
+      {
+        app
+          .handle()
+          .plugin(tauri_plugin_updater::Builder::new().build())?;
+
+        if let Some(window) = app.get_webview_window("main") {
+          let _ = window.set_icon(tauri::include_image!("./icons/128x128@2x.png"));
+        }
+      }
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
