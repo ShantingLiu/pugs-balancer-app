@@ -1,5 +1,6 @@
 {
   "heroes": {
+    "D.Mon": { "role": "Tank", "stadiumEligible": false },
     "D.Va": { "role": "Tank", "stadiumEligible": true },
     "Doomfist": { "role": "Tank", "stadiumEligible": true },
     "Domina": { "role": "Tank", "stadiumEligible": false },
@@ -28,6 +29,8 @@
     "Mei": { "role": "DPS", "stadiumEligible": true },
     "Pharah": { "role": "DPS", "stadiumEligible": true },
     "Reaper": { "role": "DPS", "stadiumEligible": true },
+    "Shion": { "role": "DPS", "stadiumEligible": false },
+    "Sierra": { "role": "DPS", "stadiumEligible": false },
     "Sojourn": { "role": "DPS", "stadiumEligible": true },
     "Soldier: 76": { "role": "DPS", "stadiumEligible": true },
     "Symmetra": { "role": "DPS", "stadiumEligible": false },
@@ -40,6 +43,7 @@
     "Ana": { "role": "Support", "stadiumEligible": true },
     "Baptiste": { "role": "Support", "stadiumEligible": false },
     "Brigitte": { "role": "Support", "stadiumEligible": true },
+    "Doctrine": { "role": "Support", "stadiumEligible": false },
     "Illari": { "role": "Support", "stadiumEligible": false },
     "Jetpack Cat": { "role": "Support", "stadiumEligible": true },
     "Juno": { "role": "Support", "stadiumEligible": true },

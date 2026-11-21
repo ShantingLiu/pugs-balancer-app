@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Player, Role } from "@engine/types";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
-import { getHeroesForRoleAndMode } from "@utils/heroUtils";
+import { getHeroesByRole } from "@utils/heroUtils";
 
 // =============================================================================
 // AddPlayerModal - Add or edit players in-app
@@ -85,7 +85,6 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
   const removePlayer = usePlayerStore((state) => state.removePlayer);
   const getPlayer = usePlayerStore((state) => state.getPlayer);
   const renamePlayerInSession = useSessionStore((state) => state.renamePlayerInSession);
-  const gameMode = useSessionStore((state) => state.gameMode);
 
   const [battletag, setBattletag] = useState("");
   const [originalBattletag, setOriginalBattletag] = useState("");
@@ -95,14 +94,11 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
 
   const isEditing = !!editPlayer;
 
-  const HEROES_BY_ROLE = useMemo<Record<Role, string[]>>(
-    () => ({
-      Tank: getHeroesForRoleAndMode("Tank", gameMode),
-      DPS: getHeroesForRoleAndMode("DPS", gameMode),
-      Support: getHeroesForRoleAndMode("Support", gameMode),
-    }),
-    [gameMode]
-  );
+  const HEROES_BY_ROLE: Record<Role, string[]> = {
+    Tank: getHeroesByRole("Tank"),
+    DPS: getHeroesByRole("DPS"),
+    Support: getHeroesByRole("Support"),
+  };
 
   useEffect(() => {
     if (isOpen) {

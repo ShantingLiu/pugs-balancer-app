@@ -73,7 +73,7 @@ export const MODE_CONFIGS: Record<GameMode, ModeConfig> = {
     useStadiumRanks: true,
     checkArchetypes: true,
     checkOneTricks: true,
-    heroFilter: "stadium",
+    heroFilter: "all",
     accentColor: "blue",
   },
   

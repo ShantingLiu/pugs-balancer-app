@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AddPlayerModal } from "./AddPlayerModal";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
+import { getHeroRole, getHeroesForRoleAndMode } from "@utils/heroUtils";
 import type { Player } from "@engine/types";
 
 // =============================================================================
@@ -296,6 +297,38 @@ describe("AddPlayerModal", () => {
       // Both players should still exist (no duplicates/overwrites)
       expect(usePlayerStore.getState().getPlayer("Player1#1111")).toBeDefined();
       expect(usePlayerStore.getState().getPlayer("Player2#2222")).toBeDefined();
+    });
+  });
+
+  describe("full hero roster expansion", () => {
+    it("maps new and reclassified heroes to their expected roles", () => {
+      expect(getHeroRole("D.Mon")).toBe("Tank");
+      expect(getHeroRole("Domina")).toBe("Tank");
+      expect(getHeroRole("Anran")).toBe("DPS");
+      expect(getHeroRole("Emre")).toBe("DPS");
+      expect(getHeroRole("Shion")).toBe("DPS");
+      expect(getHeroRole("Sierra")).toBe("DPS");
+      expect(getHeroRole("Doctrine")).toBe("Support");
+      expect(getHeroRole("Mizuki")).toBe("Support");
+      expect(getHeroRole("Sombra")).toBe("Support");
+    });
+
+    it("shows full hero roster including non-Stadium heroes even in stadium_5v5 mode", () => {
+      useSessionStore.setState({ gameMode: "stadium_5v5" });
+      expect(getHeroesForRoleAndMode("Tank", "stadium_5v5")).toEqual(
+        expect.arrayContaining(["D.Mon", "Domina", "Mauga"])
+      );
+      expect(getHeroesForRoleAndMode("DPS", "stadium_5v5")).toEqual(
+        expect.arrayContaining(["Anran", "Emre", "Shion", "Sierra"])
+      );
+      expect(getHeroesForRoleAndMode("Support", "stadium_5v5")).toEqual(
+        expect.arrayContaining(["Doctrine", "Mizuki", "Sombra"])
+      );
+
+      render(<AddPlayerModal isOpen={true} onClose={mockOnClose} />);
+      for (const hero of ["D.Mon", "Domina", "Anran", "Emre", "Shion", "Sierra", "Doctrine", "Mizuki", "Sombra"]) {
+        expect(screen.getByRole("button", { name: hero })).toBeInTheDocument();
+      }
     });
   });
 });

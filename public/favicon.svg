@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="128" y1="64" x2="896" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2b1e48" />
+      <stop offset="55%" stop-color="#1c1430" />
+      <stop offset="100%" stop-color="#140f24" />
+    </linearGradient>
+    <linearGradient id="innerRim" x1="120" y1="120" x2="904" y2="904" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f472b6" stop-opacity="0.35" />
+      <stop offset="50%" stop-color="#c4b5fd" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.35" />
+    </linearGradient>
+    <linearGradient id="leftArc" x1="202" y1="224" x2="396" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+    <linearGradient id="rightArc" x1="822" y1="224" x2="628" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="badge" x1="360" y1="664" x2="664" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#fb7185" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded squircle app tile -->
+  <rect x="48" y="48" width="928" height="928" rx="224" fill="url(#bg)" />
+  <rect x="56" y="56" width="912" height="912" rx="216" stroke="url(#innerRim)" stroke-width="10" />
+
+  <!-- Subtle inner radial highlight -->
+  <circle cx="512" cy="512" r="370" fill="#ffffff" fill-opacity="0.03" />
+
+  <!-- Balanced two-team arena arcs (Team 1 Pink left, Team 2 Sky right) -->
+  <path
+    d="M 392.0 808.7 A 320 320 0 0 1 392.0 215.3"
+    stroke="url(#leftArc)"
+    stroke-width="68"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 632.0 215.3 A 320 320 0 0 1 632.0 808.7"
+    stroke="url(#rightArc)"
+    stroke-width="68"
+    stroke-linecap="round"
+  />
+
+  <!-- Signature Swoo's brand coin & heart -->
+  <circle cx="512" cy="512" r="204" fill="url(#badge)" stroke="#fbcfe8" stroke-opacity="0.45" stroke-width="10" />
+  <g transform="translate(368, 372) scale(12)">
+    <path
+      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+      fill="#ffffff"
+    />
+  </g>
+</svg>
