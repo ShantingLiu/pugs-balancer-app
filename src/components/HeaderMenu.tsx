@@ -141,8 +141,9 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
           <div
             role="menu"
             aria-label="App menu"
-            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 max-h-[80dvh] overflow-y-auto px-4 pt-3.5 pb-3 space-y-3.5"
+            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 overflow-hidden"
           >
+            <div className="max-h-[min(calc(100dvh-5.5rem),44rem)] overflow-y-auto app-menu-scroll px-4 pt-3.5 pb-3 space-y-3">
             {/* Google Sheets */}
             <div>
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -348,6 +349,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
                   {updateNote.text}
                 </p>
               )}
+            </div>
             </div>
           </div>
         )}

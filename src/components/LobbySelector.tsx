@@ -68,6 +68,7 @@ export function LobbySelector() {
   const lockedTeam1 = useSessionStore((state) => state.lockedTeam1);
   const lockedTeam2 = useSessionStore((state) => state.lockedTeam2);
   const lockedRoles = useSessionStore((state) => state.lockedRoles);
+  const lockedRolePools = useSessionStore((state) => state.lockedRolePools);
   const afkPlayers = useSessionStore((state) => state.afkPlayers);
   const tempWeightOverrides = useSessionStore((state) => state.tempWeightOverrides);
   const playerLossStreaks = useSessionStore((state) => state.playerLossStreaks);
@@ -115,6 +116,7 @@ export function LobbySelector() {
         mustPlayPriority: mustPlayPriority.get(battletag) ?? 0,
         lockedToTeam,
         lockedToRole: lockedRoles.get(battletag) ?? null,
+        lockedToRoles: lockedRolePools.get(battletag),
         tempWeightOverride: tempWeightOverrides.get(battletag) ?? null,
         adaptiveWeight: adaptiveWeights.get(battletag) ?? 0,
         isAfk: afkPlayers.has(battletag),
@@ -123,7 +125,7 @@ export function LobbySelector() {
       });
     }
     return map;
-  }, [lobbyBattletags, players, mustPlay, mustPlayPriority, lockedTeam1, lockedTeam2, lockedRoles, afkPlayers, tempWeightOverrides, adaptiveWeights, playerLossStreaks, satOutStreaks]);
+  }, [lobbyBattletags, players, mustPlay, mustPlayPriority, lockedTeam1, lockedTeam2, lockedRoles, lockedRolePools, afkPlayers, tempWeightOverrides, adaptiveWeights, playerLossStreaks, satOutStreaks]);
 
   const lobbySummary = useMemo(() => {
     let tank = 0;

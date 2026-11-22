@@ -673,3 +673,61 @@ describe("mustPlayPriority updates", () => {
     expect(state.mustPlayPriority.get("A#1")).toBe(1);
   });
 });
+
+describe("toggleRoleLock (multi-role lock pools)", () => {
+  beforeEach(() => {
+    useSessionStore.setState(useSessionStore.getInitialState());
+    usePlayerStore.setState(usePlayerStore.getInitialState());
+  });
+
+  it("supports toggling multiple roles on a 3-role flex player and clears when all willing roles selected", () => {
+    const willing: ("Tank" | "DPS" | "Support")[] = ["Tank", "DPS", "Support"];
+    seedLobby(["Flex#1"], [willing]);
+
+    // First click locks to single role
+    useSessionStore.getState().toggleRoleLock("Flex#1", "DPS", willing);
+    expect(useSessionStore.getState().lockedRoles.get("Flex#1")).toBe("DPS");
+    expect(useSessionStore.getState().lockedRolePools.get("Flex#1")).toBeUndefined();
+
+    // Second click widens to multi-role pool (DPS + Support)
+    useSessionStore.getState().toggleRoleLock("Flex#1", "Support", willing);
+    expect(useSessionStore.getState().lockedRoles.get("Flex#1")).toBeUndefined();
+    expect(useSessionStore.getState().lockedRolePools.get("Flex#1")).toEqual(["DPS", "Support"]);
+
+    let lp = useSessionStore.getState().getLobbyPlayers()[0];
+    expect(lp.lockedToRole).toBeNull();
+    expect(lp.lockedToRoles).toEqual(["DPS", "Support"]);
+
+    // Toggling DPS off narrows back to single Support lock
+    useSessionStore.getState().toggleRoleLock("Flex#1", "DPS", willing);
+    expect(useSessionStore.getState().lockedRoles.get("Flex#1")).toBe("Support");
+    expect(useSessionStore.getState().lockedRolePools.get("Flex#1")).toBeUndefined();
+
+    // Re-add DPS then add Tank (all 3 willing) -> unlocks back to unrestricted
+    useSessionStore.getState().toggleRoleLock("Flex#1", "DPS", willing);
+    useSessionStore.getState().toggleRoleLock("Flex#1", "Tank", willing);
+    expect(useSessionStore.getState().lockedRoles.get("Flex#1")).toBeUndefined();
+    expect(useSessionStore.getState().lockedRolePools.get("Flex#1")).toBeUndefined();
+
+    lp = useSessionStore.getState().getLobbyPlayers()[0];
+    expect(lp.lockedToRole).toBeNull();
+    expect(lp.lockedToRoles).toBeUndefined();
+  });
+
+  it("clears lockedRolePools on clearRoleLocks and setGameMode", () => {
+    const willing: ("Tank" | "DPS" | "Support")[] = ["Tank", "DPS", "Support"];
+    seedLobby(["Flex#1"], [willing]);
+
+    useSessionStore.getState().toggleRoleLock("Flex#1", "DPS", willing);
+    useSessionStore.getState().toggleRoleLock("Flex#1", "Support", willing);
+    expect(useSessionStore.getState().lockedRolePools.get("Flex#1")).toEqual(["DPS", "Support"]);
+
+    useSessionStore.getState().clearRoleLocks();
+    expect(useSessionStore.getState().lockedRolePools.size).toBe(0);
+
+    useSessionStore.getState().toggleRoleLock("Flex#1", "DPS", willing);
+    useSessionStore.getState().toggleRoleLock("Flex#1", "Support", willing);
+    useSessionStore.getState().setGameMode("regular_6v6");
+    expect(useSessionStore.getState().lockedRolePools.size).toBe(0);
+  });
+});

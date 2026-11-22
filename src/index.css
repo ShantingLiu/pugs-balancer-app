@@ -75,6 +75,19 @@ body {
   padding-right: 4px;
 }
 
+/* Inset menu scrollbar away from the rounded .app-modal border corners */
+.app-menu-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-menu-scroll::-webkit-scrollbar-track {
+  margin-block: 12px;
+}
+
+.app-menu-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+}
+
 button,
 input,
 select,

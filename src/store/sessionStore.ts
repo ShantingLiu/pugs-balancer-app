@@ -36,6 +36,9 @@ interface SessionState {
   /** Battletags locked to a specific role (battletag -> role) */
   lockedRoles: Map<string, Role>;
 
+  /** Battletags restricted to multiple roles (battletag -> roles) */
+  lockedRolePools: Map<string, Role[]>;
+
   /** Temporary weight overrides (battletag -> modifier) */
   tempWeightOverrides: Map<string, number>;
 
@@ -112,6 +115,7 @@ interface SessionActions {
 
   // Role lock management
   lockToRole: (battletag: string, role: Role | null) => void;
+  toggleRoleLock: (battletag: string, role: Role, willingRoles?: Role[]) => void;
   clearRoleLocks: () => void;
 
   // Draft mode
@@ -213,6 +217,7 @@ const sessionStorage = {
         parsed.state.lockedTeam1 = new Set(parsed.state.lockedTeam1 || []);
         parsed.state.lockedTeam2 = new Set(parsed.state.lockedTeam2 || []);
         parsed.state.lockedRoles = new Map(parsed.state.lockedRoles || []);
+        parsed.state.lockedRolePools = new Map(parsed.state.lockedRolePools || []);
         parsed.state.afkPlayers = new Set(parsed.state.afkPlayers || []);
         parsed.state.lastGamePlayers = new Set(parsed.state.lastGamePlayers || []);
         parsed.state.tempWeightOverrides = new Map(parsed.state.tempWeightOverrides || []);
@@ -296,6 +301,7 @@ const sessionStorage = {
         lockedTeam1: Array.from(toStore.state.lockedTeam1),
         lockedTeam2: Array.from(toStore.state.lockedTeam2),
         lockedRoles: Array.from(toStore.state.lockedRoles.entries()),
+        lockedRolePools: Array.from(toStore.state.lockedRolePools.entries()),
         afkPlayers: Array.from(toStore.state.afkPlayers),
         lastGamePlayers: Array.from(toStore.state.lastGamePlayers),
         tempWeightOverrides: Array.from(toStore.state.tempWeightOverrides.entries()),
@@ -337,6 +343,7 @@ const initialState: SessionState = {
   lockedTeam1: new Set(),
   lockedTeam2: new Set(),
   lockedRoles: new Map(),
+  lockedRolePools: new Map(),
   tempWeightOverrides: new Map(),
   afkPlayers: new Set(),
   softConstraints: [],
@@ -447,6 +454,11 @@ export const useSessionStore = create<SessionStore>()(
             newMap.delete(battletag);
             return newMap;
           })(),
+          lockedRolePools: (() => {
+            const newMap = new Map(state.lockedRolePools);
+            newMap.delete(battletag);
+            return newMap;
+          })(),
           afkPlayers: (() => {
             const newSet = new Set(state.afkPlayers);
             newSet.delete(battletag);
@@ -467,6 +479,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: new Set(),
           lockedTeam2: new Set(),
           lockedRoles: new Map(),
+  lockedRolePools: new Map(),
           afkPlayers: new Set(),
           tempWeightOverrides: new Map(),
           softConstraints: [],
@@ -531,17 +544,54 @@ export const useSessionStore = create<SessionStore>()(
       lockToRole: (battletag: string, role: Role | null) => {
         set((state) => {
           const newLockedRoles = new Map(state.lockedRoles);
+          const newLockedPools = new Map(state.lockedRolePools);
+          newLockedPools.delete(battletag);
           if (role === null) {
             newLockedRoles.delete(battletag);
           } else {
             newLockedRoles.set(battletag, role);
           }
-          return { lockedRoles: newLockedRoles };
+          return { lockedRoles: newLockedRoles, lockedRolePools: newLockedPools };
+        });
+      },
+
+      toggleRoleLock: (battletag: string, role: Role, willingRoles?: Role[]) => {
+        set((state) => {
+          const newLockedRoles = new Map(state.lockedRoles);
+          const newLockedPools = new Map(state.lockedRolePools);
+
+          const pool = newLockedPools.get(battletag);
+          const single = newLockedRoles.get(battletag);
+          const current: Role[] = pool && pool.length > 0 ? pool : single ? [single] : [];
+
+          let next: Role[] = current.includes(role)
+            ? current.filter((r) => r !== role)
+            : [...current, role];
+
+          if (willingRoles && willingRoles.length > 0) {
+            next = willingRoles.filter((r) => next.includes(r));
+          }
+
+          newLockedRoles.delete(battletag);
+          newLockedPools.delete(battletag);
+
+          const coversAllWilling =
+            willingRoles !== undefined &&
+            willingRoles.length > 0 &&
+            willingRoles.every((r) => next.includes(r));
+
+          if (next.length === 1 && !coversAllWilling) {
+            newLockedRoles.set(battletag, next[0]);
+          } else if (next.length >= 2 && !coversAllWilling) {
+            newLockedPools.set(battletag, next);
+          }
+
+          return { lockedRoles: newLockedRoles, lockedRolePools: newLockedPools };
         });
       },
 
       clearRoleLocks: () => {
-        set({ lockedRoles: new Map() });
+        set({ lockedRoles: new Map(), lockedRolePools: new Map() });
       },
 
       // Draft mode
@@ -556,6 +606,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: new Set(),
           lockedTeam2: new Set(),
           lockedRoles: new Map(),
+  lockedRolePools: new Map(),
           pendingMatchResult: null,
         });
       },
@@ -580,6 +631,8 @@ export const useSessionStore = create<SessionStore>()(
 
         // Use provided role, or auto-assign from preference if not already locked
         const newLockedRoles = new Map(state.lockedRoles);
+        const newLockedPools = new Map(state.lockedRolePools);
+        newLockedPools.delete(battletag);
         if (role) {
           newLockedRoles.set(battletag, role);
         } else if (!newLockedRoles.has(battletag)) {
@@ -590,7 +643,12 @@ export const useSessionStore = create<SessionStore>()(
           }
         }
 
-        set({ lockedTeam1: newTeam1, lockedTeam2: newTeam2, lockedRoles: newLockedRoles });
+        set({
+          lockedTeam1: newTeam1,
+          lockedTeam2: newTeam2,
+          lockedRoles: newLockedRoles,
+          lockedRolePools: newLockedPools,
+        });
       },
 
       unassignFromTeam: (battletag: string) => {
@@ -598,12 +656,19 @@ export const useSessionStore = create<SessionStore>()(
           const newTeam1 = new Set(state.lockedTeam1);
           const newTeam2 = new Set(state.lockedTeam2);
           const newLockedRoles = new Map(state.lockedRoles);
+          const newLockedPools = new Map(state.lockedRolePools);
 
           newTeam1.delete(battletag);
           newTeam2.delete(battletag);
           newLockedRoles.delete(battletag);
+          newLockedPools.delete(battletag);
 
-          return { lockedTeam1: newTeam1, lockedTeam2: newTeam2, lockedRoles: newLockedRoles };
+          return {
+            lockedTeam1: newTeam1,
+            lockedTeam2: newTeam2,
+            lockedRoles: newLockedRoles,
+            lockedRolePools: newLockedPools,
+          };
         });
       },
 
@@ -618,8 +683,10 @@ export const useSessionStore = create<SessionStore>()(
         const nextIndex = (currentIndex + 1) % player.rolesWilling.length;
 
         const newLockedRoles = new Map(state.lockedRoles);
+        const newLockedPools = new Map(state.lockedRolePools);
+        newLockedPools.delete(battletag);
         newLockedRoles.set(battletag, player.rolesWilling[nextIndex]);
-        set({ lockedRoles: newLockedRoles });
+        set({ lockedRoles: newLockedRoles, lockedRolePools: newLockedPools });
       },
 
       getDraftState: () => {
@@ -795,13 +862,20 @@ export const useSessionStore = create<SessionStore>()(
           }
         }
 
-        // Only preserve role locks for players who are playing in their locked role
+        // Only preserve role locks for players who are playing in their allowed locked role(s)
         const allAssignments = [...result.team1, ...result.team2];
         const newLockedRoles = new Map<string, Role>();
         for (const [bt, role] of state.lockedRoles.entries()) {
           const assignment = allAssignments.find((a) => a.player.battletag === bt);
           if (assignment && assignment.assignedRole === role) {
             newLockedRoles.set(bt, role);
+          }
+        }
+        const newLockedRolePools = new Map<string, Role[]>();
+        for (const [bt, roles] of state.lockedRolePools.entries()) {
+          const assignment = allAssignments.find((a) => a.player.battletag === bt);
+          if (assignment && roles.includes(assignment.assignedRole)) {
+            newLockedRolePools.set(bt, roles);
           }
         }
 
@@ -817,6 +891,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: newLockedTeam1,
           lockedTeam2: newLockedTeam2,
           lockedRoles: newLockedRoles,
+          lockedRolePools: newLockedRolePools,
         });
       },
 
@@ -1039,11 +1114,13 @@ export const useSessionStore = create<SessionStore>()(
         const newLockedTeam1 = new Set(state.lockedTeam1);
         const newLockedTeam2 = new Set(state.lockedTeam2);
         const newLockedRoles = new Map(state.lockedRoles);
+        const newLockedPools = new Map(state.lockedRolePools);
 
         // Remove locks from outgoing player
         newLockedTeam1.delete(outBattletag);
         newLockedTeam2.delete(outBattletag);
         newLockedRoles.delete(outBattletag);
+        newLockedPools.delete(outBattletag);
 
         // Add locks for incoming player if requested
         if (lockSubstitute) {
@@ -1052,6 +1129,7 @@ export const useSessionStore = create<SessionStore>()(
           } else {
             newLockedTeam2.add(inBattletag);
           }
+          newLockedPools.delete(inBattletag);
           newLockedRoles.set(inBattletag, role);
         }
 
@@ -1068,6 +1146,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: newLockedTeam1,
           lockedTeam2: newLockedTeam2,
           lockedRoles: newLockedRoles,
+          lockedRolePools: newLockedPools,
         });
       },
 
@@ -1206,6 +1285,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: new Set(), // Clear all locks after match
           lockedTeam2: new Set(),
           lockedRoles: new Map(),
+  lockedRolePools: new Map(),
         });
       },
 
@@ -1367,6 +1447,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: newLockedTeam1,
           lockedTeam2: newLockedTeam2,
           lockedRoles: newLockedRoles,
+          lockedRolePools: new Map(),
         });
 
         return {};
@@ -1430,6 +1511,7 @@ export const useSessionStore = create<SessionStore>()(
           lockedTeam1: new Set<string>(),
           lockedTeam2: new Set<string>(),
           lockedRoles: new Map<string, Role>(),
+          lockedRolePools: new Map<string, Role[]>(),
           tempWeightOverrides: state.tempWeightOverrides,
           afkPlayers: state.afkPlayers,
           softConstraints: state.softConstraints,
@@ -1518,6 +1600,7 @@ export const useSessionStore = create<SessionStore>()(
             lockedTeam1: renameInSet(state.lockedTeam1),
             lockedTeam2: renameInSet(state.lockedTeam2),
             lockedRoles: renameInMap(state.lockedRoles),
+            lockedRolePools: renameInMap(state.lockedRolePools),
             afkPlayers: renameInSet(state.afkPlayers),
             tempWeightOverrides: renameInMap(state.tempWeightOverrides),
             softConstraints: newSoftConstraints,
@@ -1555,6 +1638,7 @@ export const useSessionStore = create<SessionStore>()(
               consecutiveSatOut: state.satOutStreaks.get(battletag) ?? 0,
               lockedToTeam,
               lockedToRole: state.lockedRoles.get(battletag) ?? null,
+              lockedToRoles: state.lockedRolePools.get(battletag),
               tempWeightOverride: state.tempWeightOverrides.get(battletag) ?? null,
               adaptiveWeight: state.adaptiveWeights.get(battletag) ?? 0,
               isAfk: state.afkPlayers.has(battletag),

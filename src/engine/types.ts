@@ -133,6 +133,9 @@ export interface LobbyPlayer extends Player {
   /** Locked to a specific role for this session (player wants to play this role) */
   lockedToRole: Role | null;
 
+  /** Restricted subset of roles when multiple role lock buttons are toggled */
+  lockedToRoles?: Role[];
+
   /** Temporary weight override for this session only */
   tempWeightOverride: number | null;
 
@@ -249,6 +252,9 @@ export interface SessionState {
 
   /** Battletags locked to a specific role (battletag -> role) */
   lockedRoles: Map<string, Role>;
+
+  /** Battletags locked to a subset of roles (battletag -> roles) */
+  lockedRolePools?: Map<string, Role[]>;
 
   /** Temporary weight overrides (battletag -> modifier) */
   tempWeightOverrides: Map<string, number>;

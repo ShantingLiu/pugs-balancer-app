@@ -72,7 +72,7 @@ export function PlayerCard({
   const toggleMustPlay = useSessionStore((state) => state.toggleMustPlay);
   const toggleAfk = useSessionStore((state) => state.toggleAfk);
   const lockToTeam = useSessionStore((state) => state.lockToTeam);
-  const lockToRole = useSessionStore((state) => state.lockToRole);
+  const toggleRoleLock = useSessionStore((state) => state.toggleRoleLock);
 
   // Compact mode for team display
   if (compact && assignedRole) {
@@ -317,26 +317,29 @@ export function PlayerCard({
             </button>
           </div>
 
-          {/* Role lock buttons */}
+          {/* Role lock buttons (multi-select supported for 3-role flex players) */}
           {player.rolesWilling.length > 1 && (
             <div className="flex gap-1">
               {player.rolesWilling.map((role) => {
-                const isLocked = lobbyPlayer.lockedToRole === role;
+                const isLocked = lobbyPlayer.lockedToRoles
+                  ? lobbyPlayer.lockedToRoles.includes(role)
+                  : lobbyPlayer.lockedToRole === role;
                 const roleInitial = role.charAt(0);
                 return (
                   <button
                     type="button"
                     key={role}
+                    aria-pressed={isLocked}
                     onClick={(e) => {
                       e.stopPropagation();
-                      lockToRole(player.battletag, isLocked ? null : role);
+                      toggleRoleLock(player.battletag, role, player.rolesWilling);
                     }}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-pill border inline-flex items-center gap-0.5 ${
                       isLocked
                         ? getRoleBadgeColor(role)
                         : "bg-paper-2 border-rule text-ink-2 hover:bg-sky hover:text-sky-btn-ink hover:border-sky-edge"
                     }`}
-                    title={isLocked ? `Unlock ${role}` : `Lock to ${role} for this game`}
+                    title={isLocked ? `Unlock ${role}` : `Restrict to ${role} (multi-select supported)`}
                   >
                     {isLocked && <LockKeyhole className="h-2.5 w-2.5" aria-hidden="true" />}
                     {roleInitial}

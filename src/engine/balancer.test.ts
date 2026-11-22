@@ -822,5 +822,61 @@ describe("balancer", () => {
         expect(result.team2).toHaveLength(5);
       }
     });
+
+    it("enforces multi-role locks (e.g. Tank+DPS+Support player restricted to DPS+Support)", () => {
+      const players = [
+        createLobbyPlayer("Flex#1", ["Tank", "DPS", "Support"], {
+          lockedToRoles: ["DPS", "Support"],
+          mustPlay: true,
+          tankRank: "Legend 1",
+          dpsRank: "Pro 3",
+          supportRank: "Pro 3",
+        }),
+        createLobbyPlayer("T1#1", ["Tank", "DPS"]),
+        createLobbyPlayer("T2#1", ["Tank", "Support"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS", "Support"]),
+        createLobbyPlayer("D4#1", ["DPS", "Support"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["DPS", "Support"]),
+      ];
+
+      for (let i = 0; i < 10; i++) {
+        const result = balanceTeams(players);
+        expect(result.team1).toHaveLength(5);
+        expect(result.team2).toHaveLength(5);
+        const flexAssign = [...result.team1, ...result.team2].find(
+          ra => ra.player.battletag === "Flex#1"
+        );
+        expect(flexAssign).toBeDefined();
+        expect(["DPS", "Support"]).toContain(flexAssign!.assignedRole);
+      }
+    });
+
+    it("diagnoses shortage when multi-role locks leave too few Tanks", () => {
+      const players = [
+        createLobbyPlayer("Flex#1", ["Tank", "DPS", "Support"], {
+          lockedToRoles: ["DPS", "Support"],
+        }),
+        createLobbyPlayer("T2#1", ["Tank"]),
+        createLobbyPlayer("D1#1", ["DPS"]),
+        createLobbyPlayer("D2#1", ["DPS"]),
+        createLobbyPlayer("D3#1", ["DPS"]),
+        createLobbyPlayer("D4#1", ["DPS"]),
+        createLobbyPlayer("S1#1", ["Support"]),
+        createLobbyPlayer("S2#1", ["Support"]),
+        createLobbyPlayer("S3#1", ["Support"]),
+        createLobbyPlayer("S4#1", ["Support"]),
+      ];
+
+      const result = balanceTeams(players);
+      expect(result.team1).toHaveLength(0);
+      const messages = result.warnings.filter(w => w.severity === "error").map(w => w.message);
+      expect(messages).toContain(
+        "Not enough Tank players: have 1, need 2 (1 more needed — check role locks)"
+      );
+    });
   });
 });
