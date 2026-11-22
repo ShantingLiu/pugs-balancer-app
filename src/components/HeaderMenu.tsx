@@ -141,7 +141,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
           <div
             role="menu"
             aria-label="App menu"
-            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 max-h-[80dvh] overflow-y-auto px-4 pt-3.5 pb-6 space-y-3.5"
+            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 max-h-[80dvh] overflow-y-auto px-4 pt-3.5 pb-3 space-y-3.5"
           >
             {/* Google Sheets */}
             <div>
@@ -315,7 +315,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
             <hr className="border-rule" />
 
             {/* Updates & Version */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-muted">Updates</span>
                 <span className="text-xs font-semibold app-measured text-ink-2">
