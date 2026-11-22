@@ -7,7 +7,12 @@ import {
   type UpdateProgress,
 } from "@services/updater";
 
-export function UpdateBanner() {
+interface UpdateBannerProps {
+  externalUpdate?: Update | null;
+  onClearExternalUpdate?: () => void;
+}
+
+export function UpdateBanner({ externalUpdate, onClearExternalUpdate }: UpdateBannerProps = {}) {
   const [update, setUpdate] = useState<Update | null>(null);
   const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
@@ -41,7 +46,8 @@ export function UpdateBanner() {
     };
   }, []);
 
-  if (!update) return null;
+  const activeUpdate = externalUpdate ?? update;
+  if (!activeUpdate) return null;
 
   const handleInstall = async () => {
     if (installing) return;
@@ -50,7 +56,7 @@ export function UpdateBanner() {
     setProgress(null);
 
     try {
-      await installAppUpdate(update, (nextProgress) => {
+      await installAppUpdate(activeUpdate, (nextProgress) => {
         setProgress(nextProgress);
       });
       installedRef.current = true;
@@ -64,6 +70,10 @@ export function UpdateBanner() {
 
   const handleDismiss = () => {
     if (installing) return;
+    if (externalUpdate) {
+      void externalUpdate.close().catch(() => {});
+      onClearExternalUpdate?.();
+    }
     if (updateRef.current) {
       void updateRef.current.close().catch(() => {});
       updateRef.current = null;
@@ -91,18 +101,18 @@ export function UpdateBanner() {
           <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">
             {error ? (
-              <>Update to v{update.version} failed: {error}</>
+              <>Update to v{activeUpdate.version} failed: {error}</>
             ) : installing ? (
               percent !== null ? (
-                <>Downloading update v{update.version} ({percent}%)…</>
+                <>Downloading update v{activeUpdate.version} ({percent}%)…</>
               ) : (
-                <>Installing update v{update.version}…</>
+                <>Installing update v{activeUpdate.version}…</>
               )
             ) : (
               <>
-                Update <span className="font-semibold">v{update.version}</span> is ready to install
+                Update <span className="font-semibold">v{activeUpdate.version}</span> is ready to install
                 {" "}
-                <span className="text-muted">(current: v{update.currentVersion})</span>
+                <span className="text-muted">(current: v{activeUpdate.currentVersion})</span>
               </>
             )}
           </span>

@@ -96,4 +96,22 @@ describe("UpdateBanner", () => {
     expect(mockUpdate.close).toHaveBeenCalledTimes(1);
     expect(container.firstChild).toBeNull();
   });
+
+  it("renders externalUpdate triggered manually and calls onClearExternalUpdate when dismissed", async () => {
+    mockCheckForAppUpdate.mockResolvedValue(null);
+    const externalUpdate = makeMockUpdate({ version: "1.3.3", currentVersion: "1.3.2" });
+    const onClearExternalUpdate = vi.fn();
+
+    render(
+      <UpdateBanner
+        externalUpdate={externalUpdate}
+        onClearExternalUpdate={onClearExternalUpdate}
+      />,
+    );
+
+    expect(await screen.findByRole("status")).toHaveTextContent("v1.3.3");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss update notification" }));
+    expect(externalUpdate.close).toHaveBeenCalledTimes(1);
+    expect(onClearExternalUpdate).toHaveBeenCalledTimes(1);
+  });
 });

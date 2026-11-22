@@ -17,7 +17,9 @@ import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
 import { useTheme } from "@hooks/useTheme";
 import { MODE_CONFIGS } from "@engine/modeConfig";
+import { APP_VERSION } from "@config/appInfo";
 import { performSync, applySyncResult } from "@services/sheetSync";
+import type { Update } from "@services/updater";
 import { initAuth } from "@services/googleAuth";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "@config/google";
 import { handleSyncError } from "@utils/handleSyncError";
@@ -39,6 +41,16 @@ function App() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [showSheetSetup, setShowSheetSetup] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<Update | null>(null);
+
+  const handleUpdateFound = useCallback((found: Update) => {
+    setPendingUpdate((prev) => {
+      if (prev && prev !== found) {
+        void prev.close().catch(() => {});
+      }
+      return found;
+    });
+  }, []);
 
   // P1-042: Restore auth state silently on app launch
   useEffect(() => {
@@ -210,6 +222,9 @@ function App() {
               <h1 className="text-base sm:text-xl lg:text-2xl font-bold app-display text-wordmark truncate">
                 Swoo’s PUGs Balancer
               </h1>
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-pill text-[11px] font-semibold app-measured bg-paper-3 border border-rule text-muted shrink-0">
+                v{APP_VERSION}
+              </span>
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
@@ -254,12 +269,16 @@ function App() {
               <HeaderMenu
                 onOpenSheets={() => setShowSheetSetup(true)}
                 onSync={handleSync}
+                onUpdateFound={handleUpdateFound}
               />
             </div>
           </div>
         </header>
 
-      <UpdateBanner />
+      <UpdateBanner
+        externalUpdate={pendingUpdate}
+        onClearExternalUpdate={() => setPendingUpdate(null)}
+      />
 
       {/* Sync error / info toast */}
       {syncError && (
@@ -386,7 +405,9 @@ function App() {
       </div>
 
       <footer className="container pb-6 pt-2 text-center text-xs text-footer-note font-medium">
-        <p>Crafted with love for sweet cozy gaming nights • {currentModeLabel} Match Engine</p>
+        <p>
+          Crafted with love for sweet cozy gaming nights • {currentModeLabel} Match Engine • v{APP_VERSION}
+        </p>
       </footer>
     </div>
   );

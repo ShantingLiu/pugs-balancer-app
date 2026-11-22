@@ -4,11 +4,14 @@ import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
 import type { GameMode } from "@engine/types";
 import { MODE_OPTIONS, LAYOUT_OPTIONS, formatRelativeTime } from "@config/headerOptions";
+import { APP_VERSION } from "@config/appInfo";
+import { checkForAppUpdateManual, type Update } from "@services/updater";
 import { ModeSwitchConfirmModal } from "./ModeSelector";
 
 interface HeaderMenuProps {
   onOpenSheets: () => void;
   onSync: () => void;
+  onUpdateFound?: (update: Update) => void;
 }
 
 const FONT_SCALE_OPTIONS: { id: "normal" | "large" | "x-large"; label: string }[] = [
@@ -18,7 +21,7 @@ const FONT_SCALE_OPTIONS: { id: "normal" | "large" | "x-large"; label: string }[
 ];
 
 /** Consolidates Sheets, Mode, Layout, Theme, and Text Size controls into one header menu. */
-export function HeaderMenu({ onOpenSheets, onSync }: HeaderMenuProps) {
+export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuProps) {
   const gameMode = useSessionStore((s) => s.gameMode);
   const setGameMode = useSessionStore((s) => s.setGameMode);
   const lastResult = useSessionStore((s) => s.lastResult);
@@ -37,7 +40,43 @@ export function HeaderMenu({ onOpenSheets, onSync }: HeaderMenuProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [confirmMode, setConfirmMode] = useState<GameMode | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateNote, setUpdateNote] = useState<{
+    text: string;
+    tone: "ok" | "muted" | "bad";
+  } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleCheckForUpdates = async () => {
+    if (checkingUpdates) return;
+    setCheckingUpdates(true);
+    setUpdateNote(null);
+
+    try {
+      const result = await checkForAppUpdateManual();
+      if (result.status === "available") {
+        setIsOpen(false);
+        onUpdateFound?.(result.update);
+      } else if (result.status === "up-to-date") {
+        setUpdateNote({
+          text: `You’re on the latest version (v${APP_VERSION})`,
+          tone: "ok",
+        });
+      } else {
+        setUpdateNote({
+          text: "Auto-updates require the desktop app",
+          tone: "muted",
+        });
+      }
+    } catch (err: unknown) {
+      setUpdateNote({
+        text: err instanceof Error ? err.message : "Could not check for updates",
+        tone: "bad",
+      });
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -271,6 +310,44 @@ export function HeaderMenu({ onOpenSheets, onSync }: HeaderMenuProps) {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <hr className="border-rule" />
+
+            {/* Updates & Version */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted">Updates</span>
+                <span className="text-xs font-semibold app-measured text-ink-2">
+                  v{APP_VERSION}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCheckForUpdates}
+                disabled={checkingUpdates}
+                className="w-full app-secondary inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-pill text-xs font-semibold"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${checkingUpdates ? "animate-spin" : ""}`}
+                  aria-hidden="true"
+                />
+                <span>{checkingUpdates ? "Checking…" : "Check for Updates"}</span>
+              </button>
+              {updateNote && (
+                <p
+                  role="status"
+                  className={`text-xs ${
+                    updateNote.tone === "ok"
+                      ? "text-ok"
+                      : updateNote.tone === "bad"
+                        ? "text-bad"
+                        : "text-muted"
+                  }`}
+                >
+                  {updateNote.text}
+                </p>
+              )}
             </div>
           </div>
         )}

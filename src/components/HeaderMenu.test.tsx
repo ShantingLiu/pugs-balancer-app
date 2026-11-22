@@ -1,8 +1,15 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HeaderMenu } from "./HeaderMenu";
 import { useSessionStore } from "@store/sessionStore";
 import { useSheetStore } from "@store/sheetStore";
+import { APP_VERSION } from "@config/appInfo";
+import type { Update } from "@services/updater";
+
+const mockCheckForAppUpdateManual = vi.fn();
+vi.mock("@services/updater", () => ({
+  checkForAppUpdateManual: (...args: unknown[]) => mockCheckForAppUpdateManual(...args),
+}));
 
 describe("HeaderMenu", () => {
   const onOpenSheets = vi.fn();
@@ -64,5 +71,47 @@ describe("HeaderMenu", () => {
     expect(screen.getByText("My PUGs")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sync" }));
     expect(onSync).toHaveBeenCalledTimes(1);
+  });
+
+  it("displays app version and handles Check for Updates states", async () => {
+    const onUpdateFound = vi.fn();
+    mockCheckForAppUpdateManual.mockResolvedValueOnce({ status: "up-to-date" });
+
+    render(
+      <HeaderMenu
+        onOpenSheets={onOpenSheets}
+        onSync={onSync}
+        onUpdateFound={onUpdateFound}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.getByText(`v${APP_VERSION}`)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      `You’re on the latest version (v${APP_VERSION})`,
+    );
+
+    const fakeUpdate = { version: "1.4.0" } as unknown as Update;
+    mockCheckForAppUpdateManual.mockResolvedValueOnce({
+      status: "available",
+      update: fakeUpdate,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
+
+    await waitFor(() => {
+      expect(onUpdateFound).toHaveBeenCalledWith(fakeUpdate);
+    });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("shows error message when manual update check fails", async () => {
+    mockCheckForAppUpdateManual.mockRejectedValueOnce(new Error("GitHub unreachable"));
+
+    render(<HeaderMenu onOpenSheets={onOpenSheets} onSync={onSync} />);
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("GitHub unreachable");
   });
 });

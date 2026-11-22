@@ -9,6 +9,11 @@ export interface UpdateProgress {
   totalBytes: number | null;
 }
 
+export type ManualUpdateCheckResult =
+  | { status: "available"; update: Update }
+  | { status: "up-to-date" }
+  | { status: "unsupported" };
+
 /**
  * Checks for a newer signed desktop release when running inside Tauri.
  * Returns null in web/test environments or when already up to date.
@@ -16,6 +21,15 @@ export interface UpdateProgress {
 export async function checkForAppUpdate(): Promise<Update | null> {
   if (!isTauri()) return null;
   return await check();
+}
+
+/**
+ * Manual update check for UI triggers, distinguishing unsupported web mode from up-to-date.
+ */
+export async function checkForAppUpdateManual(): Promise<ManualUpdateCheckResult> {
+  if (!isTauri()) return { status: "unsupported" };
+  const update = await check();
+  return update ? { status: "available", update } : { status: "up-to-date" };
 }
 
 /**
