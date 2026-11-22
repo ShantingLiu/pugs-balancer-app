@@ -59,7 +59,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
         onUpdateFound?.(result.update);
       } else if (result.status === "up-to-date") {
         setUpdateNote({
-          text: `You’re on the latest version (v${APP_VERSION})`,
+          text: "Everything up-to-date",
           tone: "ok",
         });
       } else {
@@ -141,7 +141,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
           <div
             role="menu"
             aria-label="App menu"
-            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 max-h-[80dvh] overflow-y-auto p-3.5 space-y-3.5"
+            className="absolute right-0 mt-2 w-72 sm:w-80 app-modal z-50 max-h-[80dvh] overflow-y-auto px-4 pt-3.5 pb-6 space-y-3.5"
           >
             {/* Google Sheets */}
             <div>
@@ -337,7 +337,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
               {updateNote && (
                 <p
                   role="status"
-                  className={`text-xs ${
+                  className={`pt-0.5 text-center text-xs font-semibold ${
                     updateNote.tone === "ok"
                       ? "text-ok"
                       : updateNote.tone === "bad"

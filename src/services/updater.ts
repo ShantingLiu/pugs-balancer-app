@@ -29,7 +29,13 @@ export async function checkForAppUpdate(): Promise<Update | null> {
 export async function checkForAppUpdateManual(): Promise<ManualUpdateCheckResult> {
   if (!isTauri()) return { status: "unsupported" };
   const update = await check();
-  return update ? { status: "available", update } : { status: "up-to-date" };
+  if (update && update.available) {
+    return { status: "available", update };
+  }
+  if (update) {
+    void update.close().catch(() => {});
+  }
+  return { status: "up-to-date" };
 }
 
 /**

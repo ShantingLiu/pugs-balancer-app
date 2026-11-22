@@ -89,7 +89,7 @@ describe("HeaderMenu", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
     expect(await screen.findByRole("status")).toHaveTextContent(
-      `You’re on the latest version (v${APP_VERSION})`,
+      "Everything up-to-date",
     );
 
     const fakeUpdate = { version: "1.4.0" } as unknown as Update;
