@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Users, RefreshCw, MapPin, Scale, Star } from "lucide-react";
 import type { TeamAssignment, Player, RoleAssignment, LobbyPlayer, GameMode } from "@engine/types";
 import { TeamColumn } from "./TeamColumn";
@@ -10,6 +10,22 @@ import { useSessionStore } from "@store/sessionStore";
 import { usePlayerStore } from "@store/playerStore";
 import { formatRankOnly, getEffectiveSR } from "@utils/rankMapper";
 import { getRequiredPlayers } from "@engine/modeConfig";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 /** Calculate team average SR from assignments using current lobby player state */
 function calculateTeamAvgSR(
@@ -54,15 +70,14 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [postMatchPending, setPostMatchPending] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null);
+  const [prevResult, setPrevResult] = useState<TeamAssignment | null>(result);
 
-  const prevResultRef = useRef<TeamAssignment | null>(null);
-
-  useEffect(() => {
-    if (result !== prevResultRef.current && result !== null) {
+  if (result !== prevResult) {
+    setPrevResult(result);
+    if (result !== null) {
       setPostMatchPending(false);
     }
-    prevResultRef.current = result;
-  }, [result]);
+  }
 
   const requiredPlayers = getRequiredPlayers(gameMode);
 
@@ -135,29 +150,35 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
   if (!result && postMatchPending) {
     return (
-      <div className="app-surface p-5 space-y-4">
-        <div className="app-well p-5 text-center">
-          <div className="text-lg font-semibold text-ink mb-4">Match Complete</div>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <button
-              type="button"
-              onClick={handleAutoBalanceNext}
-              className="flex-1 py-2.5 px-4 app-primary rounded-pill font-semibold inline-flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Auto-Balance Next Game
-            </button>
-            <button
-              type="button"
-              onClick={handleDraftNext}
-              className="flex-1 py-2.5 px-4 app-sky rounded-pill font-semibold inline-flex items-center justify-center gap-2"
-            >
-              <Users className="h-4 w-4" aria-hidden="true" />
-              Draft Next Game
-            </button>
-          </div>
-        </div>
-      </div>
+      <Card variant="surface" className="p-5 gap-4">
+        <Card variant="well" className="p-5 gap-4 text-center">
+          <CardHeader className="p-0">
+            <CardTitle className="text-lg">Match Complete</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleAutoBalanceNext}
+                className="flex-1"
+              >
+                <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                Auto-Balance Next Game
+              </Button>
+              <Button
+                variant="sky"
+                size="lg"
+                onClick={handleDraftNext}
+                className="flex-1"
+              >
+                <Users data-icon="inline-start" aria-hidden="true" />
+                Draft Next Game
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </Card>
     );
   }
 
@@ -169,20 +190,25 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
     if (preAssigned.length === 0) {
       return (
-        <div className="app-surface p-5 flex items-center justify-center py-14 text-muted">
-          <div className="text-center space-y-2">
-            <span className="inline-flex items-center justify-center w-12 h-12 rounded-pill bg-sky-soft border border-sky-edge mx-auto">
-              <Scale className="h-6 w-6 text-sky-ink" aria-hidden="true" />
-            </span>
-            <div className="text-base font-semibold text-ink">No teams generated yet</div>
-            <p className="text-sm text-ink-2">
-              Add at least {requiredPlayers} players to lobby and click Balance
-            </p>
-            <p className="text-xs text-muted">
-              Tip: Lock a player to a team + role in the lobby to preview them here
-            </p>
-          </div>
-        </div>
+        <Card variant="surface" className="p-5">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia
+                variant="icon"
+                className="size-12 rounded-pill bg-sky-soft border-sky-edge text-sky-ink"
+              >
+                <Scale aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle>No teams generated yet</EmptyTitle>
+              <EmptyDescription>
+                Add at least {requiredPlayers} players to lobby and click Balance
+              </EmptyDescription>
+              <p className="text-xs text-muted">
+                Tip: Lock a player to a team + role in the lobby to preview them here
+              </p>
+            </EmptyHeader>
+          </Empty>
+        </Card>
       );
     }
 
@@ -202,13 +228,15 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
       }));
 
     return (
-      <div className="space-y-5">
-        <div className="app-surface p-3 text-center border-dashed border-sky-edge">
-          <span className="text-sky-ink font-semibold text-sm inline-flex items-center gap-2">
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-            Preview: {preAssigned.length} player{preAssigned.length !== 1 ? "s" : ""} pre-assigned
-          </span>
-        </div>
+      <div className="flex flex-col gap-5">
+        <Card variant="surface" className="p-3 border-dashed border-sky-edge">
+          <CardContent className="p-0 text-center">
+            <span className="text-sky-ink font-semibold text-sm inline-flex items-center justify-center gap-2">
+              <MapPin className="size-4" aria-hidden="true" />
+              Preview: {preAssigned.length} player{preAssigned.length !== 1 ? "s" : ""} pre-assigned
+            </span>
+          </CardContent>
+        </Card>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <TeamColumn
             teamNumber={1}
@@ -248,57 +276,80 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
   const hasErrorWarnings = warnings.some((w) => w.severity === "error");
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       {/* Matchup summary bar */}
       {hasTeams && (
-      <div className="app-surface p-5">
-        <div className="grid grid-cols-3 items-center gap-4 text-center">
-          <div>
-            <div className="text-2xl md:text-3xl font-extrabold app-display text-pink-ink" title={`${team1AvgSR.toFixed(0)} SR`}>
-              {formatRankOnly(team1AvgSR, gameMode)}
-            </div>
-            <div className="text-xs font-bold text-muted uppercase tracking-wider mt-0.5 inline-flex items-center justify-center gap-1">
-              {team1AvgSR > team2AvgSR && srDifference >= 25 && (
-                <span title="Favored" className="inline-flex text-warn">
-                  <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
-                </span>
-              )}
-              <span>Team 1 MMR</span>
-            </div>
-          </div>
+        <Card variant="surface" className="p-5">
+          <CardContent className="p-0">
+            <div className="grid grid-cols-3 items-center gap-4 text-center">
+              <div>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <div className="text-2xl md:text-3xl font-extrabold app-display text-pink-ink inline-block" />
+                    }
+                  >
+                    {formatRankOnly(team1AvgSR, gameMode)}
+                  </TooltipTrigger>
+                  <TooltipContent>{`${team1AvgSR.toFixed(0)} SR`}</TooltipContent>
+                </Tooltip>
+                <div className="text-xs font-bold text-muted uppercase tracking-wider mt-0.5 flex items-center justify-center gap-1">
+                  {team1AvgSR > team2AvgSR && srDifference >= 25 && (
+                    <Tooltip>
+                      <TooltipTrigger render={<span className="inline-flex text-warn" />}>
+                        <Star className="size-3 fill-current shrink-0" aria-label="Favored" />
+                      </TooltipTrigger>
+                      <TooltipContent>Favored</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <span>Team 1 MMR</span>
+                </div>
+              </div>
 
-          <div className="flex flex-col items-center">
-            <div
-              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs md:text-sm font-bold rounded-pill border app-display ${
-                srDifference <= 50
-                  ? "bg-ok-soft border-ok-edge text-ok"
-                  : srDifference <= 100
-                  ? "bg-warn-soft border-warn-edge text-warn"
-                  : "bg-bad-soft border-bad-edge text-bad"
-              }`}
-              title={`${srDifference.toFixed(0)} SR difference`}
-            >
-              <span className="w-1.5 h-1.5 rounded-pill bg-current shrink-0" aria-hidden="true" />
-              {srDifference < 25 ? <span>Even</span> : <span>Δ {srDifference.toFixed(0)} SR</span>}
-            </div>
-            <div className="text-xs font-semibold text-muted mt-1">Difference</div>
-          </div>
+              <div className="flex flex-col items-center">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Badge
+                        variant={srDifference <= 50 ? "ok" : srDifference <= 100 ? "warn" : "bad"}
+                        className="gap-1.5 px-3 py-1 text-xs md:text-sm font-bold app-display"
+                      />
+                    }
+                  >
+                    <span className="size-1.5 rounded-pill bg-current shrink-0" aria-hidden="true" />
+                    {srDifference < 25 ? <span>Even</span> : <span>Δ {srDifference.toFixed(0)} SR</span>}
+                  </TooltipTrigger>
+                  <TooltipContent>{`${srDifference.toFixed(0)} SR difference`}</TooltipContent>
+                </Tooltip>
+                <div className="text-xs font-semibold text-muted mt-1">Difference</div>
+              </div>
 
-          <div>
-            <div className="text-2xl md:text-3xl font-extrabold app-display text-sky-ink" title={`${team2AvgSR.toFixed(0)} SR`}>
-              {formatRankOnly(team2AvgSR, gameMode)}
+              <div>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <div className="text-2xl md:text-3xl font-extrabold app-display text-sky-ink inline-block" />
+                    }
+                  >
+                    {formatRankOnly(team2AvgSR, gameMode)}
+                  </TooltipTrigger>
+                  <TooltipContent>{`${team2AvgSR.toFixed(0)} SR`}</TooltipContent>
+                </Tooltip>
+                <div className="text-xs font-bold text-muted uppercase tracking-wider mt-0.5 flex items-center justify-center gap-1">
+                  {team2AvgSR > team1AvgSR && srDifference >= 25 && (
+                    <Tooltip>
+                      <TooltipTrigger render={<span className="inline-flex text-warn" />}>
+                        <Star className="size-3 fill-current shrink-0" aria-label="Favored" />
+                      </TooltipTrigger>
+                      <TooltipContent>Favored</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <span>Team 2 MMR</span>
+                </div>
+              </div>
             </div>
-            <div className="text-xs font-bold text-muted uppercase tracking-wider mt-0.5 inline-flex items-center justify-center gap-1">
-              {team2AvgSR > team1AvgSR && srDifference >= 25 && (
-                <span title="Favored" className="inline-flex text-warn">
-                  <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
-                </span>
-              )}
-              <span>Team 2 MMR</span>
-            </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Warnings */}
@@ -328,79 +379,105 @@ export function TeamDisplay({ result }: TeamDisplayProps) {
 
           {postMatchPending ? (
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                shape="well"
                 onClick={handleAutoBalanceNext}
-                className="flex-1 py-3 px-4 app-primary rounded-well font-bold inline-flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 font-bold"
               >
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                <RefreshCw data-icon="inline-start" aria-hidden="true" />
                 Auto-Balance Next Game
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="sky"
+                shape="well"
                 onClick={handleDraftNext}
-                className="flex-1 py-3 px-4 app-sky rounded-well font-bold inline-flex items-center justify-center gap-2"
+                className="flex-1 py-3 px-4 font-bold"
               >
-                <Users className="h-4 w-4" aria-hidden="true" />
+                <Users data-icon="inline-start" aria-hidden="true" />
                 Draft Next Game
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <HoldButton
                 onConfirm={() => handleTeamWon(1)}
-                className={`${pendingMatchResult ? "md:col-span-6" : "md:col-span-5"} py-3.5 px-6 app-win-1 rounded-well font-bold text-sm md:text-base`}
+                variant="win1"
+                shape="well"
+                className={cn(
+                  pendingMatchResult ? "md:col-span-6" : "md:col-span-5",
+                  "py-3.5 px-6 font-bold text-sm md:text-base"
+                )}
                 title="Hold for 1 second to confirm Team 1 won"
               >
                 <span className="inline-flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 rounded-pill bg-current shrink-0" aria-hidden="true" />
+                  <span className="size-2 rounded-pill bg-current shrink-0" aria-hidden="true" />
                   <span>Team 1 Won</span>
                 </span>
               </HoldButton>
               <HoldButton
                 onConfirm={() => handleTeamWon(2)}
-                className={`${pendingMatchResult ? "md:col-span-6" : "md:col-span-5"} py-3.5 px-6 app-sky rounded-well font-bold text-sm md:text-base`}
+                variant="sky"
+                shape="well"
+                className={cn(
+                  pendingMatchResult ? "md:col-span-6" : "md:col-span-5",
+                  "py-3.5 px-6 font-bold text-sm md:text-base"
+                )}
                 title="Hold for 1 second to confirm Team 2 won"
               >
                 <span className="inline-flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 rounded-pill bg-current shrink-0" aria-hidden="true" />
+                  <span className="size-2 rounded-pill bg-current shrink-0" aria-hidden="true" />
                   <span>Team 2 Won</span>
                 </span>
               </HoldButton>
               {!pendingMatchResult && (
-                <button
-                  type="button"
-                  onClick={handleNewGame}
-                  className="md:col-span-2 py-3.5 px-4 app-secondary rounded-well font-extrabold text-xs md:text-sm inline-flex items-center justify-center gap-1.5"
-                  title="Clear teams without recording a result"
-                >
-                  <RefreshCw className="h-4 w-4 text-lock shrink-0" aria-hidden="true" />
-                  <span>New Game</span>
-                </button>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="secondary"
+                        shape="well"
+                        size="sm"
+                        onClick={handleNewGame}
+                        className="md:col-span-2 py-3.5 px-4 font-extrabold text-xs md:text-sm"
+                      />
+                    }
+                  >
+                    <RefreshCw className="text-lock" data-icon="inline-start" aria-hidden="true" />
+                    <span>New Game</span>
+                  </TooltipTrigger>
+                  <TooltipContent>Clear teams without recording a result</TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}
         </>
       ) : hasErrorWarnings ? null : (
-        <div className="app-surface p-5 text-center text-muted py-8">
-          Could not generate valid teams. Check warnings above.
-        </div>
+        <Card variant="surface" className="p-5">
+          <Empty className="py-8">
+            <EmptyHeader>
+              <EmptyDescription>
+                Could not generate valid teams. Check warnings above.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </Card>
       )}
 
-      {/* Edit Player Modal */}
-      <AddPlayerModal
-        isOpen={!!editingPlayer}
-        onClose={() => setEditingPlayer(null)}
-        editPlayer={editingPlayer}
-      />
+        {/* Edit Player Modal */}
+        <AddPlayerModal
+          isOpen={!!editingPlayer}
+          onClose={() => setEditingPlayer(null)}
+          editPlayer={editingPlayer}
+        />
 
-      {/* Match Score Modal */}
-      <MatchScoreModal
-        isOpen={!!pendingMatchResult}
-        winningTeam={pendingMatchResult?.winningTeam ?? 1}
-        onConfirm={handleScoreConfirm}
-        onCancel={handleScoreCancel}
-      />
+        {/* Match Score Modal */}
+        <MatchScoreModal
+          isOpen={!!pendingMatchResult}
+          winningTeam={pendingMatchResult?.winningTeam ?? 1}
+          onConfirm={handleScoreConfirm}
+          onCancel={handleScoreCancel}
+        />
     </div>
   );
 }

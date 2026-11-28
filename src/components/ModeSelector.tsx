@@ -1,5 +1,20 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { ChevronDown, Check, Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { useSessionStore } from "@store/sessionStore";
 import type { GameMode } from "@engine/types";
 import { MODE_CONFIGS } from "@engine/modeConfig";
@@ -11,7 +26,8 @@ import { useTheme } from "@hooks/useTheme";
 // =============================================================================
 
 interface ModeSwitchConfirmModalProps {
-  targetMode: GameMode;
+  targetMode: GameMode | null;
+  isOpen?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -19,41 +35,43 @@ interface ModeSwitchConfirmModalProps {
 /** Confirms switching game mode when a match result exists. */
 export function ModeSwitchConfirmModal({
   targetMode,
+  isOpen,
   onCancel,
   onConfirm,
 }: ModeSwitchConfirmModalProps) {
+  const open = isOpen ?? Boolean(targetMode);
+  const [displayMode, setDisplayMode] = useState<GameMode>(
+    targetMode ?? "stadium_5v5"
+  );
+
+  if (targetMode !== null && targetMode !== displayMode) {
+    setDisplayMode(targetMode);
+  }
+
   return (
-    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
-      <div className="app-modal p-6 max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-ink mb-2">Switch Game Mode?</h3>
-        <p className="text-ink-2 text-sm mb-4">
-          Switching to {MODE_CONFIGS[targetMode].label} will reset your current session stats (wins, losses, adaptive weights).
-        </p>
-        <p className="flex items-start gap-2 text-sm text-pink-ink bg-pink-soft border border-pink-edge rounded-well p-3 mb-4">
-          <Info className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
-          <span>Export your CSV first to save session wins before switching.</span>
-        </p>
-        <p className="text-muted text-sm mb-6">
+    <AlertDialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onCancel(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Switch Game Mode?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Switching to {MODE_CONFIGS[displayMode].label} will reset your current session stats (wins, losses, adaptive weights).
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Alert className="bg-pink-soft border-pink-edge text-pink-ink">
+          <Info aria-hidden="true" />
+          <AlertDescription className="text-pink-ink">
+            Export your CSV first to save session wins before switching.
+          </AlertDescription>
+        </Alert>
+        <p className="text-muted text-sm">
           Your lobby players and imported roster will be preserved.
         </p>
-        <div className="flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="app-secondary px-4 py-2 rounded-pill text-sm font-semibold"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="app-primary px-4 py-2 rounded-pill text-sm font-semibold"
-          >
-            Switch Mode
-          </button>
-        </div>
-      </div>
-    </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Switch Mode</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -64,81 +82,84 @@ export function ModeSelector() {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState<GameMode | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const currentMode = MODE_CONFIGS[gameMode];
   const hasActiveSession = lastResult && lastResult.team1.length > 0;
 
   const handleModeSelect = (mode: GameMode) => {
-    if (mode === gameMode) { setIsOpen(false); return; }
-    if (hasActiveSession) { setShowConfirm(mode); setIsOpen(false); } else { setGameMode(mode); setIsOpen(false); }
+    if (mode === gameMode) {
+      setIsOpen(false);
+      return;
+    }
+    if (hasActiveSession) {
+      setShowConfirm(mode);
+      setIsOpen(false);
+    } else {
+      setGameMode(mode);
+      setIsOpen(false);
+    }
   };
 
   return (
     <>
       <div className="flex items-center gap-2">
         {/* Mode badge/pill */}
-        <span className={`px-3 py-1 text-xs font-semibold rounded-pill ${theme.badge.bg} ${theme.badge.text}`}>
+        <Badge className={cn("px-3 py-1 font-semibold", theme.badge.bg, theme.badge.text)}>
           {currentMode.label}
-        </span>
+        </Badge>
 
         {/* Mode selector dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="app-secondary flex items-center gap-2 px-3.5 py-2 rounded-pill text-sm font-semibold"
-          >
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger render={<Button variant="secondary" />}>
             <span>Change Mode</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-          </button>
+            <ChevronDown
+              data-icon="inline-end"
+              className={cn("transition-transform", isOpen && "rotate-180")}
+              aria-hidden="true"
+            />
+          </PopoverTrigger>
 
-          {/* Dropdown menu */}
-          {isOpen && (
-            <div className="absolute right-0 mt-2 w-60 app-modal z-50 overflow-hidden">
-              {MODE_OPTIONS.map((option) => {
-                const isActive = option.id === gameMode;
-                return (
-                  <button
-                    type="button"
-                    key={option.id}
-                    onClick={() => handleModeSelect(option.id)}
-                    className={`w-full text-left px-4 py-3 border-b border-rule last:border-b-0 ${
-                      isActive ? "bg-pink-soft" : "hover:bg-sky-soft"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isActive && <Check className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />}
-                      <span className="font-semibold text-ink">{option.label}</span>
-                    </div>
-                    <p className="text-xs text-muted mt-0.5 ml-6">
-                      {option.description}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          <PopoverContent align="end" className="w-60 p-1.5 flex flex-col gap-1">
+            {MODE_OPTIONS.map((option) => {
+              const isActive = option.id === gameMode;
+              return (
+                <Button
+                  key={option.id}
+                  variant="ghost"
+                  shape="well"
+                  onClick={() => handleModeSelect(option.id)}
+                  className={cn(
+                    "h-auto w-full flex-col items-start justify-start text-left whitespace-normal px-3 py-2.5 gap-0.5",
+                    isActive ? "bg-pink-soft hover:bg-pink-soft" : "hover:bg-sky-soft",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    {isActive && (
+                      <Check data-icon="inline-start" className="text-pink-ink" aria-hidden="true" />
+                    )}
+                    <span className="font-semibold text-ink">{option.label}</span>
+                  </div>
+                  <p className="text-xs text-muted font-normal ml-6">
+                    {option.description}
+                  </p>
+                </Button>
+              );
+            })}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Confirmation modal */}
-      {showConfirm && (
-        <ModeSwitchConfirmModal
-          targetMode={showConfirm}
-          onCancel={() => setShowConfirm(null)}
-          onConfirm={() => { setGameMode(showConfirm); setShowConfirm(null); }}
-        />
-      )}
+      <ModeSwitchConfirmModal
+        targetMode={showConfirm}
+        onCancel={() => setShowConfirm(null)}
+        onConfirm={() => {
+          if (showConfirm) {
+            setGameMode(showConfirm);
+          }
+          setShowConfirm(null);
+        }}
+      />
     </>
   );
 }

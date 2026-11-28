@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Moon, Sun } from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import { CsvImporter } from "@components/CsvImporter";
 import { LobbySelector } from "@components/LobbySelector";
 import { TeamDisplay } from "@components/TeamDisplay";
@@ -9,6 +16,7 @@ import { StatsPanel } from "@components/StatsPanel";
 import { Leaderboard } from "@components/Leaderboard";
 import { SpectatorsList } from "@components/SpectatorsList";
 import { HeaderMenu } from "@components/HeaderMenu";
+import { WindowControls } from "@components/WindowControls";
 import { SyncDiffModal } from "@components/SyncDiffModal";
 import { SheetSetupModal } from "@components/SheetSetupModal";
 import { DraftView } from "@components/DraftView";
@@ -38,7 +46,6 @@ function App() {
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
 
   const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [showSheetSetup, setShowSheetSetup] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<Update | null>(null);
@@ -52,6 +59,23 @@ function App() {
     });
   }, []);
 
+  const notifySyncStatus = useCallback((message: string) => {
+    if (message === "Everything is up to date.") {
+      toast.success(message);
+      return;
+    }
+    if (message.toLowerCase().includes("sign in")) {
+      toast.error(message, {
+        action: {
+          label: "Sign in with Google",
+          onClick: () => setShowSheetSetup(true),
+        },
+      });
+      return;
+    }
+    toast.error(message);
+  }, []);
+
   // P1-042: Restore auth state silently on app launch
   useEffect(() => {
     initAuth(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET).catch(() => {});
@@ -60,21 +84,20 @@ function App() {
   // P1-041: Sync button click handler
   const handleSync = useCallback(async () => {
     if (!spreadsheetId || syncing) return;
-    setSyncError(null);
     setSyncing(true);
     try {
       const diff = await performSync(spreadsheetId);
       if (!diff.hasChanges) {
-        setSyncError("Everything is up to date.");
+        notifySyncStatus("Everything is up to date.");
       } else {
         setSyncDiff(diff);
       }
     } catch (err: unknown) {
-      setSyncError(handleSyncError(err));
+      notifySyncStatus(handleSyncError(err));
     } finally {
       setSyncing(false);
     }
-  }, [spreadsheetId, syncing]);
+  }, [spreadsheetId, syncing, notifySyncStatus]);
 
   // Auto-sync when a sheet is first connected
   const prevSpreadsheetId = useRef<string | null>(null);
@@ -92,10 +115,10 @@ function App() {
       try {
         await applySyncResult(spreadsheetId, resolved);
       } catch (err: unknown) {
-        setSyncError(handleSyncError(err));
+        notifySyncStatus(handleSyncError(err));
       }
     },
-    [spreadsheetId],
+    [spreadsheetId, notifySyncStatus],
   );
 
   // Scale root font size so ALL rem-based Tailwind classes scale up cleanly
@@ -115,238 +138,217 @@ function App() {
   const currentModeLabel = MODE_CONFIGS[gameMode].label;
 
   const importerSection = (
-    <section className="app-surface p-5">
-      <CsvImporter />
-    </section>
+    <Card variant="surface">
+      <CardContent className="pt-5">
+        <CsvImporter />
+      </CardContent>
+    </Card>
   );
 
   const lobbySection = (
-    <section className="app-surface p-5">
-      <LobbySelector />
-      <div className="mt-4 pt-3 border-t border-rule text-center">
-        <p className="text-xs text-footer-note">
+    <Card variant="surface">
+      <CardContent className="pt-5 pb-4">
+        <LobbySelector />
+      </CardContent>
+      <CardFooter className="flex-col gap-3">
+        <Separator />
+        <p className="text-xs text-footer-note text-center">
           © {new Date().getFullYear()} Swoo • PUGs Match Engine
         </p>
-      </div>
-    </section>
+      </CardFooter>
+    </Card>
   );
 
   const workspaceSection = (
     <>
-      <nav
-        className="app-surface flex gap-1.5 p-1.5 rounded-pill"
-        aria-label="Team planning mode"
+      <Tabs
+        value={draftMode ? "draft" : "balance"}
+        onValueChange={(value) => setDraftMode(value === "draft")}
+        className="gap-5"
       >
-        <button
-          type="button"
-          onClick={() => setDraftMode(false)}
-          className={`flex-1 py-2.5 px-4 rounded-pill text-sm font-bold ${
-            !draftMode
-              ? "app-primary"
-              : "text-muted hover:text-ink"
-          }`}
-        >
-          Balance
-        </button>
-        <button
-          type="button"
-          onClick={() => setDraftMode(true)}
-          className={`flex-1 py-2.5 px-4 rounded-pill text-sm font-bold ${
-            draftMode
-              ? "app-sky"
-              : "text-muted hover:text-ink"
-          }`}
-        >
-          Draft
-        </button>
-      </nav>
+        <TabsList aria-label="Team planning mode">
+          <TabsTrigger value="balance" activeVariant="primary" className="py-2.5">
+            Balance
+          </TabsTrigger>
+          <TabsTrigger value="draft" activeVariant="sky" className="py-2.5">
+            Draft
+          </TabsTrigger>
+        </TabsList>
 
-      {draftMode ? (
-        <section className="app-surface p-5">
-          <DraftView />
-        </section>
-      ) : (
-        <>
+        <TabsContent value="draft">
+          <Card variant="surface">
+            <CardContent className="pt-5">
+              <DraftView />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="balance" className="flex flex-col gap-5">
           <div>
             <BalanceButton />
           </div>
           <TeamDisplay result={lastResult} />
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
 
       <SpectatorsList />
     </>
   );
 
   const constraintsSection = (
-    <section className="app-surface p-5">
-      <ConstraintsPanel />
-    </section>
+    <Card variant="surface">
+      <CardContent className="pt-5">
+        <ConstraintsPanel />
+      </CardContent>
+    </Card>
   );
 
   const statsSection = (
-    <section className="app-surface p-5">
-      <StatsPanel />
-    </section>
+    <Card variant="surface">
+      <CardContent className="pt-5">
+        <StatsPanel />
+      </CardContent>
+    </Card>
   );
 
   const leaderboardSection = (
-    <section className="app-surface p-5">
-      <Leaderboard />
-    </section>
+    <Card variant="surface">
+      <CardContent className="pt-5">
+        <Leaderboard />
+      </CardContent>
+    </Card>
   );
 
   return (
-    <div className="app-shell min-h-dvh bg-paper text-ink flex flex-col justify-between">
-      <div>
-        <header className="app-toolbar py-3 sm:py-3.5">
-          <div className="container flex items-center justify-between gap-2 sm:gap-4">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <span
-                className="app-brand-badge inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-well shrink-0 transform hover:rotate-6 transition-transform"
-                aria-hidden="true"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                    fill="var(--color-brand-heart)"
-                  />
-                </svg>
-              </span>
-              <h1 className="text-base sm:text-xl lg:text-2xl font-bold app-display text-wordmark truncate">
-                Swoo’s PUGs Balancer
-              </h1>
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-pill text-[11px] font-semibold app-measured bg-paper-3 border border-rule text-muted shrink-0">
-                v{APP_VERSION}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-              <span
-                className={`hidden sm:inline-flex px-3.5 py-1.5 text-xs font-bold rounded-pill items-center gap-2 ${theme.badge.bg} ${theme.badge.text}`}
-              >
-                <span className="w-2 h-2 rounded-pill bg-current animate-pulse" aria-hidden="true" />
-                {currentModeLabel}
-              </span>
-              <div
-                className="app-well p-0.5 rounded-pill inline-flex gap-0.5"
-                role="group"
-                aria-label="Color theme"
-              >
-                <button
-                  type="button"
-                  onClick={() => setColorMode("light")}
-                  aria-pressed={colorMode === "light"}
-                  aria-label="Light mode"
-                  title="Light mode"
-                  className={`inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1.5 rounded-pill text-xs font-semibold ${
-                    colorMode === "light" ? "app-primary" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  <Sun className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="hidden lg:inline">Light</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setColorMode("dark")}
-                  aria-pressed={colorMode === "dark"}
-                  aria-label="Dark mode"
-                  title="Dark mode"
-                  className={`inline-flex items-center gap-1.5 px-2 lg:px-2.5 py-1.5 rounded-pill text-xs font-semibold ${
-                    colorMode === "dark" ? "app-sky" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  <Moon className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="hidden lg:inline">Dark</span>
-                </button>
-              </div>
-              <HeaderMenu
-                onOpenSheets={() => setShowSheetSetup(true)}
-                onSync={handleSync}
-                onUpdateFound={handleUpdateFound}
-              />
-            </div>
-          </div>
-        </header>
-
-      <UpdateBanner
-        externalUpdate={pendingUpdate}
-        onClearExternalUpdate={() => setPendingUpdate(null)}
-      />
-
-      {/* Sync error / info toast */}
-      {syncError && (
-        <div className="container pt-4">
+    <div className="app-shell h-dvh overflow-hidden bg-paper text-ink flex flex-col">
+      <header
+        data-tauri-drag-region
+        className="app-toolbar shrink-0 select-none flex items-center"
+      >
+        <div
+          data-tauri-drag-region
+          className="container flex-1 min-w-0 flex items-center justify-between gap-2 sm:gap-4 py-2 has-[+[data-window-controls]]:pr-3"
+        >
           <div
-            className={`px-4 py-2.5 rounded-well text-sm flex items-center justify-between border ${
-              syncError === "Everything is up to date."
-                ? "border-ok-edge text-ok bg-ok-soft"
-                : "border-bad-edge text-bad bg-bad-soft"
-            }`}
+            data-tauri-drag-region
+            className="flex items-center gap-2.5 sm:gap-3 min-w-0"
           >
-            <span>
-              {syncError.includes("sign in") ? (
-                <>
-                  Please{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSyncError(null);
-                      setShowSheetSetup(true);
-                    }}
-                    className="underline font-semibold text-sky-ink"
-                  >
-                    sign in with Google
-                  </button>
-                  {" "}to sync.
-                </>
-              ) : (
-                syncError
-              )}
-            </span>
-            <button
-              type="button"
-              onClick={() => setSyncError(null)}
-              className="ml-4 font-semibold underline"
-              aria-label="Dismiss sync message"
+            <span
+              data-tauri-drag-region
+              className="app-brand-badge inline-flex items-center justify-center size-9 sm:size-10 rounded-well shrink-0 transform hover:rotate-6 transition-transform"
+              aria-hidden="true"
             >
-              Dismiss
-            </button>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+                className="pointer-events-none"
+              >
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill="var(--color-brand-heart)"
+                />
+              </svg>
+            </span>
+            <h1
+              data-tauri-drag-region
+              className="text-base sm:text-xl lg:text-2xl font-bold app-display text-wordmark truncate"
+            >
+              Swoo’s PUGs Balancer
+            </h1>
+            <Badge
+              variant="muted"
+              data-tauri-drag-region
+              className="hidden sm:inline-flex px-2 py-0.5 text-[11px] font-semibold app-measured shrink-0"
+            >
+              v{APP_VERSION}
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <Badge
+              className={cn(
+                "hidden sm:inline-flex px-3.5 py-1.5 font-bold gap-2",
+                theme.badge.bg,
+                theme.badge.text,
+              )}
+            >
+              <span className="size-2 rounded-pill bg-current animate-pulse" aria-hidden="true" />
+              {currentModeLabel}
+            </Badge>
+            <ToggleGroup
+              value={[colorMode]}
+              onValueChange={(vals) => {
+                const next = vals[0];
+                if (next === "light" || next === "dark") setColorMode(next);
+              }}
+              aria-label="Color theme"
+              size="sm"
+            >
+              <ToggleGroupItem
+                value="light"
+                activeVariant="primary"
+                aria-label="Light mode"
+                title="Light mode"
+                className="px-2 lg:px-2.5 py-1.5"
+              >
+                <Sun data-icon="inline-start" aria-hidden="true" />
+                <span className="hidden lg:inline">Light</span>
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="dark"
+                activeVariant="sky"
+                aria-label="Dark mode"
+                title="Dark mode"
+                className="px-2 lg:px-2.5 py-1.5"
+              >
+                <Moon data-icon="inline-start" aria-hidden="true" />
+                <span className="hidden lg:inline">Dark</span>
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <HeaderMenu
+              onOpenSheets={() => setShowSheetSetup(true)}
+              onSync={handleSync}
+              onUpdateFound={handleUpdateFound}
+            />
           </div>
         </div>
-      )}
+        <WindowControls />
+      </header>
 
       {/* Sheet setup modal */}
-      {showSheetSetup && (
-        <SheetSetupModal onClose={() => setShowSheetSetup(false)} />
-      )}
+      <SheetSetupModal
+        isOpen={showSheetSetup}
+        onClose={() => setShowSheetSetup(false)}
+      />
 
       {/* Sync diff modal */}
-      {syncDiff && (
-        <SyncDiffModal
-          diff={syncDiff}
-          onApply={handleApplySync}
-          onCancel={() => setSyncDiff(null)}
-        />
-      )}
+      <SyncDiffModal
+        diff={syncDiff}
+        onApply={handleApplySync}
+        onCancel={() => setSyncDiff(null)}
+      />
 
-      {/* Main workbench */}
+      <div className="app-scroll-viewport flex-1 min-h-0 overflow-y-auto overflow-x-clip flex flex-col justify-between">
+        <div>
+          <UpdateBanner
+            externalUpdate={pendingUpdate}
+            onClearExternalUpdate={() => setPendingUpdate(null)}
+          />
+
+          {/* Main workbench */}
       <main className="container py-6">
         {layoutMode === "wide-teams" ? (
-          <div className="space-y-6">
-            <div className="space-y-5">{workspaceSection}</div>
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">{workspaceSection}</div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              <div className="lg:col-span-5 space-y-5">
+              <div className="lg:col-span-5 flex flex-col gap-5">
                 {importerSection}
                 {lobbySection}
               </div>
-              <div className="lg:col-span-7 space-y-5">
+              <div className="lg:col-span-7 flex flex-col gap-5">
                 {constraintsSection}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {statsSection}
@@ -357,11 +359,11 @@ function App() {
           </div>
         ) : layoutMode === "three-col" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-4 xl:col-span-3 space-y-5">
+            <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-5">
               {importerSection}
               {lobbySection}
             </div>
-            <div className="lg:col-span-8 xl:col-span-6 space-y-5">
+            <div className="lg:col-span-8 xl:col-span-6 flex flex-col gap-5">
               {workspaceSection}
             </div>
             <div className="lg:col-span-12 xl:col-span-3 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-1 gap-5">
@@ -372,7 +374,7 @@ function App() {
           </div>
         ) : layoutMode === "teams-left" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-8 space-y-5">
+            <div className="lg:col-span-8 flex flex-col gap-5">
               {workspaceSection}
               {constraintsSection}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -380,18 +382,18 @@ function App() {
                 {leaderboardSection}
               </div>
             </div>
-            <div className="lg:col-span-4 space-y-5">
+            <div className="lg:col-span-4 flex flex-col gap-5">
               {importerSection}
               {lobbySection}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-4 space-y-5">
+            <div className="lg:col-span-4 flex flex-col gap-5">
               {importerSection}
               {lobbySection}
             </div>
-            <div className="lg:col-span-8 space-y-5">
+            <div className="lg:col-span-8 flex flex-col gap-5">
               {workspaceSection}
               {constraintsSection}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -402,13 +404,14 @@ function App() {
           </div>
         )}
       </main>
-      </div>
+        </div>
 
-      <footer className="container pb-6 pt-2 text-center text-xs text-footer-note font-medium">
-        <p>
-          Crafted with love for sweet cozy gaming nights • {currentModeLabel} Match Engine • v{APP_VERSION}
-        </p>
-      </footer>
+        <footer className="container pb-6 pt-2 text-center text-xs text-footer-note font-medium">
+          <p>
+            Crafted with love for sweet cozy gaming nights • {currentModeLabel} Match Engine • v{APP_VERSION}
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

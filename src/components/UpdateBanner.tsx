@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   checkForAppUpdate,
   installAppUpdate,
@@ -89,17 +92,14 @@ export function UpdateBanner({ externalUpdate, onClearExternalUpdate }: UpdateBa
 
   return (
     <div className="container pt-4">
-      <div
+      <Alert
         role="status"
-        className={`px-4 py-2.5 rounded-well text-sm flex flex-wrap items-center justify-between gap-3 border ${
-          error
-            ? "border-bad-edge text-bad bg-bad-soft"
-            : "border-sky-edge text-sky-ink bg-sky-soft"
-        }`}
+        variant={error ? "bad" : "info"}
+        className="items-center [&>svg]:translate-y-0"
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="truncate">
+        <Download aria-hidden="true" />
+        <AlertDescription className="flex flex-wrap items-center justify-between gap-3 text-current">
+          <span className="truncate min-w-0">
             {error ? (
               <>Update to v{activeUpdate.version} failed: {error}</>
             ) : installing ? (
@@ -116,29 +116,37 @@ export function UpdateBanner({ externalUpdate, onClearExternalUpdate }: UpdateBa
               </>
             )}
           </span>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleInstall}
-            disabled={installing}
-            className="app-primary px-3.5 py-1.5 rounded-pill text-xs font-semibold"
-          >
-            {installing ? "Updating…" : error ? "Retry" : "Update & Restart"}
-          </button>
-          {!installing && (
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="app-secondary px-3 py-1.5 rounded-pill text-xs font-semibold"
-              aria-label="Dismiss update notification"
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleInstall}
+              disabled={installing}
             >
-              Later
-            </button>
-          )}
-        </div>
-      </div>
+              {installing && (
+                <Spinner
+                  data-icon="inline-start"
+                  role={undefined}
+                  aria-label={undefined}
+                  aria-hidden="true"
+                />
+              )}
+              {installing ? "Updating…" : error ? "Retry" : "Update & Restart"}
+            </Button>
+            {!installing && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleDismiss}
+                aria-label="Dismiss update notification"
+              >
+                Later
+              </Button>
+            )}
+          </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

@@ -1,26 +1,52 @@
 import { useCallback, useMemo, useState, useRef, useLayoutEffect } from "react";
-import { Eye, EyeOff, Pencil, Search, X, Star } from "lucide-react";
+import { Eye, EyeOff, Pencil, Search, Star, Users, X } from "lucide-react";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { PlayerCard } from "./PlayerCard";
 import { AppSelect, type SelectOption } from "./AppSelect";
 import { AddPlayerModal } from "./AddPlayerModal";
 import { WeightAdjuster } from "./WeightAdjuster";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { getDisplayName } from "@utils/heroUtils";
 import type { Player, LobbyPlayer, Role } from "@engine/types";
 
 type SortOption = "name" | "rank-desc" | "rank-asc" | "role";
 
 const STITCH_CHIP_VARIANTS = [
-  "app-chip--pink",
-  "app-chip--sky",
-  "app-chip--purple",
-  "app-chip--emerald",
-  "app-chip--slate",
-  "app-chip--amber",
+  "pink",
+  "sky",
+  "purple",
+  "emerald",
+  "slate",
+  "amber",
 ] as const;
 
-function getChipVariant(battletag: string, index: number): string {
+type ChipVariant = (typeof STITCH_CHIP_VARIANTS)[number];
+
+function getChipVariant(battletag: string, index: number): ChipVariant {
   let hash = index;
   for (let i = 0; i < battletag.length; i++) {
     hash = (hash * 31 + battletag.charCodeAt(i)) >>> 0;
@@ -227,289 +253,348 @@ export function LobbySelector() {
     setEditingPlayer(null);
   };
 
-  if (allPlayers.length === 0) {
-    return (
-      <div className="text-center text-muted py-8">
-        <p className="mb-4 text-sm">Import players first to build your lobby</p>
-        <button
-          type="button"
-          onClick={handleAddPlayer}
-          className="app-primary px-4 py-2 rounded-pill text-sm font-semibold"
-        >
-          + Add Player Manually
-        </button>
-        <AddPlayerModal
-          isOpen={modalOpen}
-          onClose={handleCloseModal}
-          editPlayer={editingPlayer}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-heading min-w-0 flex items-center gap-1.5 flex-wrap">
-          <span>Lobby</span>
-          <span className="text-muted text-sm font-semibold">
-            (<span className="num">{lobbySummary.activeCount}</span> active
-            {lobbySummary.afkCount > 0 && (
-              <span> / <span className="num">{lobbySummary.afkCount}</span> AFK</span>
-            )}
-            )
-          </span>
-        </h2>
-        <div className="flex gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleAddPlayer}
-            className="app-win-1 min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
-          >
-            + Add
-          </button>
-          <button
-            type="button"
-            onClick={handleSelectAll}
-            className="app-secondary min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
-          >
-            All
-          </button>
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="app-secondary min-h-8 px-3 py-1 text-xs font-bold rounded-pill app-nowrap"
-          >
-            Clear
-          </button>
+    <>
+      {allPlayers.length === 0 ? (
+        <Empty className="py-8">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Users aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>No players loaded</EmptyTitle>
+            <EmptyDescription>
+              Import players first to build your lobby
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button variant="primary" onClick={handleAddPlayer}>
+              + Add Player Manually
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-bold text-heading min-w-0 flex items-center gap-1.5 flex-wrap">
+            <span>Lobby</span>
+            <span className="text-muted text-sm font-semibold">
+              (<span className="num">{lobbySummary.activeCount}</span> active
+              {lobbySummary.afkCount > 0 && (
+                <span> / <span className="num">{lobbySummary.afkCount}</span> AFK</span>
+              )}
+              )
+            </span>
+          </h2>
+          <div className="flex gap-1.5 shrink-0">
+            <Button variant="win1" size="sm" onClick={handleAddPlayer} className="min-h-8 py-1 font-bold">
+              + Add
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleSelectAll} className="min-h-8 py-1 font-bold">
+              All
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleClearAll} className="min-h-8 py-1 font-bold">
+              Clear
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Quick lobby summary */}
-      {lobbyBattletags.length > 0 && (
-        <div className="app-well p-3.5">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="inline-flex items-center gap-1.5">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">In Lobby</span>
-              <span className="px-2 py-0.5 text-xs font-bold rounded-pill bg-paper-2 text-ink-2 num">
-                {lobbyBattletags.length}
-              </span>
-            </div>
-            {selectedBattletag && (
-              <button
-                type="button"
-                onClick={() => setSelectedBattletag(null)}
-                className="text-xs text-pink-ink hover:underline font-semibold"
-              >
-                Clear selection
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 mb-2.5 text-xs">
-            <span>
-              <span className="font-semibold text-tank">Tank</span>{" "}
-              <span className="font-semibold text-ink num">{lobbySummary.tank}</span>
-            </span>
-            <span>
-              <span className="font-semibold text-dps">DPS</span>{" "}
-              <span className="font-semibold text-ink num">{lobbySummary.dps}</span>
-            </span>
-            <span>
-              <span className="font-semibold text-sup">Support</span>{" "}
-              <span className="font-semibold text-ink num">{lobbySummary.support}</span>
-            </span>
-            {lobbySummary.mustCount > 0 && (
-              <span className="font-semibold text-warn num">
-                Must {lobbySummary.mustCount}
-              </span>
-            )}
-            {lobbySummary.afkCount > 0 && (
-              <span className="font-semibold text-muted num">
-                AFK {lobbySummary.afkCount}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {lobbyBattletags.map((bt, idx) => {
-              const isAfk = afkPlayers.has(bt);
-              const isMustPlay = mustPlay.has(bt);
-              const isSelected = selectedBattletag === bt;
-              const name = getDisplayName(bt);
-              const chipVariant = getChipVariant(bt, idx);
-              return (
-                <div
-                  key={bt}
-                  className={`group/badge inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-pill border transition-colors duration-150 ${
-                    isSelected
-                      ? isMustPlay
-                        ? "bg-warn-soft text-warn border-warn-edge ring-2 ring-focus hover:bg-warn-fill hover:text-warn-btn-ink"
-                        : "bg-pink-soft text-pink-ink border-pink-edge ring-2 ring-focus hover:bg-accent hover:text-accent-ink"
-                      : isAfk
-                        ? "bg-paper-2 text-muted border-rule-2 hover:bg-card-row hover:text-ink"
-                        : isMustPlay
-                          ? "app-chip--amber hover:bg-warn-fill hover:text-warn-btn-ink"
-                          : `${chipVariant} hover:border-pink-edge`
-                  }`}
+        {/* Quick lobby summary */}
+        {lobbyBattletags.length > 0 && (
+          <Card variant="well" className="p-3.5 gap-2">
+            <CardHeader className="p-0 flex-row items-center justify-between gap-2">
+              <CardTitle className="inline-flex items-center gap-1.5 text-xs font-bold text-muted uppercase tracking-wider">
+                <span>In Lobby</span>
+                <Badge className="bg-paper-2 border-transparent px-2 font-bold num">
+                  {lobbyBattletags.length}
+                </Badge>
+              </CardTitle>
+              {selectedBattletag && (
+                <Button
+                  variant="link"
+                  size="xs"
+                  onClick={() => setSelectedBattletag(null)}
+                  className="h-auto p-0 text-pink-ink"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedBattletag === bt) {
-                        setSelectedBattletag(null);
-                      } else {
-                        setSelectedBattletag(bt);
-                        const cardEl = playerCardRefs.current.get(bt);
-                        if (cardEl && playerListRef.current) {
-                          cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                        }
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 text-left focus-visible:outline-none focus-visible:underline"
-                    title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "") + " - Click to view"}
-                  >
-                    {isMustPlay && !isAfk && <Star className="h-3 w-3 shrink-0" aria-hidden="true" />}
-                    <span>{name}</span>
-                    {isAfk && <span className="text-muted"> AFK</span>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeFromLobby(bt)}
-                    className="inline-flex items-center justify-center ml-0.5 text-muted hover:text-bad focus-visible:text-bad focus-visible:outline-none"
-                    title="Remove from lobby"
-                    aria-label={`Remove ${name} from lobby`}
-                  >
-                    <X className="w-3 h-3" aria-hidden="true" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                  Clear selection
+                </Button>
+              )}
+            </CardHeader>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
-        <input
-          type="text"
-          placeholder="Search players or heroes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          aria-label="Search players or heroes"
-          className="app-input w-full pl-9 pr-3.5 py-2 text-xs font-semibold"
-        />
-      </div>
+            <CardContent className="p-0 flex flex-col gap-2.5">
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs">
+                <span>
+                  <span className="font-semibold text-tank">Tank</span>{" "}
+                  <span className="font-semibold text-ink num">{lobbySummary.tank}</span>
+                </span>
+                <span>
+                  <span className="font-semibold text-dps">DPS</span>{" "}
+                  <span className="font-semibold text-ink num">{lobbySummary.dps}</span>
+                </span>
+                <span>
+                  <span className="font-semibold text-sup">Support</span>{" "}
+                  <span className="font-semibold text-ink num">{lobbySummary.support}</span>
+                </span>
+                {lobbySummary.mustCount > 0 && (
+                  <span className="font-semibold text-warn num">
+                    Must {lobbySummary.mustCount}
+                  </span>
+                )}
+                {lobbySummary.afkCount > 0 && (
+                  <span className="font-semibold text-muted num">
+                    AFK {lobbySummary.afkCount}
+                  </span>
+                )}
+              </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 items-center min-w-0">
-        <AppSelect
-          value={roleFilter}
-          onChange={setRoleFilter}
-          options={ROLE_FILTER_OPTIONS}
-          ariaLabel="Filter by role"
-        />
-        <AppSelect
-          value={sortBy}
-          onChange={setSortBy}
-          options={SORT_OPTIONS}
-          ariaLabel="Sort players"
-        />
-        <button
-          type="button"
-          onClick={toggleShowWeightModifiers}
-          className={`shrink-0 px-2.5 py-1.5 rounded-well text-sm ${
-            showWeightModifiers
-              ? "app-sky"
-              : "app-quiet"
-          }`}
-          aria-label={showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
-          title={showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
-        >
-          {showWeightModifiers ? <Eye className="h-4 w-4" aria-hidden="true" /> : <EyeOff className="h-4 w-4" aria-hidden="true" />}
-        </button>
-      </div>
+              <div className="flex flex-wrap gap-1.5">
+                {lobbyBattletags.map((bt, idx) => {
+                  const isAfk = afkPlayers.has(bt);
+                  const isMustPlay = mustPlay.has(bt);
+                  const isSelected = selectedBattletag === bt;
+                  const name = getDisplayName(bt);
+                  const chipVariant = getChipVariant(bt, idx);
 
-      {/* Player count indicator */}
-      {lobbyBattletags.length - afkPlayers.size < 10 && (
-        <div className="text-sm font-semibold text-warn bg-warn-soft border border-warn-edge rounded-well px-3 py-2">
-          Need at least 10 active players ({10 - (lobbyBattletags.length - afkPlayers.size)} more)
-        </div>
-      )}
+                  const badgeVariant: BadgeProps["variant"] = isSelected
+                    ? isMustPlay
+                      ? "warn"
+                      : "pink"
+                    : isAfk
+                      ? "muted"
+                      : isMustPlay
+                        ? "amber"
+                        : chipVariant;
 
-      {/* Player list */}
-      <div ref={playerListRef} className="app-player-scroll space-y-2 max-h-[600px] overflow-y-auto py-1">
-        {sortedPlayers.map((player) => {
-          const inLobby = lobbySet.has(player.battletag);
-          const lobbyPlayer = lobbyPlayersMap.get(player.battletag);
-          return (
-            <div
-              key={player.battletag}
-              ref={(el) => {
-                if (el) {
-                  playerCardRefs.current.set(player.battletag, el);
-                }
-              }}
-              className={`relative group rounded-well ${
-                selectedBattletag === player.battletag ? "ring-2 ring-focus" : ""
-              }`}
+                  return (
+                    <Badge
+                      key={bt}
+                      variant={badgeVariant}
+                      className={cn(
+                        "group/badge py-1",
+                        isSelected
+                          ? isMustPlay
+                            ? "ring-2 ring-focus hover:bg-warn-fill hover:text-warn-btn-ink"
+                            : "ring-2 ring-focus hover:bg-accent hover:text-accent-ink"
+                          : isAfk
+                            ? "bg-paper-2 border-rule-2 hover:bg-card-row hover:text-ink"
+                            : isMustPlay
+                              ? "hover:bg-warn-fill hover:text-warn-btn-ink"
+                              : "hover:border-pink-edge"
+                      )}
+                    >
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selectedBattletag === bt) {
+                                  setSelectedBattletag(null);
+                                } else {
+                                  setSelectedBattletag(bt);
+                                  const cardEl = playerCardRefs.current.get(bt);
+                                  if (cardEl && playerListRef.current) {
+                                    cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  }
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 text-left focus-visible:outline-none focus-visible:underline"
+                            />
+                          }
+                        >
+                          {isMustPlay && !isAfk && <Star className="size-3 shrink-0" aria-hidden="true" />}
+                          <span>{name}</span>
+                          {isAfk && <span className="text-muted"> AFK</span>}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {`${bt}${isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : ""} - Click to view`}
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <button
+                              type="button"
+                              onClick={() => removeFromLobby(bt)}
+                              className="inline-flex items-center justify-center ml-0.5 text-muted hover:text-bad focus-visible:text-bad focus-visible:outline-none"
+                              aria-label={`Remove ${name} from lobby`}
+                            />
+                          }
+                        >
+                          <X className="size-3" aria-hidden="true" />
+                        </TooltipTrigger>
+                        <TooltipContent>Remove from lobby</TooltipContent>
+                      </Tooltip>
+                    </Badge>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search */}
+        <InputGroup>
+          <InputGroupAddon align="inline-start">
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="text"
+            placeholder="Search players or heroes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search players or heroes"
+            className="text-xs font-semibold"
+          />
+          {searchTerm && (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                onClick={() => setSearchTerm("")}
+                aria-label="Clear search"
+              >
+                <X aria-hidden="true" />
+              </InputGroupButton>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
+
+        {/* Filters */}
+        <div className="flex gap-2 items-center min-w-0">
+          <AppSelect
+            value={roleFilter}
+            onChange={setRoleFilter}
+            options={ROLE_FILTER_OPTIONS}
+            ariaLabel="Filter by role"
+          />
+          <AppSelect
+            value={sortBy}
+            onChange={setSortBy}
+            options={SORT_OPTIONS}
+            ariaLabel="Sort players"
+          />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={showWeightModifiers ? "sky" : "quiet"}
+                  size="icon-sm"
+                  shape="well"
+                  onClick={toggleShowWeightModifiers}
+                  aria-label={showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
+                />
+              }
             >
-              <PlayerCard
-                player={inLobby && lobbyPlayer ? lobbyPlayer : player}
-                selected={inLobby}
-                onClick={() => {
-                  // Clear highlight on click
-                  setSelectedBattletag(null);
-                  if (inLobby) {
-                    // If in lobby, clicking edits the player
-                    handleEditPlayer(player.battletag);
-                  } else {
-                    // If not in lobby, clicking adds them
-                    saveScrollPosition();
-                    addToLobby(player.battletag);
+              {showWeightModifiers ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
+            </TooltipTrigger>
+            <TooltipContent>
+              {showWeightModifiers ? "Hide weight modifiers" : "Show weight modifiers"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Player count indicator */}
+        {lobbyBattletags.length - afkPlayers.size < 10 && (
+          <Alert variant="warn" className="px-3 py-2">
+            <AlertDescription className="font-semibold text-warn">
+              Need at least 10 active players ({10 - (lobbyBattletags.length - afkPlayers.size)} more)
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Player list */}
+        <div ref={playerListRef} className="app-player-scroll flex flex-col gap-2 max-h-[600px] overflow-y-auto py-1">
+          {sortedPlayers.map((player) => {
+            const inLobby = lobbySet.has(player.battletag);
+            const lobbyPlayer = lobbyPlayersMap.get(player.battletag);
+            return (
+              <div
+                key={player.battletag}
+                ref={(el) => {
+                  if (el) {
+                    playerCardRefs.current.set(player.battletag, el);
                   }
                 }}
-                showControls={inLobby}
-                onWeightClick={
-                  inLobby && lobbyPlayer
-                    ? () => setWeightAdjustPlayer(lobbyPlayer)
-                    : undefined
-                }
-              />
-              {inLobby && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    saveScrollPosition();
-                    removeFromLobby(player.battletag);
+                className={cn(
+                  "relative group rounded-well",
+                  selectedBattletag === player.battletag && "ring-2 ring-focus"
+                )}
+              >
+                <PlayerCard
+                  player={inLobby && lobbyPlayer ? lobbyPlayer : player}
+                  selected={inLobby}
+                  onClick={() => {
+                    // Clear highlight on click
+                    setSelectedBattletag(null);
+                    if (inLobby) {
+                      // If in lobby, clicking edits the player
+                      handleEditPlayer(player.battletag);
+                    } else {
+                      // If not in lobby, clicking adds them
+                      saveScrollPosition();
+                      addToLobby(player.battletag);
+                    }
                   }}
-                  className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center text-xs bg-paper-2 border border-rule text-muted hover:bg-bad-soft hover:text-bad hover:border-bad-edge rounded-pill opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  title="Remove from lobby"
-                  aria-label={`Remove ${getDisplayName(player.battletag)} from lobby`}
-                >
-                  <X className="h-3 w-3" aria-hidden="true" />
-                </button>
-              )}
-              {!inLobby && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditPlayer(player.battletag);
-                  }}
-                  className="absolute top-2 right-2 px-2 py-1 text-xs bg-paper-2 border border-rule text-ink-2 hover:bg-sky-soft rounded-pill opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label={`Edit ${getDisplayName(player.battletag)}`}
-                >
-                  <Pencil className="h-3 w-3" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  showControls={inLobby}
+                  onWeightClick={
+                    inLobby && lobbyPlayer
+                      ? () => setWeightAdjustPlayer(lobbyPlayer)
+                      : undefined
+                  }
+                  headerAction={
+                    inLobby ? (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              shape="pill"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                saveScrollPosition();
+                                removeFromLobby(player.battletag);
+                              }}
+                              className="size-6 ml-0.5 text-muted hover:bg-bad-soft hover:text-bad focus-visible:text-bad"
+                              aria-label={`Remove ${getDisplayName(player.battletag)} from lobby`}
+                            />
+                          }
+                        >
+                          <X aria-hidden="true" />
+                        </TooltipTrigger>
+                        <TooltipContent>Remove from lobby</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              shape="pill"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditPlayer(player.battletag);
+                              }}
+                              className="size-6 ml-0.5 text-muted hover:bg-sky-soft hover:text-sky-ink focus-visible:text-sky-ink"
+                              aria-label={`Edit ${getDisplayName(player.battletag)}`}
+                            />
+                          }
+                        >
+                          <Pencil aria-hidden="true" />
+                        </TooltipTrigger>
+                        <TooltipContent>Edit player</TooltipContent>
+                      </Tooltip>
+                    )
+                  }
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        </div>
+      )}
 
       {/* Add/Edit Player Modal */}
       <AddPlayerModal
@@ -519,12 +604,10 @@ export function LobbySelector() {
       />
 
       {/* Weight Adjuster Modal */}
-      {weightAdjustPlayer && (
-        <WeightAdjuster
-          player={weightAdjustPlayer}
-          onClose={() => setWeightAdjustPlayer(null)}
-        />
-      )}
-    </div>
+      <WeightAdjuster
+        player={weightAdjustPlayer}
+        onClose={() => setWeightAdjustPlayer(null)}
+      />
+    </>
   );
 }

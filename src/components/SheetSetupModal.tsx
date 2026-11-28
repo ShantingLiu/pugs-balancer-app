@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FilePlus2, Link2, Upload, PlugZap, X } from "lucide-react";
+import { FilePlus2, Link2, Upload, PlugZap } from "lucide-react";
 import { useSheetStore } from "@store/sheetStore";
 import { usePlayerStore } from "@store/playerStore";
 import {
@@ -13,6 +13,19 @@ import { extractSheetId } from "@utils/sheetUrl";
 import { signIn } from "@services/googleAuth";
 import { open } from "@tauri-apps/plugin-shell";
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "@config/google";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 
 // =============================================================================
 // SheetSetupModal — Create, connect, or upload a Google Sheet (§10.2)
@@ -21,10 +34,11 @@ import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } from "@config/google";
 type SetupMode = "create" | "connect" | "upload";
 
 interface SheetSetupModalProps {
+  isOpen?: boolean;
   onClose: () => void;
 }
 
-export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
+export function SheetSetupModal({ isOpen = true, onClose }: SheetSetupModalProps) {
   const isAuth = useSheetStore((s) => s.isAuthenticated);
   const spreadsheetId = useSheetStore((s) => s.spreadsheetId);
   const sheetName = useSheetStore((s) => s.sheetName);
@@ -41,6 +55,19 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setMode(null);
+      setUrl("");
+      setTitle("PUGs Balancer Roster");
+      setLoading(false);
+      setError(null);
+      setConfirmDisconnect(false);
+    }
+  }
 
   const handleDisconnect = () => {
     if (hasUnsyncedChanges) {
@@ -142,26 +169,20 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
-      <div className="app-modal p-6 w-full max-w-lg max-h-[90vh] flex flex-col mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 shrink-0">
-          <h2 className="text-xl font-semibold text-ink">Google Sheets</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="text-muted hover:text-ink p-1.5 rounded-pill"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="text-xl">Google Sheets</DialogTitle>
+          <DialogDescription className="sr-only">
+            Sign in, create, connect, upload, or disconnect a Google Sheet.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Error display */}
         {error && (
-          <div className="bg-bad-soft border border-bad-edge rounded-well p-3 mb-4 text-sm text-bad max-h-32 overflow-y-auto shrink-0">
-            {error}
-          </div>
+          <Alert variant="bad" className="max-h-32 overflow-y-auto shrink-0">
+            <AlertDescription className="text-bad">{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Content */}
@@ -170,178 +191,232 @@ export function SheetSetupModal({ onClose }: SheetSetupModalProps) {
             <p className="text-ink-2 mb-4 text-sm">
               Sign in to access Google Sheets sync.
             </p>
-            <button
-              type="button"
-              onClick={handleSignIn}
-              disabled={loading}
-              className="px-5 py-2.5 app-primary rounded-pill font-semibold text-sm"
-            >
+            <Button onClick={handleSignIn} disabled={loading} size="lg">
+              {loading && (
+                <Spinner
+                  data-icon="inline-start"
+                  role={undefined}
+                  aria-label={undefined}
+                  aria-hidden="true"
+                />
+              )}
               {loading ? "Signing in…" : "Sign in with Google"}
-            </button>
+            </Button>
           </div>
         ) : !mode ? (
-          <div>
+          <div className="flex flex-col gap-4">
             {spreadsheetId && (
-              <div className="app-well p-3 mb-4 text-sm text-ink-2">
-                Connected to{" "}
-                <span className="font-semibold text-ink">{sheetName}</span>
-                {spreadsheetUrl && (
-                  <button
-                    type="button"
-                    onClick={() => open(spreadsheetUrl)}
-                    className="ml-2 text-sky-ink font-semibold underline"
-                  >
-                    Open in Sheets
-                  </button>
-                )}
-              </div>
+              <Card variant="well">
+                <CardContent className="p-3 text-sm text-ink-2">
+                  Connected to{" "}
+                  <span className="font-semibold text-ink">{sheetName}</span>
+                  {spreadsheetUrl && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="ml-2 h-auto p-0"
+                      onClick={() => open(spreadsheetUrl)}
+                    >
+                      Open in Sheets
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
-            {confirmDisconnect ? (
-              <div className="bg-warn-soft border border-warn-edge rounded-well p-4 mb-4">
-                <p className="text-sm text-warn font-semibold mb-3">
-                  You have unsynced changes that will be lost if you disconnect.
-                </p>
-                <div className="flex gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleConfirmDisconnect}
-                    className="px-3.5 py-1.5 app-danger rounded-pill text-sm font-semibold"
-                  >
-                    Disconnect anyway
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDisconnect(false)}
-                    className="px-3.5 py-1.5 app-secondary rounded-pill text-sm font-semibold"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : null}
+            {confirmDisconnect && (
+              <Alert variant="warn">
+                <AlertDescription className="flex flex-col gap-3">
+                  <p className="text-sm text-warn font-semibold">
+                    You have unsynced changes that will be lost if you disconnect.
+                  </p>
+                  <div className="flex gap-2.5">
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={handleConfirmDisconnect}
+                    >
+                      Disconnect anyway
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setConfirmDisconnect(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex flex-col gap-2.5">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                shape="well"
+                className="justify-start py-3 h-auto"
                 onClick={() => setMode("create")}
-                className="px-4 py-3 app-secondary rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
               >
-                <FilePlus2 className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
+                <FilePlus2 className="text-pink-ink" data-icon="inline-start" aria-hidden="true" />
                 Create New Sheet
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
+                shape="well"
+                className="justify-start py-3 h-auto"
                 onClick={() => setMode("connect")}
-                className="px-4 py-3 app-secondary rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
               >
-                <Link2 className="h-4 w-4 text-sky-ink shrink-0" aria-hidden="true" />
+                <Link2 className="text-sky-ink" data-icon="inline-start" aria-hidden="true" />
                 Connect Existing Sheet
-              </button>
-              <button
-                type="button"
-                className="px-4 py-3 app-secondary app-nowrap rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
+              </Button>
+              <Button
+                variant="secondary"
+                shape="well"
+                className="justify-start py-3 h-auto app-nowrap"
                 onClick={() => setMode("upload")}
               >
-                <Upload className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
+                <Upload className="text-pink-ink" data-icon="inline-start" aria-hidden="true" />
                 Upload to New Sheet
-              </button>
+              </Button>
               {spreadsheetId && (
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
+                  shape="well"
+                  className="justify-start py-3 h-auto"
                   onClick={handleDisconnect}
-                  className="px-4 py-3 app-danger rounded-well text-left font-semibold text-sm flex items-center gap-2.5"
                 >
-                  <PlugZap className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <PlugZap data-icon="inline-start" aria-hidden="true" />
                   Disconnect
-                </button>
+                </Button>
               )}
             </div>
           </div>
         ) : mode === "create" ? (
-          <div>
-            <button
-              type="button"
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="link"
+              size="sm"
+              className="self-start h-auto p-0"
               onClick={goBack}
-              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
-            </button>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">
-              Sheet title
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="app-input w-full px-3 py-2 mb-4 text-sm"
-            />
-            <button
-              type="button"
+            </Button>
+            <FieldGroup className="gap-3">
+              <Field data-invalid={Boolean(error) || undefined} className="gap-1.5">
+                <FieldLabel htmlFor="sheet-create-title">Sheet title</FieldLabel>
+                <Input
+                  id="sheet-create-title"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  aria-invalid={Boolean(error) || undefined}
+                />
+              </Field>
+            </FieldGroup>
+            <Button
               onClick={handleCreate}
               disabled={loading || !title.trim()}
-              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
+              className="w-full mt-1"
             >
+              {loading && (
+                <Spinner
+                  data-icon="inline-start"
+                  role={undefined}
+                  aria-label={undefined}
+                  aria-hidden="true"
+                />
+              )}
               {loading ? "Creating…" : "Create"}
-            </button>
+            </Button>
           </div>
         ) : mode === "connect" ? (
-          <div>
-            <button
-              type="button"
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="link"
+              size="sm"
+              className="self-start h-auto p-0"
               onClick={goBack}
-              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
-            </button>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">
-              Paste Google Sheet URL
-            </label>
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              className="app-input w-full px-3 py-2 mb-4 text-sm"
-            />
-            <button
-              type="button"
+            </Button>
+            <FieldGroup className="gap-3">
+              <Field data-invalid={Boolean(error) || undefined} className="gap-1.5">
+                <FieldLabel htmlFor="sheet-connect-url">Paste Google Sheet URL</FieldLabel>
+                <Input
+                  id="sheet-connect-url"
+                  value={url}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  aria-invalid={Boolean(error) || undefined}
+                />
+              </Field>
+            </FieldGroup>
+            <Button
               onClick={handleConnect}
               disabled={loading || !url.trim()}
-              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
+              className="w-full mt-1"
             >
+              {loading && (
+                <Spinner
+                  data-icon="inline-start"
+                  role={undefined}
+                  aria-label={undefined}
+                  aria-hidden="true"
+                />
+              )}
               {loading ? "Connecting…" : "Connect"}
-            </button>
+            </Button>
           </div>
         ) : mode === "upload" ? (
-          <div>
-            <button
-              type="button"
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="link"
+              size="sm"
+              className="self-start h-auto p-0"
               onClick={goBack}
-              className="text-sm font-semibold text-sky-ink hover:underline mb-3"
             >
               ← Back
-            </button>
-            <p className="text-sm text-ink-2 mb-3">
+            </Button>
+            <p className="text-sm text-ink-2">
               {playerCount} player{playerCount !== 1 ? "s" : ""} will be uploaded to a new sheet.
             </p>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">
-              Sheet title
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="app-input w-full px-3 py-2 mb-4 text-sm"
-            />
-            <button
-              type="button"
+            <FieldGroup className="gap-3">
+              <Field data-invalid={Boolean(error) || undefined} className="gap-1.5">
+                <FieldLabel htmlFor="sheet-upload-title">Sheet title</FieldLabel>
+                <Input
+                  id="sheet-upload-title"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  aria-invalid={Boolean(error) || undefined}
+                />
+              </Field>
+            </FieldGroup>
+            <Button
               onClick={handleUpload}
               disabled={loading || !title.trim()}
-              className="w-full px-4 py-2.5 app-primary rounded-pill font-semibold text-sm"
+              className="w-full mt-1"
             >
+              {loading && (
+                <Spinner
+                  data-icon="inline-start"
+                  role={undefined}
+                  aria-label={undefined}
+                  aria-hidden="true"
+                />
+              )}
               {loading ? "Uploading…" : "Upload"}
-            </button>
+            </Button>
           </div>
         ) : null}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

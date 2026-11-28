@@ -3,6 +3,17 @@ import { LockKeyhole, LockKeyholeOpen, RefreshCw, Pencil, ArrowLeftRight } from 
 import type { RoleAssignment, Role, LobbyPlayer, GameMode } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { formatRankOnly, getEffectiveSR } from "@utils/rankMapper";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // TeamColumn - Displays a single team's composition
@@ -54,10 +65,10 @@ function formatRankWithModifier(
     return (
       <>
         {baseRank}{" "}
-        <span className={`app-measured ${manualMod > 0 ? "text-ok" : "text-bad"}`}>
+        <span className={cn("app-measured", manualMod > 0 ? "text-ok" : "text-bad")}>
           {manualSign}{manualMod}
         </span>
-        <span className={`app-measured ${adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink"}`}>
+        <span className={cn("app-measured", adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink")}>
           {" "}{adaptiveSign}{adaptiveWeight}
         </span>
       </>
@@ -69,7 +80,7 @@ function formatRankWithModifier(
     return (
       <>
         {baseRank}{" "}
-        <span className={`app-measured ${adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink"}`}>
+        <span className={cn("app-measured", adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink")}>
           {sign}{adaptiveWeight}
         </span>
       </>
@@ -80,7 +91,7 @@ function formatRankWithModifier(
   return (
     <>
       {baseRank}{" "}
-      <span className={`app-measured ${manualMod > 0 ? "text-ok" : "text-bad"}`}>
+      <span className={cn("app-measured", manualMod > 0 ? "text-ok" : "text-bad")}>
         {sign}{manualMod}
       </span>
     </>
@@ -98,55 +109,15 @@ function getRoleColor(role: Role): string {
   }
 }
 
-function getRoleBadgeColor(role: Role): string {
+function getRoleBadgeVariant(role: Role): NonNullable<BadgeProps["variant"]> {
   switch (role) {
     case "Tank":
-      return "role-tank";
+      return "tank";
     case "DPS":
-      return "role-dps";
+      return "dps";
     case "Support":
-      return "role-support";
+      return "support";
   }
-}
-
-interface ExpandActionButtonProps {
-  icon: ReactNode;
-  label: string;
-  ariaLabel: string;
-  onClick: () => void;
-  className: string;
-  ariaExpanded?: boolean;
-  ariaPressed?: boolean;
-  expanded?: boolean;
-}
-
-/** Compact icon button with a non-shifting floating pill label on hover, focus, or active state. */
-function ExpandActionButton({
-  icon,
-  label,
-  ariaLabel,
-  onClick,
-  className,
-  ariaExpanded,
-  ariaPressed,
-  expanded,
-}: ExpandActionButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      aria-expanded={ariaExpanded}
-      aria-pressed={ariaPressed}
-      data-expanded={expanded ? "true" : undefined}
-      className={`app-expand-btn px-2 py-1 text-xs font-semibold border rounded-pill shrink-0 ${className}`}
-    >
-      {icon}
-      <span className="app-expand-label" aria-hidden="true">
-        {label}
-      </span>
-    </button>
-  );
 }
 
 export function TeamColumn({
@@ -199,218 +170,296 @@ export function TeamColumn({
   const isTeam1 = teamNumber === 1;
 
   return (
-    <div className={`${isTeam1 ? "app-team-1" : "app-team-2"} p-5`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className={`text-xl font-bold app-display flex items-center gap-2.5 ${isTeam1 ? "text-pink-ink" : "text-sky-ink"}`}>
+    <Card variant={isTeam1 ? "team1" : "team2"} className="p-5 gap-4">
+      <CardHeader className="p-0">
+        <CardTitle
+          className={cn(
+            "text-xl font-bold app-display flex items-center gap-2.5",
+            isTeam1 ? "text-pink-ink" : "text-sky-ink"
+          )}
+        >
           <span>Team {teamNumber}</span>
-          <span
-            className={`text-xs font-bold px-2.5 py-0.5 rounded-pill border ${
-              isTeam1
-                ? "bg-team-1-pill border-team-1-edge text-pink-ink"
-                : "bg-team-2-pill border-team-2-edge text-sky-ink"
-            }`}
-            title={`${averageSR.toFixed(0)} SR`}
-          >
-            {formatRankOnly(averageSR, gameMode)}
-          </span>
-        </h3>
-      </div>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Badge
+                  className={cn(
+                    "font-bold",
+                    isTeam1
+                      ? "bg-team-1-pill border-team-1-edge text-pink-ink"
+                      : "bg-team-2-pill border-team-2-edge text-sky-ink"
+                  )}
+                />
+              }
+            >
+              {formatRankOnly(averageSR, gameMode)}
+            </TooltipTrigger>
+            <TooltipContent>{`${averageSR.toFixed(0)} SR`}</TooltipContent>
+          </Tooltip>
+        </CardTitle>
+      </CardHeader>
 
-      {/* Role sections */}
-      <div className="space-y-3.5">
-        {byRole.map(({ role, players }) => (
-          <div key={role}>
-            <div className={`text-[11px] font-bold uppercase tracking-wider mb-1.5 ${getRoleColor(role)}`}>
-              {role}
-            </div>
-            <div className="space-y-2">
-              {players.map((assignment) => {
-                const battletag = assignment.player.battletag;
-                const lobbyPlayer = lobbyMap.get(battletag);
-                const isLocked = lobbyPlayer?.lockedToTeam === teamNumber;
-                const modifier = getPlayerModifier(lobbyPlayer);
-                const adaptive = getAdaptiveWeight(lobbyPlayer);
-                const isSwapSource = swapSource === battletag;
+        <CardContent className="p-0 flex flex-col gap-3.5">
+          {byRole.map(({ role, players }) => (
+            <div key={role}>
+              <div
+                className={cn(
+                  "text-[11px] font-bold uppercase tracking-wider mb-1.5",
+                  getRoleColor(role)
+                )}
+              >
+                {role}
+              </div>
+              <div className="flex flex-col gap-2">
+                {players.map((assignment) => {
+                  const battletag = assignment.player.battletag;
+                  const shortName = battletag.split("#")[0];
+                  const lobbyPlayer = lobbyMap.get(battletag);
+                  const isLocked = lobbyPlayer?.lockedToTeam === teamNumber;
+                  const modifier = getPlayerModifier(lobbyPlayer);
+                  const adaptive = getAdaptiveWeight(lobbyPlayer);
+                  const isSwapSource = swapSource === battletag;
+                  const eligibleSubs = getEligibleSubstitutes(assignment.assignedRole);
+                  const srTooltip = showWeightModifiers
+                    ? `${assignment.effectiveSR.toLocaleString()} SR (manual: ${
+                        modifier - adaptive >= 0 ? "+" : ""
+                      }${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})`
+                    : `${(assignment.effectiveSR - modifier).toLocaleString()} SR`;
 
-                return (
-                  <div
-                    key={assignment.player.battletag}
-                    className={`p-3 rounded-well border group flex gap-3 app-card-interactive ${
-                      isSwapSource
-                        ? "border-sky-edge ring-2 ring-focus bg-sky-soft"
-                        : isLocked
-                        ? "border-lock-edge bg-lock-soft"
-                        : "app-player-row border-rule"
-                    }`}
-                  >
-                    {/* Role badge */}
-                    <span
-                      className={`w-8 h-8 inline-flex items-center justify-center text-xs font-bold rounded-pill shrink-0 self-center ${getRoleBadgeColor(
-                        assignment.assignedRole
-                      )}`}
+                  return (
+                    <div
+                      key={battletag}
+                      className={cn(
+                        "p-3 rounded-well border group flex gap-3 app-card-interactive",
+                        isSwapSource
+                          ? "border-sky-edge ring-2 ring-focus bg-sky-soft"
+                          : isLocked
+                          ? "border-lock-edge bg-lock-soft"
+                          : "app-player-row border-rule"
+                      )}
                     >
-                      {assignment.assignedRole.charAt(0)}
-                    </span>
+                      {/* Role badge */}
+                      <Badge
+                        variant={getRoleBadgeVariant(assignment.assignedRole)}
+                        className="size-8 p-0 font-bold self-center"
+                      >
+                        {assignment.assignedRole.charAt(0)}
+                      </Badge>
 
-                    {/* Player details + quick controls */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-1.5">
-                        <span
-                          className="flex-1 min-w-0 font-semibold text-ink break-words"
-                          title={assignment.player.battletag}
-                        >
-                          {assignment.player.battletag.split("#")[0]}
-                        </span>
-
-                        {/* Lock button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isLocked) {
-                              // Unlock: remove team AND role lock
-                              lockToTeam(assignment.player.battletag, null);
-                              lockToRole(assignment.player.battletag, null);
-                            } else {
-                              // Lock: set team AND role lock
-                              lockToTeam(assignment.player.battletag, teamNumber);
-                              lockToRole(assignment.player.battletag, assignment.assignedRole);
-                            }
-                          }}
-                          className={`px-2 py-1 text-xs rounded-pill border shrink-0 ${
-                            isLocked
-                              ? "bg-lock-soft border-lock-edge text-lock"
-                              : "bg-paper-3 border-rule text-ink-2 hover:bg-lock-soft"
-                          }`}
-                          title={isLocked ? "Unlock player" : `Lock to Team ${teamNumber}`}
-                          aria-label={isLocked ? `Unlock ${assignment.player.battletag.split("#")[0]}` : `Lock ${assignment.player.battletag.split("#")[0]} to Team ${teamNumber}`}
-                        >
-                          {isLocked ? (
-                            <LockKeyhole className="h-3 w-3" aria-hidden="true" />
-                          ) : (
-                            <LockKeyholeOpen className="h-3 w-3" aria-hidden="true" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Rank display & hover/focus actions */}
-                      <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
-                        {assignment.effectiveSR !== undefined ? (
-                          <div
-                            className="text-xs text-ink-2"
-                            title={
-                              showWeightModifiers
-                                ? `${assignment.effectiveSR.toLocaleString()} SR (manual: ${
-                                    modifier - adaptive >= 0 ? "+" : ""
-                                  }${modifier - adaptive}, adaptive: ${adaptive >= 0 ? "+" : ""}${adaptive})`
-                                : `${(assignment.effectiveSR - modifier).toLocaleString()} SR`
-                            }
-                          >
-                            {formatRankWithModifier(
-                              assignment.effectiveSR,
-                              modifier,
-                              adaptive,
-                              gameMode,
-                              showWeightModifiers
-                            )}
-                          </div>
-                        ) : (
-                          <span />
-                        )}
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          {/* Swap button */}
-                          <ExpandActionButton
-                            icon={<ArrowLeftRight className="h-3 w-3 shrink-0" aria-hidden="true" />}
-                            label={isSwapSource ? "Cancel" : "Swap"}
-                            ariaLabel={`Swap ${assignment.player.battletag.split("#")[0]}`}
-                            ariaPressed={isSwapSource}
-                            expanded={isSwapSource}
-                            onClick={() => onSwapClick(battletag)}
-                            className={
-                              isSwapSource
-                                ? "bg-sky border-sky-edge text-sky-btn-ink opacity-100"
-                                : swapSource
-                                ? "bg-sky-soft border-sky-edge text-sky-ink animate-pulse"
-                                : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                            }
-                          />
-
-                          {/* Substitute button */}
-                          <div className="relative inline-flex items-center">
-                            <ExpandActionButton
-                              icon={<RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" />}
-                              label="Substitute"
-                              ariaLabel={`Substitute ${assignment.player.battletag.split("#")[0]}`}
-                              ariaExpanded={substituteOpen === battletag}
-                              onClick={() => setSubstituteOpen(substituteOpen === battletag ? null : battletag)}
-                              className={
-                                substituteOpen === battletag
-                                  ? "bg-pink-soft border-pink-edge text-pink-ink opacity-100"
-                                  : "bg-paper-3 border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge hover:text-pink-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      {/* Player details + quick controls */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <span className="flex-1 min-w-0 font-semibold text-ink break-words" />
                               }
-                            />
-                            {substituteOpen === battletag && (
-                              <div className="absolute right-0 top-full mt-1 z-50 app-modal min-w-[200px] max-h-[300px] overflow-y-auto">
-                                <div className="p-2.5 text-xs font-semibold text-muted border-b border-rule">
-                                  Sub for {assignment.player.battletag.split("#")[0]}
+                            >
+                              {shortName}
+                            </TooltipTrigger>
+                            <TooltipContent>{battletag}</TooltipContent>
+                          </Tooltip>
+
+                          {/* Lock button */}
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="quiet"
+                                  size="xs"
+                                  onClick={() => {
+                                    if (isLocked) {
+                                      lockToTeam(battletag, null);
+                                      lockToRole(battletag, null);
+                                    } else {
+                                      lockToTeam(battletag, teamNumber);
+                                      lockToRole(battletag, assignment.assignedRole);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "px-2 py-1 shrink-0",
+                                    isLocked
+                                      ? "bg-lock-soft border-lock-edge text-lock hover:bg-lock-soft hover:border-lock-edge hover:text-lock"
+                                      : "bg-paper-3 border-rule text-ink-2 hover:bg-lock-soft hover:border-lock-edge hover:text-lock"
+                                  )}
+                                  aria-label={
+                                    isLocked
+                                      ? `Unlock ${shortName}`
+                                      : `Lock ${shortName} to Team ${teamNumber}`
+                                  }
+                                />
+                              }
+                            >
+                              {isLocked ? (
+                                <LockKeyhole aria-hidden="true" />
+                              ) : (
+                                <LockKeyholeOpen aria-hidden="true" />
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {isLocked ? "Unlock player" : `Lock to Team ${teamNumber}`}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+
+                        {/* Rank display & hover/focus actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
+                          {assignment.effectiveSR !== undefined ? (
+                            <Tooltip>
+                              <TooltipTrigger render={<div className="text-xs text-ink-2" />}>
+                                {formatRankWithModifier(
+                                  assignment.effectiveSR,
+                                  modifier,
+                                  adaptive,
+                                  gameMode,
+                                  showWeightModifiers
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>{srTooltip}</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span />
+                          )}
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Swap button */}
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Button
+                                    variant={isSwapSource ? "sky" : "quiet"}
+                                    size="xs"
+                                    aria-label={`Swap ${shortName}`}
+                                    aria-pressed={isSwapSource}
+                                    onClick={() => onSwapClick(battletag)}
+                                    className={cn(
+                                      "px-2 py-1 shrink-0",
+                                      isSwapSource
+                                        ? "opacity-100"
+                                        : swapSource
+                                        ? "bg-sky-soft border-sky-edge text-sky-ink animate-pulse"
+                                        : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                                    )}
+                                  />
+                                }
+                              >
+                                <ArrowLeftRight aria-hidden="true" />
+                              </TooltipTrigger>
+                              <TooltipContent>{isSwapSource ? "Cancel" : "Swap"}</TooltipContent>
+                            </Tooltip>
+
+                            {/* Substitute button + portaled Popover */}
+                            <Popover
+                              open={substituteOpen === battletag}
+                              onOpenChange={(open) =>
+                                setSubstituteOpen(open ? battletag : null)
+                              }
+                            >
+                              <Tooltip>
+                                <PopoverTrigger
+                                  render={
+                                    <TooltipTrigger
+                                      render={
+                                        <Button
+                                          variant="quiet"
+                                          size="xs"
+                                          aria-label={`Substitute ${shortName}`}
+                                          className={cn(
+                                            "px-2 py-1 shrink-0",
+                                            substituteOpen === battletag
+                                              ? "bg-pink-soft border-pink-edge text-pink-ink opacity-100 hover:bg-pink-soft hover:border-pink-edge hover:text-pink-ink"
+                                              : "bg-paper-3 border-rule text-ink-2 hover:bg-pink-soft hover:border-pink-edge hover:text-pink-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                                          )}
+                                        />
+                                      }
+                                    />
+                                  }
+                                >
+                                  <RefreshCw aria-hidden="true" />
+                                </PopoverTrigger>
+                                <TooltipContent>Substitute</TooltipContent>
+                              </Tooltip>
+
+                              <PopoverContent
+                                align="end"
+                                className="w-auto min-w-[200px] max-h-[300px] overflow-y-auto p-0"
+                              >
+                                <div className="p-2.5 text-xs font-semibold text-muted">
+                                  Sub for {shortName}
                                 </div>
-                                {getEligibleSubstitutes(assignment.assignedRole).length === 0 ? (
+                                <Separator />
+                                {eligibleSubs.length === 0 ? (
                                   <div className="p-3 text-sm text-muted">
                                     No eligible {assignment.assignedRole} subs
                                   </div>
                                 ) : (
-                                  getEligibleSubstitutes(assignment.assignedRole).map((sub) => (
-                                    <button
-                                      type="button"
+                                  eligibleSubs.map((sub) => (
+                                    <Button
                                       key={sub.battletag}
+                                      variant="ghost"
+                                      shape="well"
                                       onClick={() => {
                                         substitutePlayer(battletag, sub.battletag, true);
                                         setSubstituteOpen(null);
                                       }}
-                                      className="w-full px-3 py-2 text-left text-sm text-ink hover:bg-sky-soft flex items-center justify-between"
+                                      className="w-full justify-between rounded-none px-3 py-2 text-sm text-ink hover:bg-sky-soft"
                                     >
-                                      <span className="font-semibold">{sub.battletag.split("#")[0]}</span>
-                                      <span className="text-muted text-xs">
-                                        {formatRankOnly(getEffectiveSR(sub, assignment.assignedRole), gameMode)}
+                                      <span className="font-semibold">
+                                        {sub.battletag.split("#")[0]}
                                       </span>
-                                    </button>
+                                      <span className="text-muted text-xs">
+                                        {formatRankOnly(
+                                          getEffectiveSR(sub, assignment.assignedRole),
+                                          gameMode
+                                        )}
+                                      </span>
+                                    </Button>
                                   ))
                                 )}
-                                <button
-                                  type="button"
+                                <Separator />
+                                <Button
+                                  variant="ghost"
+                                  shape="well"
                                   onClick={() => setSubstituteOpen(null)}
-                                  className="w-full px-3 py-2 text-left text-xs font-semibold text-muted hover:bg-paper-3 border-t border-rule"
+                                  className="w-full justify-start rounded-none px-3 py-2 text-xs font-semibold text-muted hover:bg-paper-3"
                                 >
                                   Cancel
-                                </button>
-                              </div>
+                                </Button>
+                              </PopoverContent>
+                            </Popover>
+
+                            {/* Edit button */}
+                            {onEditPlayer && (
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Button
+                                      variant="quiet"
+                                      size="xs"
+                                      aria-label={`Edit ${shortName}`}
+                                      onClick={() => onEditPlayer(battletag)}
+                                      className="px-2 py-1 shrink-0 bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                                    />
+                                  }
+                                >
+                                  <Pencil aria-hidden="true" />
+                                </TooltipTrigger>
+                                <TooltipContent>Edit</TooltipContent>
+                              </Tooltip>
                             )}
                           </div>
-
-                          {/* Edit button */}
-                          {onEditPlayer && (
-                            <ExpandActionButton
-                              icon={<Pencil className="h-3 w-3 shrink-0" aria-hidden="true" />}
-                              label="Edit"
-                              ariaLabel={`Edit ${assignment.player.battletag.split("#")[0]}`}
-                              onClick={() => onEditPlayer(battletag)}
-                              className="bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft hover:border-sky-edge hover:text-sky-ink opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                            />
-                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-              {players.length === 0 && (
-                <div className="text-muted text-sm py-1">No {role}</div>
-              )}
+                  );
+                })}
+                {players.length === 0 && (
+                  <div className="text-muted text-sm py-1">No {role}</div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </CardContent>
+    </Card>
   );
 }

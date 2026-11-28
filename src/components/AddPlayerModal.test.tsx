@@ -130,11 +130,11 @@ describe("AddPlayerModal", () => {
       fireEvent.click(screen.getAllByText("Tank")[0]);
       
       // Select a rank - need to find the Tank Stadium Rank dropdown
-      const selects = screen.getAllByRole("combobox");
-      const tankRankSelect = selects.find(s => s.closest("div")?.textContent?.includes("Tank Stadium"));
-      if (tankRankSelect) {
-        fireEvent.change(tankRankSelect, { target: { value: "Pro 2" } });
-      }
+      const tankRankTrigger = screen.getByRole("combobox", { name: "Tank Stadium Rank" });
+      fireEvent.click(tankRankTrigger);
+      const pro2Option = screen.getByRole("option", { name: "Pro 2" });
+      fireEvent.pointerDown(pro2Option);
+      fireEvent.click(pro2Option);
       
       fireEvent.click(screen.getByText("Add Player"));
       
@@ -235,9 +235,11 @@ describe("AddPlayerModal", () => {
       fireEvent.click(tankButtons[0]); // First Tank button is the role toggle
       
       // Select a rank - find the Tank Stadium Rank dropdown
-      const selects = screen.getAllByRole("combobox");
-      const tankRankSelect = selects[0]; // First select should be tank stadium rank
-      fireEvent.change(tankRankSelect, { target: { value: "Pro 2" } });
+      const tankRankTrigger = screen.getByRole("combobox", { name: "Tank Stadium Rank" });
+      fireEvent.click(tankRankTrigger);
+      const pro2Option = screen.getByRole("option", { name: "Pro 2" });
+      fireEvent.pointerDown(pro2Option);
+      fireEvent.click(pro2Option);
       
       // Add hero to pool - click on a hero button using getAllByText
       const reinhardtButtons = screen.getAllByText("Reinhardt");
@@ -266,9 +268,12 @@ describe("AddPlayerModal", () => {
       fireEvent.click(screen.getAllByText("Tank")[0]);
       fireEvent.click(screen.getAllByText("DPS")[0]);
 
-      const rank6v6Selects = screen.getAllByLabelText("6v6 Comp Rank");
+      const rank6v6Selects = screen.getAllByRole("combobox", { name: "6v6 Comp Rank" });
       expect(rank6v6Selects).toHaveLength(1);
-      fireEvent.change(rank6v6Selects[0], { target: { value: "Diamond 3" } });
+      fireEvent.click(rank6v6Selects[0]);
+      const diamond3Option = screen.getByRole("option", { name: "Diamond 3" });
+      fireEvent.pointerDown(diamond3Option);
+      fireEvent.click(diamond3Option);
 
       fireEvent.click(screen.getAllByText("Reinhardt")[0]);
       fireEvent.click(screen.getByText("Add Player"));

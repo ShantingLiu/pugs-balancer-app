@@ -1,30 +1,56 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // HoldButton - Button that requires holding for confirmation
 // =============================================================================
 
-interface HoldButtonProps {
+interface HoldButtonProps extends Omit<ButtonProps, "onClick" | "type" | "className"> {
   onConfirm: () => void;
   holdDuration?: number; // ms, default 1000
-  children: React.ReactNode;
   className?: string;
-  title?: string;
 }
 
 export function HoldButton({
   onConfirm,
   holdDuration = 1000,
   children,
-  className = "",
+  className,
   title,
+  disabled,
+  variant = "primary",
+  size = "default",
+  shape = "pill",
+  ...buttonProps
 }: HoldButtonProps) {
   const [progress, setProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
+  const stopHolding = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsHolding(false);
+    setProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
   const startHolding = useCallback(() => {
+    if (disabled) return;
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+    }
     setIsHolding(true);
     startTimeRef.current = Date.now();
 
@@ -41,37 +67,35 @@ export function HoldButton({
         onConfirm();
       }
     }, 16);
-  }, [holdDuration, onConfirm]);
-
-  const stopHolding = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setIsHolding(false);
-    setProgress(0);
-  }, []);
+  }, [disabled, holdDuration, onConfirm]);
 
   return (
-    <button
+    <Button
       type="button"
+      variant={variant}
+      size={size}
+      shape={shape}
+      disabled={disabled}
       onMouseDown={startHolding}
       onMouseUp={stopHolding}
       onMouseLeave={stopHolding}
       onTouchStart={startHolding}
       onTouchEnd={stopHolding}
-      className={`relative overflow-hidden ${className}`}
+      className={cn("relative isolate overflow-hidden", className)}
       title={title || "Hold to confirm"}
+      {...buttonProps}
     >
       {/* Progress overlay using transform (no width animation) */}
       {isHolding && (
         <div
-          className="absolute inset-0 bg-accent-ink/20 origin-left"
+          className="pointer-events-none absolute inset-0 bg-accent-ink/20 origin-left"
           style={{ transform: `scaleX(${progress / 100})` }}
           aria-hidden="true"
         />
       )}
-      <span className="relative z-10">{children}</span>
-    </button>
+      <span className="relative inline-flex items-center justify-center gap-2 [&>[data-icon=inline-start]]:-ml-0.5 [&>[data-icon=inline-end]]:-mr-0.5">
+        {children}
+      </span>
+    </Button>
   );
 }

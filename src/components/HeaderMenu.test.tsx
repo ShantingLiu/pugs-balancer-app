@@ -21,16 +21,18 @@ describe("HeaderMenu", () => {
     useSheetStore.setState(useSheetStore.getInitialState());
   });
 
-  it("opens menu and triggers Sheets setup", () => {
+  it("opens menu and triggers Sheets setup", async () => {
     render(<HeaderMenu onOpenSheets={onOpenSheets} onSync={onSync} />);
 
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "App menu" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
-    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "App menu" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Sheets Setup" }));
     expect(onOpenSheets).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "App menu" })).not.toBeInTheDocument();
+    });
   });
 
   it("switches layout, theme, and text size from the menu", () => {
@@ -105,7 +107,9 @@ describe("HeaderMenu", () => {
     await waitFor(() => {
       expect(onUpdateFound).toHaveBeenCalledWith(fakeUpdate);
     });
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "App menu" })).not.toBeInTheDocument();
+    });
   });
 
   it("shows error message when manual update check fails", async () => {
@@ -126,13 +130,15 @@ describe("HeaderMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Everything up-to-date");
 
-    // Click outside menu to close it
-    fireEvent.mouseDown(document.body);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    // Close menu via trigger click
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "App menu" })).not.toBeInTheDocument();
+    });
 
     // Reopen menu -> stale status text should be gone
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
-    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "App menu" })).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });
