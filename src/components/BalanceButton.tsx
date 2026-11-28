@@ -3,6 +3,7 @@ import { RefreshCw, Scale } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import { balanceTeams } from "@engine/balancer";
 import { getModeConfig } from "@engine/modeConfig";
+import { Button } from "@/components/ui/button";
 
 // =============================================================================
 // BalanceButton - Triggers the balancing algorithm
@@ -34,29 +35,26 @@ export function BalanceButton() {
 
   return (
     <div>
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        shape="card"
         onClick={handleBalance}
         disabled={!canBalance}
-        className={`w-full inline-flex items-center justify-center gap-2.5 py-3.5 px-6 text-lg font-bold leading-snug rounded-card ${
-          canBalance
-            ? "app-primary"
-            : "bg-paper-3 border border-rule text-muted"
-        }`}
+        className="w-full gap-2.5 py-3.5 px-6 text-lg font-bold leading-snug"
       >
         {canBalance ? (
           <>
             {hasResult ? (
-              <RefreshCw className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <RefreshCw data-icon="inline-start" aria-hidden="true" />
             ) : (
-              <Scale className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <Scale data-icon="inline-start" aria-hidden="true" />
             )}
             <span>{hasResult ? "Reshuffle Teams" : "Balance Teams"}</span>
           </>
         ) : (
           `Need ${requiredPlayers - lobbyCount} more players`
         )}
-      </button>
+      </Button>
     </div>
   );
 }

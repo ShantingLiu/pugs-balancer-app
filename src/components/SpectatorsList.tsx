@@ -1,21 +1,31 @@
 import { useMemo } from "react";
 import { useSessionStore } from "@store/sessionStore";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // =============================================================================
 // SpectatorsList - Shows players sitting out / spectating the current match
 // =============================================================================
 
 const STITCH_CHIP_VARIANTS = [
-  "app-chip--sky",
-  "app-chip--slate",
-  "app-chip--purple",
-  "app-chip--slate",
-  "app-chip--amber",
-  "app-chip--pink",
-  "app-chip--emerald",
-] as const;
+  "sky",
+  "slate",
+  "purple",
+  "slate",
+  "amber",
+  "pink",
+  "emerald",
+] as const satisfies readonly NonNullable<BadgeProps["variant"]>[];
 
-function getSpectatorChipVariant(battletag: string, index: number): string {
+function getSpectatorChipVariant(
+  battletag: string,
+  index: number
+): (typeof STITCH_CHIP_VARIANTS)[number] {
   let hash = index;
   for (let i = 0; i < battletag.length; i++) {
     hash = (hash * 31 + battletag.charCodeAt(i)) >>> 0;
@@ -60,37 +70,39 @@ export function SpectatorsList() {
   }
 
   return (
-    <section className="app-surface p-5">
-      <h2 className="text-sm font-bold text-ink-2 mb-3 flex items-center gap-2">
-        <span>Sitting Out / Spectating</span>
-        <span className="text-xs px-2 py-0.5 rounded-pill bg-paper-3 text-muted border border-rule font-semibold">
-          ({spectators.length})
-        </span>
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {spectators.map((bt, idx) => {
-          const name = bt.split("#")[0];
-          const isAfk = afkPlayers.has(bt);
-          const isMustPlay = mustPlay.has(bt) || (draftMode && !isAfk);
-          const chipVariant = getSpectatorChipVariant(bt, idx);
-          return (
-            <span
-              key={bt}
-              className={`px-3 py-1 text-xs font-semibold rounded-pill border ${
-                isAfk
-                  ? "bg-paper-3 border-rule text-muted"
-                  : isMustPlay
-                  ? "app-chip--amber"
-                  : chipVariant
-              }`}
-              title={bt + (isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : "")}
-            >
-              {name}
-              {isAfk && <span className="text-muted ml-1">AFK</span>}
-            </span>
-          );
-        })}
-      </div>
-    </section>
+    <Card variant="surface" className="p-5 gap-3" role="region" aria-label="Sitting Out / Spectating">
+      <CardHeader className="p-0">
+        <CardTitle className="text-sm font-bold text-ink-2 flex items-center gap-2">
+          <span>Sitting Out / Spectating</span>
+          <Badge variant="muted">({spectators.length})</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="flex flex-wrap gap-2">
+          {spectators.map((bt, idx) => {
+            const name = bt.split("#")[0];
+            const isAfk = afkPlayers.has(bt);
+            const isMustPlay = mustPlay.has(bt) || (draftMode && !isAfk);
+            const chipVariant = getSpectatorChipVariant(bt, idx);
+            const variant: BadgeProps["variant"] = isAfk
+              ? "muted"
+              : isMustPlay
+              ? "amber"
+              : chipVariant;
+            const tooltipLabel = `${bt}${isAfk ? " (AFK)" : isMustPlay ? " (Must Play Next)" : ""}`;
+
+            return (
+              <Tooltip key={bt}>
+                <TooltipTrigger render={<Badge variant={variant} className="px-3 py-1" />}>
+                  {name}
+                  {isAfk && <span className="text-muted">AFK</span>}
+                </TooltipTrigger>
+                <TooltipContent>{tooltipLabel}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

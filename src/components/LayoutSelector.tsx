@@ -1,5 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { LayoutGrid, ChevronDown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useSessionStore } from "@store/sessionStore";
 import { LAYOUT_OPTIONS } from "@config/headerOptions";
 
@@ -11,82 +15,55 @@ export function LayoutSelector() {
   const layoutMode = useSessionStore((state) => state.layoutMode);
   const setLayoutMode = useSessionStore((state) => state.setLayoutMode);
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const currentLayout =
     LAYOUT_OPTIONS.find((opt) => opt.id === layoutMode) ?? LAYOUT_OPTIONS[0];
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        title={`Layout: ${currentLayout.label}`}
-        className="app-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-sm font-semibold"
-      >
-        <LayoutGrid className="h-4 w-4 text-pink-ink" aria-hidden="true" />
-        <span>{currentLayout.label}</span>
-        <ChevronDown
-          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
-          aria-hidden="true"
-        />
-      </button>
-
-      {isOpen && (
-        <div
-          role="listbox"
-          aria-label="Workspace layout"
-          className="absolute right-0 mt-2 w-64 app-modal z-50 overflow-hidden"
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Tooltip>
+        <TooltipTrigger
+          render={<PopoverTrigger render={<Button variant="secondary" />} />}
         >
-          {LAYOUT_OPTIONS.map((option) => {
-            const isActive = option.id === layoutMode;
-            return (
-              <button
-                type="button"
-                role="option"
-                aria-selected={isActive}
-                key={option.id}
-                onClick={() => {
-                  setLayoutMode(option.id);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-4 py-3 border-b border-rule last:border-b-0 ${
-                  isActive ? "bg-pink-soft" : "hover:bg-sky-soft"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {isActive && (
-                    <Check className="h-4 w-4 text-pink-ink shrink-0" aria-hidden="true" />
-                  )}
-                  <span className="font-semibold text-ink">{option.label}</span>
-                </div>
-                <p className="text-xs text-muted mt-0.5 ml-6">{option.description}</p>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+          <LayoutGrid data-icon="inline-start" className="text-pink-ink" aria-hidden="true" />
+          <span>{currentLayout.label}</span>
+          <ChevronDown
+            data-icon="inline-end"
+            className={cn("transition-transform", isOpen && "rotate-180")}
+            aria-hidden="true"
+          />
+        </TooltipTrigger>
+        <TooltipContent>Layout: {currentLayout.label}</TooltipContent>
+      </Tooltip>
+
+      <PopoverContent align="end" className="w-64 p-1.5 flex flex-col gap-1">
+        {LAYOUT_OPTIONS.map((option) => {
+          const isActive = option.id === layoutMode;
+          return (
+            <Button
+              key={option.id}
+              variant="ghost"
+              shape="well"
+              onClick={() => {
+                setLayoutMode(option.id);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "h-auto w-full flex-col items-start justify-start text-left whitespace-normal px-3 py-2.5 gap-0.5",
+                isActive ? "bg-pink-soft hover:bg-pink-soft" : "hover:bg-sky-soft",
+              )}
+            >
+              <div className="flex items-center gap-2">
+                {isActive && (
+                  <Check data-icon="inline-start" className="text-pink-ink" aria-hidden="true" />
+                )}
+                <span className="font-semibold text-ink">{option.label}</span>
+              </div>
+              <p className="text-xs text-muted font-normal ml-6">{option.description}</p>
+            </Button>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 
 // Reveal slim scrollbars while a scrollable container or document is actively scrolling
 const scrollTimers = new WeakMap<HTMLElement, number>();
@@ -33,7 +35,10 @@ window.addEventListener(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <TooltipProvider delay={200}>
+        <App />
+        <Toaster />
+      </TooltipProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

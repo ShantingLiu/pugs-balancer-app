@@ -1,5 +1,6 @@
 import type { Warning } from "@engine/types";
 import { AlertTriangle, CircleOff, Gamepad2, Link2, Scale, Swords, Users } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // =============================================================================
 // WarningsPanel - Displays algorithm warnings
@@ -11,7 +12,7 @@ interface WarningsPanelProps {
 }
 
 function WarningIcon({ type }: { type: Warning["type"] }) {
-  const props = { className: "h-4 w-4 shrink-0", "aria-hidden": true as const };
+  const props = { "aria-hidden": true as const };
   switch (type) {
     case "one_trick_conflict":
       return <Gamepad2 {...props} />;
@@ -35,31 +36,22 @@ export function WarningsPanel({ warnings, compact = false }: WarningsPanelProps)
 
   const errors = warnings.filter((w) => w.severity === "error");
   const warningItems = warnings.filter((w) => w.severity === "warning");
+  const alertSize = compact ? "compact" : "default";
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       {errors.map((warning, idx) => (
-        <div
-          key={`error-${idx}`}
-          className={`flex items-start gap-2 rounded-well ${
-            compact ? "p-2.5 text-xs" : "p-3 text-sm"
-          } bg-bad-soft border border-bad-edge text-bad`}
-        >
+        <Alert key={`error-${idx}`} variant="bad" size={alertSize}>
           <WarningIcon type={warning.type} />
-          <span className="text-ink font-semibold">{warning.message}</span>
-        </div>
+          <AlertTitle>{warning.message}</AlertTitle>
+        </Alert>
       ))}
 
       {warningItems.map((warning, idx) => (
-        <div
-          key={`warning-${idx}`}
-          className={`flex items-start gap-2 rounded-well ${
-            compact ? "p-2.5 text-xs" : "p-3 text-sm"
-          } bg-warn-soft border border-warn-edge text-warn`}
-        >
+        <Alert key={`warning-${idx}`} variant="warn" size={alertSize}>
           <WarningIcon type={warning.type} />
-          <span className="text-ink">{warning.message}</span>
-        </div>
+          <AlertDescription className="text-ink">{warning.message}</AlertDescription>
+        </Alert>
       ))}
     </div>
   );

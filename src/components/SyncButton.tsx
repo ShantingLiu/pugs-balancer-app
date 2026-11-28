@@ -1,4 +1,6 @@
 import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSheetStore } from "@store/sheetStore";
 import { formatRelativeTime } from "@config/headerOptions";
 
@@ -19,6 +21,13 @@ export function SyncButton({ onClick }: SyncButtonProps) {
 
   const isConnected = spreadsheetId !== null;
   const isDisabled = !isConnected || !isAuthenticated;
+  const tooltipText = !isConnected
+    ? "Connect a Google Sheet to sync"
+    : !isAuthenticated
+      ? "Sign in with Google to sync"
+      : hasUnsyncedChanges
+        ? "Unsynced changes — click to sync"
+        : "Sync with Google Sheets";
 
   return (
     <div className="flex items-center gap-2">
@@ -33,23 +42,26 @@ export function SyncButton({ onClick }: SyncButtonProps) {
       )}
 
       {/* Sync button with unsync badge */}
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={isDisabled}
-        className={`relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-sm font-semibold ${
-          isDisabled ? "app-quiet" : "app-sky"
-        }`}
-      >
-        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>Sync</span>
-        {hasUnsyncedChanges && !isDisabled && (
-          <span
-            data-testid="unsync-badge"
-            className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-accent border border-pink-edge rounded-pill"
-          />
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex" />}>
+          <Button
+            variant={isDisabled ? "quiet" : "sky"}
+            onClick={onClick}
+            disabled={isDisabled}
+            className="relative"
+          >
+            <RefreshCw data-icon="inline-start" aria-hidden="true" />
+            <span>Sync</span>
+            {hasUnsyncedChanges && !isDisabled && (
+              <span
+                data-testid="unsync-badge"
+                className="absolute -top-1 -right-1 size-2.5 bg-accent border border-pink-edge rounded-pill"
+              />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{tooltipText}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

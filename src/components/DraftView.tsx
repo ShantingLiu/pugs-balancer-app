@@ -1,18 +1,47 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useCallback, type ComponentPropsWithRef } from "react";
 import { Users, Zap, RefreshCw, Trophy, AlertTriangle, Star } from "lucide-react";
-import type { LobbyPlayer, Role } from "@engine/types";
+import type { GameMode, LobbyPlayer, Role } from "@engine/types";
 import { useSessionStore } from "@store/sessionStore";
 import { getModeConfig } from "@engine/modeConfig";
 import { parseBattletag } from "@utils/heroUtils";
 import { getEffectiveSR, formatRankOnly } from "@utils/rankMapper";
 import { HoldButton } from "./HoldButton";
 import { MatchScoreModal } from "./MatchScoreModal";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+} from "@/components/ui/empty";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // DraftView - 3-panel captain draft layout
 // =============================================================================
 
 const ROLE_ORDER: Role[] = ["Tank", "DPS", "Support"];
+
+function getRoleBadgeVariant(role: Role): NonNullable<BadgeProps["variant"]> {
+  switch (role) {
+    case "Tank":
+      return "tank";
+    case "DPS":
+      return "dps";
+    case "Support":
+      return "support";
+  }
+}
 
 function getRoleBadgeColor(role: Role): string {
   switch (role) {
@@ -58,7 +87,7 @@ function RoleBadges({
 }: {
   roles: Role[];
   player?: LobbyPlayer;
-  gameMode?: import("@engine/types").GameMode;
+  gameMode?: GameMode;
 }) {
   return (
     <span className="flex flex-wrap gap-1">
@@ -73,21 +102,18 @@ function RoleBadges({
           rankDisplay = formatRankOnly(effectiveSR - modifier, gameMode);
         }
         return (
-          <span
-            key={role}
-            className={`px-2 py-0.5 text-xs font-semibold rounded-pill inline-flex items-center gap-1 ${getRoleBadgeColor(role)}`}
-          >
+          <Badge key={role} variant={getRoleBadgeVariant(role)}>
             {getRoleLabel(role)}
             {rankDisplay && <span className="font-normal text-[11px]">{rankDisplay}</span>}
-          </span>
+          </Badge>
         );
       })}
     </span>
   );
 }
 
-function getOpenRoles(players: LobbyPlayer[], gameMode: string): Set<Role> {
-  const config = getModeConfig(gameMode as import("@engine/types").GameMode);
+function getOpenRoles(players: LobbyPlayer[], gameMode: GameMode): Set<Role> {
+  const config = getModeConfig(gameMode);
   const roleCounts: Record<Role, number> = {
     Tank: config.composition.tank.max,
     DPS: config.composition.dps.max,
@@ -106,8 +132,8 @@ function getOpenRoles(players: LobbyPlayer[], gameMode: string): Set<Role> {
   return open;
 }
 
-function getCompositionWarning(players: LobbyPlayer[], gameMode: string): string | null {
-  const config = getModeConfig(gameMode as import("@engine/types").GameMode);
+function getCompositionWarning(players: LobbyPlayer[], gameMode: GameMode): string | null {
+  const config = getModeConfig(gameMode);
   const roleCounts: Record<Role, number> = {
     Tank: config.composition.tank.max,
     DPS: config.composition.dps.max,
@@ -138,26 +164,26 @@ function getCompositionWarning(players: LobbyPlayer[], gameMode: string): string
   return null;
 }
 
-interface DraftPlayerCardProps {
+interface DraftPlayerCardProps extends ComponentPropsWithRef<"div"> {
   player: LobbyPlayer;
-  onClick: (e: React.MouseEvent) => void;
   assignedRole?: Role;
   canCycleRole?: boolean;
   onCycleRole?: () => void;
   dimmed?: boolean;
-  draggable?: boolean;
-  onDragStart?: (battletag: string) => void;
+  onDragStartBattletag?: (battletag: string) => void;
 }
 
 function DraftPlayerCard({
   player,
-  onClick,
   assignedRole,
   canCycleRole,
   onCycleRole,
   dimmed,
   draggable: isDraggable,
+  onDragStartBattletag,
+  className,
   onDragStart,
+  ...rest
 }: DraftPlayerCardProps) {
   const gameMode = useSessionStore((state) => state.gameMode);
   const showWeightModifiers = useSessionStore((state) => state.showWeightModifiers);
@@ -188,12 +214,12 @@ function DraftPlayerCard({
       <span className="text-xs text-ink-2">
         {baseRank}
         {showManual && (
-          <span className={`app-measured ${manualMod > 0 ? "text-ok" : "text-bad"}`}>
+          <span className={cn("app-measured", manualMod > 0 ? "text-ok" : "text-bad")}>
             {" "}{manualMod > 0 ? "+" : ""}{manualMod}
           </span>
         )}
         {showAdaptive && (
-          <span className={`app-measured ${adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink"}`}>
+          <span className={cn("app-measured", adaptiveWeight > 0 ? "text-sky-ink" : "text-pink-ink")}>
             {" "}{adaptiveWeight > 0 ? "+" : ""}{adaptiveWeight}
           </span>
         )}
@@ -205,51 +231,79 @@ function DraftPlayerCard({
 
   return (
     <div
-      className={`app-card-interactive flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-well border border-rule cursor-pointer select-none ${
-        isSubdued ? "bg-paper-2 text-muted" : "app-player-row"
-      }`}
-      onClick={(e) => onClick(e)}
+      className={cn(
+        "app-card-interactive flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 py-2 rounded-well border border-rule cursor-pointer select-none",
+        isSubdued ? "bg-paper-2 text-muted" : "app-player-row",
+        className
+      )}
       draggable={isDraggable}
       onDragStart={(e) => {
-        if (isDraggable && onDragStart) {
+        if (isDraggable) {
           e.dataTransfer.setData("text/plain", player.battletag);
           e.dataTransfer.effectAllowed = "move";
-          onDragStart(player.battletag);
+          onDragStartBattletag?.(player.battletag);
         }
+        onDragStart?.(e);
       }}
+      {...rest}
     >
       {displayRole ? (
         <div className="flex items-center gap-2.5 w-full min-w-0">
-          <button
-            type="button"
-            className={`px-2 py-1 text-xs font-bold rounded-pill inline-flex items-center gap-1 shrink-0 ${getRoleBadgeColor(
-              displayRole
-            )} ${canCycleRole ? "hover:opacity-85 cursor-pointer" : ""}`}
-            onClick={(e) => {
-              if (canCycleRole && onCycleRole) {
-                e.stopPropagation();
-                onCycleRole();
-              }
-            }}
-            title={canCycleRole ? "Click to cycle role" : undefined}
-          >
-            {getRoleLabel(displayRole)}
-            {canCycleRole && <RefreshCw className="h-2.5 w-2.5" aria-hidden="true" />}
-          </button>
+          {canCycleRole ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Badge
+                    variant={getRoleBadgeVariant(displayRole)}
+                    render={
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCycleRole?.();
+                        }}
+                      />
+                    }
+                    className="py-1 font-bold hover:opacity-85 cursor-pointer"
+                  />
+                }
+              >
+                {getRoleLabel(displayRole)}
+                <RefreshCw aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>Click to cycle role</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Badge variant={getRoleBadgeVariant(displayRole)} className="py-1 font-bold">
+              {getRoleLabel(displayRole)}
+            </Badge>
+          )}
           <div className="flex-1 min-w-0">
-            <div
-              className={`font-semibold truncate ${isSubdued ? "text-muted" : "text-ink"}`}
-              title={player.battletag}
-            >
-              {name}
-            </div>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <div
+                    className={cn(
+                      "font-semibold truncate",
+                      isSubdued ? "text-muted" : "text-ink"
+                    )}
+                  />
+                }
+              >
+                {name}
+              </TooltipTrigger>
+              <TooltipContent>{player.battletag}</TooltipContent>
+            </Tooltip>
             {formatSRDisplay()}
           </div>
         </div>
       ) : (
         <>
           <span
-            className={`font-semibold truncate max-w-full ${isSubdued ? "text-muted" : "text-ink"}`}
+            className={cn(
+              "font-semibold truncate max-w-full",
+              isSubdued ? "text-muted" : "text-ink"
+            )}
             title={player.battletag}
           >
             {name}
@@ -261,99 +315,68 @@ function DraftPlayerCard({
   );
 }
 
-interface AssignPopupProps {
-  anchorRect: DOMRect;
+interface AssignPopoverContentProps {
   roles: Role[];
   team1OpenRoles: Set<Role>;
   team2OpenRoles: Set<Role>;
   onAssign: (team: 1 | 2, role: Role) => void;
-  onClose: () => void;
 }
 
-function AssignPopup({
-  anchorRect,
+function AssignPopoverBody({
   roles,
   team1OpenRoles,
   team2OpenRoles,
   onAssign,
-  onClose,
-}: AssignPopupProps) {
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
-
-  const openAbove =
-    typeof window !== "undefined" && anchorRect.bottom + 110 > window.innerHeight && anchorRect.top > 110;
-  const clampedLeft =
-    typeof window !== "undefined"
-      ? Math.min(Math.max(anchorRect.left + anchorRect.width / 2, 120), window.innerWidth - 120)
-      : anchorRect.left + anchorRect.width / 2;
-
-  const style: React.CSSProperties = {
-    position: "fixed",
-    ...(openAbove
-      ? { bottom: window.innerHeight - anchorRect.top + 4 }
-      : { top: anchorRect.bottom + 4 }),
-    left: clampedLeft,
-    transform: "translateX(-50%)",
-    zIndex: 50,
-  };
-
+}: AssignPopoverContentProps) {
   return (
-    <div ref={popupRef} style={style} className="app-modal p-2.5 flex gap-3">
+    <div className="flex items-stretch gap-3">
       <div className="text-center">
         <div className="text-xs font-semibold text-pink-ink mb-1.5">← Team 1</div>
         <div className="flex gap-1">
           {roles.map((role) => {
             const open = team1OpenRoles.has(role);
             return (
-              <button
-                type="button"
+              <Button
                 key={`t1-${role}`}
+                variant="quiet"
+                size="xs"
                 onClick={() => open && onAssign(1, role)}
                 disabled={!open}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-pill ${
+                className={cn(
                   open
-                    ? getRoleBadgeColor(role)
-                    : "bg-paper-3 border border-rule text-muted cursor-not-allowed"
-                }`}
+                    ? [getRoleBadgeColor(role), "hover:opacity-85"]
+                    : "bg-paper-3 border-rule text-muted"
+                )}
                 title={open ? undefined : `${role} is full on Team 1`}
               >
                 {getRoleLabel(role)}
-              </button>
+              </Button>
             );
           })}
         </div>
       </div>
-      <div className="w-px bg-rule" />
+      <Separator orientation="vertical" className="h-auto self-stretch" />
       <div className="text-center">
         <div className="text-xs font-semibold text-sky-ink mb-1.5">Team 2 →</div>
         <div className="flex gap-1">
           {roles.map((role) => {
             const open = team2OpenRoles.has(role);
             return (
-              <button
-                type="button"
+              <Button
                 key={`t2-${role}`}
+                variant="quiet"
+                size="xs"
                 onClick={() => open && onAssign(2, role)}
                 disabled={!open}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-pill ${
+                className={cn(
                   open
-                    ? getRoleBadgeColor(role)
-                    : "bg-paper-3 border border-rule text-muted cursor-not-allowed"
-                }`}
+                    ? [getRoleBadgeColor(role), "hover:opacity-85"]
+                    : "bg-paper-3 border-rule text-muted"
+                )}
                 title={open ? undefined : `${role} is full on Team 2`}
               >
                 {getRoleLabel(role)}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -367,7 +390,6 @@ interface TeamPanelProps {
   onUnassign: (battletag: string) => void;
   onCycleRole: (battletag: string) => void;
   onDrop?: (battletag: string) => void;
-  onDragStart?: (battletag: string) => void;
   dragOver: boolean;
   onDragOverChange: (over: boolean) => void;
   compositionWarning: string | null;
@@ -378,7 +400,6 @@ function TeamPanel({
   onUnassign,
   onCycleRole,
   onDrop,
-  onDragStart,
   dragOver,
   onDragOverChange,
   compositionWarning,
@@ -419,18 +440,19 @@ function TeamPanel({
 
   return (
     <div
-      className={`space-y-3 rounded-well p-1 ${
-        dragOver ? "bg-paper-2 ring-2 ring-focus" : ""
-      }`}
+      className={cn(
+        "flex flex-col gap-3 rounded-well p-1",
+        dragOver && "bg-paper-2 ring-2 ring-focus"
+      )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {compositionWarning && (
-        <div className="text-xs text-warn bg-warn-soft border border-warn-edge rounded-well px-2.5 py-1.5 flex items-center gap-2 font-semibold">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {compositionWarning}
-        </div>
+        <Alert variant="warn" size="compact">
+          <AlertTriangle aria-hidden="true" />
+          <AlertTitle className="text-warn">{compositionWarning}</AlertTitle>
+        </Alert>
       )}
       {ROLE_ORDER.map((role) => {
         const playersInRole = players.filter((p) => p.lockedToRole === role);
@@ -438,10 +460,10 @@ function TeamPanel({
 
         return (
           <div key={role}>
-            <div className={`text-xs font-semibold mb-1.5 ${getRoleTextColor(role)}`}>
+            <div className={cn("text-xs font-semibold mb-1.5", getRoleTextColor(role))}>
               {role} ({playersInRole.length}/{roleCounts[role]})
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               {playersInRole.map((player) => (
                 <DraftPlayerCard
                   key={player.battletag}
@@ -451,15 +473,15 @@ function TeamPanel({
                   canCycleRole={player.rolesWilling.length > 1}
                   onCycleRole={() => onCycleRole(player.battletag)}
                   draggable
-                  onDragStart={onDragStart}
                 />
               ))}
               {Array.from({ length: emptySlots }).map((_, i) => (
                 <div
                   key={`empty-${role}-${i}`}
-                  className={`flex items-center justify-center px-3 py-2 rounded-well bg-paper-2/70 border border-dashed ${getRoleBorderColor(
-                    role
-                  )} text-xs text-muted`}
+                  className={cn(
+                    "flex items-center justify-center px-3 py-2 rounded-well bg-paper-2/70 border border-dashed text-xs text-muted",
+                    getRoleBorderColor(role)
+                  )}
                 >
                   Open {role} slot
                 </div>
@@ -494,7 +516,7 @@ export function DraftView() {
   useSessionStore((state) => state.lobbyBattletags);
   useSessionStore((state) => state.afkPlayers);
 
-  const [popup, setPopup] = useState<{ battletag: string; rect: DOMRect } | null>(null);
+  const [assignPopoverTag, setAssignPopoverTag] = useState<string | null>(null);
   const [fillError, setFillError] = useState<string | null>(null);
   const [shuffleError, setShuffleError] = useState<string | null>(null);
   const [dragOverTeam1, setDragOverTeam1] = useState(false);
@@ -588,16 +610,9 @@ export function DraftView() {
     clearTeams();
   };
 
-  const handlePlayerClick = (battletag: string, e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setPopup({ battletag, rect });
-  };
-
-  const handleAssign = (team: 1 | 2, role: Role) => {
-    if (popup) {
-      assignToTeam(popup.battletag, team, role);
-      setPopup(null);
-    }
+  const handleAssign = (battletag: string, team: 1 | 2, role: Role) => {
+    assignToTeam(battletag, team, role);
+    setAssignPopoverTag(null);
   };
 
   const handleUnassign = (battletag: string) => {
@@ -607,8 +622,6 @@ export function DraftView() {
   const handleCycleRole = (battletag: string) => {
     cycleRole(battletag);
   };
-
-  const handleDragStart = (_battletag: string) => {};
 
   const handleDragEnd = () => {
     setDragOverTeam1(false);
@@ -631,14 +644,15 @@ export function DraftView() {
   const teamSize = config.teamSize;
 
   return (
-    <div className="space-y-4" onDragEnd={handleDragEnd}>
+    <div className="flex flex-col gap-4" onDragEnd={handleDragEnd}>
       {/* Team SR Comparison */}
       {team1.length > 0 && team2.length > 0 && (() => {
         const team1AvgSR =
           team1.length > 0
             ? Math.round(
                 team1.reduce(
-                  (sum, p) => sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
+                  (sum, p) =>
+                    sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
                   0
                 ) / team1.length
               )
@@ -647,7 +661,8 @@ export function DraftView() {
           team2.length > 0
             ? Math.round(
                 team2.reduce(
-                  (sum, p) => sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
+                  (sum, p) =>
+                    sum + getEffectiveSR(p, p.lockedToRole ?? p.rolesWilling[0] ?? "DPS", gameMode),
                   0
                 ) / team2.length
               )
@@ -655,278 +670,337 @@ export function DraftView() {
         const srDiff = Math.abs(team1AvgSR - team2AvgSR);
 
         return (
-          <div className="app-well p-3">
-            <div className="grid grid-cols-3 items-center gap-4 text-center">
-              <div>
-                <div className="text-lg app-display text-pink-ink" title={`${team1AvgSR} SR`}>
-                  {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
-                </div>
-                <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
-                  {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
-                    <span title="Favored" className="inline-flex text-warn">
-                      <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
-                    </span>
-                  )}
-                  <span>Team 1</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                {team1.length > 0 && team2.length > 0 ? (
-                  <div
-                    className={`inline-flex items-center px-3 py-0.5 text-sm rounded-pill border app-display ${
-                      srDiff <= 50
-                        ? "bg-ok-soft border-ok-edge text-ok"
-                        : srDiff <= 100
-                        ? "bg-warn-soft border-warn-edge text-warn"
-                        : "bg-bad-soft border-bad-edge text-bad"
-                    }`}
-                    title={`${srDiff} SR difference`}
-                  >
-                    {srDiff < 25 ? <span>Even</span> : <span>Δ {srDiff} SR</span>}
+          <Card variant="well" className="p-3">
+            <CardContent className="p-0">
+              <div className="grid grid-cols-3 items-center gap-4 text-center">
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <div className="text-lg app-display text-pink-ink inline-block" />
+                      }
+                    >
+                      {team1.length > 0 ? formatRankOnly(team1AvgSR, gameMode) : "Pending"}
+                    </TooltipTrigger>
+                    <TooltipContent>{`${team1AvgSR} SR`}</TooltipContent>
+                  </Tooltip>
+                  <div className="text-xs font-semibold text-ink-2 flex items-center justify-center gap-1">
+                    {team1AvgSR > team2AvgSR && srDiff >= 25 && team2.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger render={<span className="inline-flex text-warn" />}>
+                          <Star className="size-3 fill-current shrink-0" aria-label="Favored" />
+                        </TooltipTrigger>
+                        <TooltipContent>Favored</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <span>Team 1</span>
                   </div>
-                ) : (
-                  <div className="text-lg text-muted">vs</div>
-                )}
-                <div className="text-xs font-semibold text-muted">Difference</div>
-              </div>
-              <div>
-                <div className="text-lg app-display text-sky-ink" title={`${team2AvgSR} SR`}>
-                  {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
                 </div>
-                <div className="text-xs font-semibold text-ink-2 inline-flex items-center justify-center gap-1">
-                  {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
-                    <span title="Favored" className="inline-flex text-warn">
-                      <Star className="h-3 w-3 fill-current shrink-0" aria-label="Favored" />
-                    </span>
+                <div className="flex flex-col items-center gap-1">
+                  {team1.length > 0 && team2.length > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Badge
+                            variant={srDiff <= 50 ? "ok" : srDiff <= 100 ? "warn" : "bad"}
+                            className="px-3 py-0.5 text-sm app-display"
+                          />
+                        }
+                      >
+                        {srDiff < 25 ? <span>Even</span> : <span>Δ {srDiff} SR</span>}
+                      </TooltipTrigger>
+                      <TooltipContent>{`${srDiff} SR difference`}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <div className="text-lg text-muted">vs</div>
                   )}
-                  <span>Team 2</span>
+                  <div className="text-xs font-semibold text-muted">Difference</div>
+                </div>
+                <div>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <div className="text-lg app-display text-sky-ink inline-block" />
+                      }
+                    >
+                      {team2.length > 0 ? formatRankOnly(team2AvgSR, gameMode) : "Pending"}
+                    </TooltipTrigger>
+                    <TooltipContent>{`${team2AvgSR} SR`}</TooltipContent>
+                  </Tooltip>
+                  <div className="text-xs font-semibold text-ink-2 flex items-center justify-center gap-1">
+                    {team2AvgSR > team1AvgSR && srDiff >= 25 && team1.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger render={<span className="inline-flex text-warn" />}>
+                          <Star className="size-3 fill-current shrink-0" aria-label="Favored" />
+                        </TooltipTrigger>
+                        <TooltipContent>Favored</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <span>Team 2</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         );
       })()}
 
-      {/* 3-panel grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] gap-3">
-        {/* Team 1 */}
-        <div className="app-team-1 p-4 min-w-0">
-          <h3 className="text-sm font-semibold text-pink-ink mb-3 text-center">
-            Team 1
-            <span
-              className={`ml-2 text-xs font-normal app-measured ${
-                team1.length === teamSize ? "text-ok" : team1.length > 0 ? "text-pink-ink" : "text-muted"
-              }`}
-            >
-              ({team1.length}/{teamSize})
-            </span>
-          </h3>
-          <TeamPanel
-            players={team1}
-            onUnassign={handleUnassign}
-            onCycleRole={handleCycleRole}
-            onDrop={(bt) => assignToTeam(bt, 1)}
-            onDragStart={handleDragStart}
-            dragOver={dragOverTeam1}
-            onDragOverChange={setDragOverTeam1}
-            compositionWarning={team1Warning}
-          />
+        {/* 3-panel grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)] gap-3">
+          {/* Team 1 */}
+          <Card variant="team1" className="p-4 min-w-0 gap-3">
+            <CardHeader className="p-0">
+              <CardTitle className="text-sm font-semibold text-pink-ink text-center">
+                Team 1
+                <span
+                  className={cn(
+                    "ml-2 text-xs font-normal app-measured",
+                    team1.length === teamSize
+                      ? "text-ok"
+                      : team1.length > 0
+                      ? "text-pink-ink"
+                      : "text-muted"
+                  )}
+                >
+                  ({team1.length}/{teamSize})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <TeamPanel
+                players={team1}
+                onUnassign={handleUnassign}
+                onCycleRole={handleCycleRole}
+                onDrop={(bt) => assignToTeam(bt, 1)}
+                dragOver={dragOverTeam1}
+                onDragOverChange={setDragOverTeam1}
+                compositionWarning={team1Warning}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Unassigned Pool */}
+          <Card
+            variant="well"
+            className={cn(
+              "p-4 min-w-0 gap-3",
+              dragOverPool && "ring-2 ring-focus bg-sky-soft"
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setDragOverPool(true);
+            }}
+            onDragLeave={() => setDragOverPool(false)}
+            onDrop={handlePoolDrop}
+          >
+            <CardHeader className="p-0 gap-2">
+              <CardTitle className="text-sm font-semibold text-ink text-center">
+                Unassigned
+                <span className="ml-2 text-xs font-normal text-muted app-measured">
+                  ({sortedUnassigned.length})
+                </span>
+              </CardTitle>
+              <ToggleGroup
+                multiple
+                size="sm"
+                aria-label="Filter unassigned players by role"
+                value={roleFilter ? [roleFilter] : []}
+                onValueChange={(vals) => {
+                  const next = vals.find((v) => v !== roleFilter) ?? null;
+                  setRoleFilter(next as Role | null);
+                }}
+                className="mx-auto"
+              >
+                {ROLE_ORDER.map((role) => (
+                  <ToggleGroupItem key={role} value={role} className="py-0.5">
+                    {getRoleLabel(role)}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </CardHeader>
+            <CardContent className="p-0">
+              {sortedUnassigned.length === 0 ? (
+                <Empty className="gap-2 p-4 py-6 md:p-6">
+                  <EmptyHeader className="gap-1">
+                    <EmptyDescription>All players assigned</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {sortedUnassigned.map((player) => (
+                    <Popover
+                      key={player.battletag}
+                      open={assignPopoverTag === player.battletag}
+                      onOpenChange={(open) =>
+                        setAssignPopoverTag(open ? player.battletag : null)
+                      }
+                    >
+                      <PopoverTrigger
+                        nativeButton={false}
+                        render={
+                          <DraftPlayerCard
+                            player={player}
+                            dimmed={isPlayerDimmed(player)}
+                            draggable
+                          />
+                        }
+                      />
+                      <PopoverContent className="w-auto p-2.5">
+                        <AssignPopoverBody
+                          roles={player.rolesWilling}
+                          team1OpenRoles={team1OpenRoles}
+                          team2OpenRoles={team2OpenRoles}
+                          onAssign={(team, role) => handleAssign(player.battletag, team, role)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Team 2 */}
+          <Card variant="team2" className="p-4 min-w-0 gap-3">
+            <CardHeader className="p-0">
+              <CardTitle className="text-sm font-semibold text-sky-ink text-center">
+                Team 2
+                <span
+                  className={cn(
+                    "ml-2 text-xs font-normal app-measured",
+                    team2.length === teamSize
+                      ? "text-ok"
+                      : team2.length > 0
+                      ? "text-sky-ink"
+                      : "text-muted"
+                  )}
+                >
+                  ({team2.length}/{teamSize})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <TeamPanel
+                players={team2}
+                onUnassign={handleUnassign}
+                onCycleRole={handleCycleRole}
+                onDrop={(bt) => assignToTeam(bt, 2)}
+                dragOver={dragOverTeam2}
+                onDragOverChange={setDragOverTeam2}
+                compositionWarning={team2Warning}
+              />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Unassigned Pool */}
-        <div
-          className={`app-well p-4 min-w-0 ${
-            dragOverPool ? "ring-2 ring-focus bg-sky-soft" : ""
-          }`}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "move";
-            setDragOverPool(true);
-          }}
-          onDragLeave={() => setDragOverPool(false)}
-          onDrop={handlePoolDrop}
-        >
-          <h3 className="text-sm font-semibold text-ink mb-1 text-center">
-            Unassigned
-            <span className="ml-2 text-xs font-normal text-muted app-measured">
-              ({sortedUnassigned.length})
-            </span>
-          </h3>
-          <div className="flex justify-center gap-1.5 mb-3">
-            {(["Tank", "DPS", "Support"] as Role[]).map((role) => (
-              <button
-                type="button"
-                key={role}
-                onClick={() => setRoleFilter(roleFilter === role ? null : role)}
-                className={`px-2.5 py-0.5 text-xs font-semibold rounded-pill border ${
-                  roleFilter === role
-                    ? getRoleBadgeColor(role)
-                    : "bg-paper-2 border-rule text-ink-2 hover:bg-sky-soft"
-                }`}
-              >
-                {getRoleLabel(role)}
-              </button>
-            ))}
+        {/* Fill Remaining / Shuffle Drafted */}
+        {showFillRemaining && (
+          <div className="text-center">
+            <Button variant="primary" size="lg" onClick={handleFillRemaining}>
+              <Zap data-icon="inline-start" aria-hidden="true" />
+              Fill Remaining
+            </Button>
+            {fillError && (
+              <Alert variant="bad" size="compact" className="mt-2 mx-auto w-fit text-left">
+                <AlertTriangle aria-hidden="true" />
+                <AlertDescription className="text-bad">{fillError}</AlertDescription>
+              </Alert>
+            )}
           </div>
-          {sortedUnassigned.length === 0 ? (
-            <div className="text-center text-muted text-sm py-8">
-              All players assigned
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {sortedUnassigned.map((player) => (
-                <DraftPlayerCard
-                  key={player.battletag}
-                  player={player}
-                  onClick={(e) => handlePlayerClick(player.battletag, e)}
-                  dimmed={isPlayerDimmed(player)}
-                  draggable
-                  onDragStart={handleDragStart}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
-        {/* Team 2 */}
-        <div className="app-team-2 p-4 min-w-0">
-          <h3 className="text-sm font-semibold text-sky-ink mb-3 text-center">
-            Team 2
-            <span
-              className={`ml-2 text-xs font-normal app-measured ${
-                team2.length === teamSize ? "text-ok" : team2.length > 0 ? "text-sky-ink" : "text-muted"
-              }`}
-            >
-              ({team2.length}/{teamSize})
-            </span>
-          </h3>
-          <TeamPanel
-            players={team2}
-            onUnassign={handleUnassign}
-            onCycleRole={handleCycleRole}
-            onDrop={(bt) => assignToTeam(bt, 2)}
-            onDragStart={handleDragStart}
-            dragOver={dragOverTeam2}
-            onDragOverChange={setDragOverTeam2}
-            compositionWarning={team2Warning}
-          />
-        </div>
-      </div>
-
-      {/* Fill Remaining / Shuffle Drafted */}
-      {showFillRemaining && (
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={handleFillRemaining}
-            className="px-6 py-2.5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
-          >
-            <Zap className="w-4 h-4" aria-hidden="true" />
-            Fill Remaining
-          </button>
-          {fillError && (
-            <div className="mt-2 text-sm text-bad bg-bad-soft border border-bad-edge rounded-well px-3 py-1.5 inline-block">
-              {fillError}
-            </div>
-          )}
-        </div>
-      )}
-
-      {teamsAreFull && !postMatchPending && (
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={handleShuffleDrafted}
-            className="px-6 py-2.5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
-            title="Auto-balance just the drafted players"
-          >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
-            Shuffle Drafted
-          </button>
-          {shuffleError && (
-            <div className="mt-2 text-sm text-bad bg-bad-soft border border-bad-edge rounded-well px-3 py-1.5 inline-block">
-              {shuffleError}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Team Won / Post-Match buttons */}
-      {(hasAssigned || postMatchPending) && (
-        <div className="text-center">
-          {postMatchPending ? (
-            <div className="flex flex-wrap gap-3 justify-center">
-              <button
-                type="button"
-                onClick={handleAutoBalanceNext}
-                className="py-2.5 px-5 app-primary rounded-pill font-semibold inline-flex items-center gap-2"
+        {teamsAreFull && !postMatchPending && (
+          <div className="text-center">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button variant="sky" size="lg" onClick={handleShuffleDrafted} />
+                }
               >
-                <RefreshCw className="w-4 h-4" aria-hidden="true" />
-                Auto-Balance Next Game
-              </button>
-              <button
-                type="button"
-                onClick={handleDraftNext}
-                className="py-2.5 px-5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" aria-hidden="true" />
-                Draft Next Game
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-3 justify-center">
-              <HoldButton
-                onConfirm={() => handleTeamWon(1)}
-                className="py-2.5 px-5 app-win-1 rounded-pill font-semibold inline-flex items-center gap-2"
-                title="Hold for 1 second to confirm Team 1 won"
-              >
-                <Trophy className="inline-block w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />
-                Team 1 Won
-              </HoldButton>
-              <HoldButton
-                onConfirm={() => handleTeamWon(2)}
-                className="py-2.5 px-5 app-sky rounded-pill font-semibold inline-flex items-center gap-2"
-                title="Hold for 1 second to confirm Team 2 won"
-              >
-                <Trophy className="inline-block w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />
-                Team 2 Won
-              </HoldButton>
-              <button
-                type="button"
-                onClick={handleNewGame}
-                className="py-2.5 px-5 app-secondary rounded-pill font-semibold inline-flex items-center gap-2"
-                title="Clear teams without recording a result"
-              >
-                <RefreshCw className="w-4 h-4" aria-hidden="true" />
-                New Game
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+                <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                Shuffle Drafted
+              </TooltipTrigger>
+              <TooltipContent>Auto-balance just the drafted players</TooltipContent>
+            </Tooltip>
+            {shuffleError && (
+              <Alert variant="bad" size="compact" className="mt-2 mx-auto w-fit text-left">
+                <AlertTriangle aria-hidden="true" />
+                <AlertDescription className="text-bad">{shuffleError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
 
-      {/* Match Score Modal */}
-      <MatchScoreModal
-        isOpen={!!pendingMatchResult}
-        winningTeam={pendingMatchResult?.winningTeam ?? 1}
-        onConfirm={handleScoreConfirm}
-        onCancel={() => cancelPendingMatch()}
-      />
+        {/* Team Won / Post-Match buttons */}
+        {(hasAssigned || postMatchPending) && (
+          <div className="text-center">
+            {postMatchPending ? (
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Button
+                  variant="primary"
+                  onClick={handleAutoBalanceNext}
+                  className="py-2.5 px-5"
+                >
+                  <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                  Auto-Balance Next Game
+                </Button>
+                <Button
+                  variant="sky"
+                  onClick={handleDraftNext}
+                  className="py-2.5 px-5"
+                >
+                  <Users data-icon="inline-start" aria-hidden="true" />
+                  Draft Next Game
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 justify-center">
+                <HoldButton
+                  onConfirm={() => handleTeamWon(1)}
+                  variant="win1"
+                  className="py-2.5 px-5"
+                  title="Hold for 1 second to confirm Team 1 won"
+                >
+                  <Trophy data-icon="inline-start" aria-hidden="true" />
+                  Team 1 Won
+                </HoldButton>
+                <HoldButton
+                  onConfirm={() => handleTeamWon(2)}
+                  variant="sky"
+                  className="py-2.5 px-5"
+                  title="Hold for 1 second to confirm Team 2 won"
+                >
+                  <Trophy data-icon="inline-start" aria-hidden="true" />
+                  Team 2 Won
+                </HoldButton>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="secondary"
+                        onClick={handleNewGame}
+                        className="py-2.5 px-5"
+                      />
+                    }
+                  >
+                    <RefreshCw data-icon="inline-start" aria-hidden="true" />
+                    New Game
+                  </TooltipTrigger>
+                  <TooltipContent>Clear teams without recording a result</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Assign popup */}
-      {popup && (() => {
-        const popupPlayer = unassigned.find((p) => p.battletag === popup.battletag);
-        return (
-          <AssignPopup
-            anchorRect={popup.rect}
-            roles={popupPlayer?.rolesWilling ?? []}
-            team1OpenRoles={team1OpenRoles}
-            team2OpenRoles={team2OpenRoles}
-            onAssign={handleAssign}
-            onClose={() => setPopup(null)}
-          />
-        );
-      })()}
+        {/* Match Score Modal */}
+        <MatchScoreModal
+          isOpen={!!pendingMatchResult}
+          winningTeam={pendingMatchResult?.winningTeam ?? 1}
+          onConfirm={handleScoreConfirm}
+          onCancel={() => cancelPendingMatch()}
+        />
     </div>
   );
 }

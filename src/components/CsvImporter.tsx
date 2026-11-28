@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Download, FileSpreadsheet, FolderOpen, Gamepad2, Upload } from "lucide-react";
 import { parsePlayersCSV } from "@utils/csvParser";
 import { usePlayerStore } from "@store/playerStore";
@@ -8,6 +8,16 @@ import {
   openExportFolder,
   triggerBrowserDownload,
 } from "@services/csvExport";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { Player, GameMode, ValidationWarning } from "@engine/types";
 import { CsvImportModal } from "./CsvImportModal";
 
@@ -91,17 +101,23 @@ function playersToCSV(
   return [headers.join(","), ...rows].join("\n");
 }
 
+const EMPTY_PLAYERS: Player[] = [];
+
+type PendingImport = {
+  existingCount: number;
+  incomingPlayers: Player[];
+  missingExisting: Player[];
+  warnings: ValidationWarning[];
+};
+
 export function CsvImporter() {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successDetails, setSuccessDetails] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [pendingImport, setPendingImport] = useState<{
-    incomingPlayers: Player[];
-    missingExisting: Player[];
-    warnings: ValidationWarning[];
-  } | null>(null);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [modalSnapshot, setModalSnapshot] = useState<PendingImport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const setPlayers = usePlayerStore((state) => state.setPlayers);
@@ -114,14 +130,17 @@ export function CsvImporter() {
   const lastResult = useSessionStore((state) => state.lastResult);
   const gameMode = useSessionStore((state) => state.gameMode);
 
+  const [prevLastResult, setPrevLastResult] = useState(lastResult);
+
   // Clear success message when teams are generated (Balance/Reshuffle clicked)
-  useEffect(() => {
+  if (lastResult !== prevLastResult) {
+    setPrevLastResult(lastResult);
     if (lastResult) {
       setSuccessMessage(null);
       setSuccessDetails(null);
       setShowDetails(false);
     }
-  }, [lastResult]);
+  }
 
   const finalizeImport = useCallback(
     (
@@ -200,11 +219,14 @@ export function CsvImporter() {
           .filter((p) => !incomingKeys.has(p.battletag.toLowerCase()))
           .sort((a, b) => a.battletag.localeCompare(b.battletag));
 
-        setPendingImport({
+        const nextImport: PendingImport = {
+          existingCount: playerCount,
           incomingPlayers: result.valid,
           missingExisting,
           warnings: result.warnings,
-        });
+        };
+        setPendingImport(nextImport);
+        setModalSnapshot(nextImport);
         return;
       }
 
@@ -333,40 +355,42 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-heading">Player Data</h2>
         {playerCount > 0 && (
-          <span className="text-xs font-bold text-pink-ink bg-pink-soft border border-pink-edge px-3 py-1 rounded-pill">
+          <Badge variant="pink" className="px-3 py-1 font-bold">
             <span className="app-measured">{playerCount}</span> players
-          </span>
+          </Badge>
         )}
       </div>
 
       {/* Drop zone for import */}
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        shape="well"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`group w-full border-2 border-dashed rounded-well p-5 flex flex-col items-center justify-center gap-1.5 text-center app-card-interactive ${
+        className={cn(
+          "group w-full h-auto border-2 border-dashed p-5 flex-col gap-1.5 text-center whitespace-normal app-card-interactive",
           isDragging
             ? "border-accent bg-card-row text-ink"
             : "border-rule-2 hover:border-pink-edge bg-paper-3 text-ink"
-        }`}
+        )}
       >
-        <span className="w-11 h-11 mb-1 rounded-well bg-paper-2 border border-rule inline-flex items-center justify-center text-pink-ink group-hover:scale-105 transition-transform">
-          <Upload className="h-5 w-5" aria-hidden="true" />
+        <span className="size-11 mb-1 rounded-well bg-paper-2 border border-rule inline-flex items-center justify-center text-pink-ink group-hover:scale-105 transition-transform">
+          <Upload aria-hidden="true" />
         </span>
         <span className="text-sm font-bold text-ink group-hover:text-pink-ink">
           Drop or click for CSV
         </span>
-        <span className="text-xs text-muted">
+        <span className="text-xs text-muted font-normal">
           Supports Discord &amp; Faceit rating rosters
         </span>
-      </button>
+      </Button>
       <input
         ref={fileInputRef}
         type="file"
@@ -377,86 +401,110 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
 
       {/* Action buttons */}
       <div className="grid grid-cols-2 gap-2.5">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
+          shape="well"
           onClick={handleExportCSV}
           disabled={playerCount === 0}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
+          className="py-2.5 font-bold"
         >
-          <Download className="h-3.5 w-3.5 text-pink-ink" aria-hidden="true" />
+          <Download data-icon="inline-start" className="text-pink-ink" aria-hidden="true" />
           <span>Export</span>
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          shape="well"
           onClick={handleDownloadTemplate}
-          className="app-secondary flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
+          className="py-2.5 font-bold"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-sky-ink" aria-hidden="true" />
+          <FileSpreadsheet data-icon="inline-start" className="text-sky-ink" aria-hidden="true" />
           <span>Template</span>
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          shape="well"
           onClick={handleOpenExportFolder}
-          className="app-secondary col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
+          className="col-span-2 py-2.5 font-bold"
         >
-          <FolderOpen className="h-3.5 w-3.5 text-sky-ink" aria-hidden="true" />
+          <FolderOpen data-icon="inline-start" className="text-sky-ink" aria-hidden="true" />
           <span>Open Export Folder</span>
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="sky"
+          size="sm"
+          shape="well"
           onClick={handleLoadSampleData}
-          className="app-sky col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-extrabold rounded-well"
+          className="col-span-2 py-2.5 font-extrabold"
         >
-          <Gamepad2 className="h-4 w-4" aria-hidden="true" />
+          <Gamepad2 data-icon="inline-start" aria-hidden="true" />
           <span>Load Sample Data</span>
-        </button>
+        </Button>
       </div>
 
       {/* Error message */}
       {error && (
-        <div className="p-3 bg-bad-soft border border-bad-edge rounded-well text-sm text-bad whitespace-pre-wrap">
-          {error}
-        </div>
+        <Alert variant="bad" className="p-3">
+          <AlertDescription className="text-bad whitespace-pre-wrap">
+            {error}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Success message */}
       {successMessage && (
-        <div className="p-3 bg-ok-soft border border-ok-edge rounded-well text-sm text-ok">
-          <div className="flex items-center justify-between gap-2">
-            <span>{successMessage}</span>
-            {successDetails && (
-              <button
-                type="button"
-                onClick={() => setShowDetails(!showDetails)}
-                className="ml-2 font-semibold underline shrink-0"
-                title={showDetails ? "Hide details" : "Show details"}
-              >
-                {showDetails ? "Hide" : "Details"}
-              </button>
-            )}
-          </div>
-          {showDetails && successDetails && (
-            <div className="mt-2 pt-2 border-t border-ok-edge text-xs text-ink-2 whitespace-pre-wrap max-h-40 overflow-y-auto">
-              {successDetails}
+        <Alert variant="ok" className="p-3">
+          <AlertDescription className="w-full text-ok">
+            <div className="flex w-full items-center justify-between gap-2">
+              <span>{successMessage}</span>
+              {successDetails && (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="link"
+                        size="xs"
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="h-auto p-0 ml-2 text-ok underline shrink-0"
+                      />
+                    }
+                  >
+                    {showDetails ? "Hide" : "Details"}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {showDetails ? "Hide details" : "Show details"}
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
-          )}
-        </div>
+            {showDetails && successDetails && (
+              <div className="w-full">
+                <Separator className="my-2 bg-ok-edge" />
+                <div className="text-xs text-ink-2 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                  {successDetails}
+                </div>
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
-      {pendingImport && (
-        <CsvImportModal
-          existingCount={playerCount}
-          incomingPlayers={pendingImport.incomingPlayers}
-          missingExisting={pendingImport.missingExisting}
-          onConfirm={(keptMissingPlayers) =>
-            finalizeImport(
-              pendingImport.incomingPlayers,
-              keptMissingPlayers,
-              pendingImport.warnings
-            )
-          }
-          onCancel={() => setPendingImport(null)}
-        />
-      )}
+      <CsvImportModal
+        isOpen={pendingImport !== null}
+        existingCount={modalSnapshot?.existingCount ?? playerCount}
+        incomingPlayers={modalSnapshot?.incomingPlayers ?? EMPTY_PLAYERS}
+        missingExisting={modalSnapshot?.missingExisting ?? EMPTY_PLAYERS}
+        onConfirm={(keptMissingPlayers) => {
+          if (!pendingImport) return;
+          finalizeImport(
+            pendingImport.incomingPlayers,
+            keptMissingPlayers,
+            pendingImport.warnings
+          );
+        }}
+        onCancel={() => setPendingImport(null)}
+      />
     </div>
   );
 }

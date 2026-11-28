@@ -1,6 +1,25 @@
 import { useState } from "react";
 import { Trophy } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+} from "@/components/ui/field";
 
 // =============================================================================
 // MatchScoreModal - Input match score for adaptive weight calculation
@@ -31,8 +50,25 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
   const [winnerAdj, setWinnerAdj] = useState(50);
   const [loserAdj, setLoserAdj] = useState(50);
   const [error, setError] = useState<string | null>(null);
+  const [displayWinningTeam, setDisplayWinningTeam] = useState<1 | 2>(winningTeam);
+  const [prevProps, setPrevProps] = useState({ isOpen, winningTeam });
 
-  if (!isOpen) return null;
+  if (isOpen !== prevProps.isOpen || winningTeam !== prevProps.winningTeam) {
+    setPrevProps({ isOpen, winningTeam });
+    if (isOpen) {
+      setDisplayWinningTeam(winningTeam);
+      if (!prevProps.isOpen) {
+        setWinnerScore(4);
+        setLoserScore(0);
+        setTeam1Cash("");
+        setTeam2Cash("");
+        setCustomAdj(false);
+        setWinnerAdj(50);
+        setLoserAdj(50);
+        setError(null);
+      }
+    }
+  }
 
   const handleConfirm = () => {
     if (winnerScore <= loserScore) {
@@ -55,202 +91,237 @@ export function MatchScoreModal({ isOpen, winningTeam, onConfirm, onCancel }: Ma
       customAdj ? winnerAdj : undefined,
       customAdj ? loserAdj : undefined
     );
-    setWinnerScore(4);
-    setLoserScore(0);
-    setTeam1Cash("");
-    setTeam2Cash("");
-    setCustomAdj(false);
-    setWinnerAdj(50);
-    setLoserAdj(50);
-    setError(null);
   };
 
   const handleSkip = () => {
     onConfirm(1, 0);
-    setWinnerScore(4);
-    setLoserScore(0);
-    setTeam1Cash("");
-    setTeam2Cash("");
-    setCustomAdj(false);
-    setWinnerAdj(50);
-    setLoserAdj(50);
-    setError(null);
   };
 
-  const losingTeam = winningTeam === 1 ? 2 : 1;
+  const losingTeam = displayWinningTeam === 1 ? 2 : 1;
+  const scoresInvalid = Boolean(error);
+
+  const autoAdjustment = (() => {
+    const diff = winnerScore - loserScore;
+    const factor = winnerScore > 0 ? diff / winnerScore : 0;
+    const adjustment = Math.round(50 * factor);
+    if (factor >= 0.75) return { adjustment, label: `Stomp! Auto: ±${adjustment} SR` };
+    if (factor >= 0.5) return { adjustment, label: `Solid win: ±${adjustment} SR` };
+    if (factor >= 0.25) return { adjustment, label: `Close game: ±${adjustment} SR` };
+    return { adjustment, label: `Very close: ±${adjustment} SR` };
+  })();
 
   return (
-    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
-      <div className="app-modal p-6 w-full max-w-sm mx-4">
-        <h2 className="text-xl font-semibold text-ink mb-2 text-center flex items-center justify-center gap-2">
-          <Trophy className="h-5 w-5 text-pink-ink" aria-hidden="true" />
-          Team {winningTeam} Won
-        </h2>
-
-        <p className="text-ink-2 text-sm mb-4 text-center">
-          Enter the match score to adjust player weights based on how close/dominant the game was.
-        </p>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader className="text-center sm:text-center">
+          <DialogTitle className="text-xl flex items-center justify-center gap-2">
+            <Trophy className="size-5 text-pink-ink" aria-hidden="true" />
+            Team {displayWinningTeam} Won
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            Enter the match score to adjust player weights based on how close/dominant the game was.
+          </DialogDescription>
+        </DialogHeader>
 
         {error && (
-          <div className="mb-4 p-2.5 bg-bad-soft border border-bad-edge rounded-well text-bad text-sm">
-            {error}
-          </div>
+          <Alert variant="bad" size="compact">
+            <AlertDescription className="text-bad">{error}</AlertDescription>
+          </Alert>
         )}
 
-        <div className="flex items-center justify-center gap-4 mb-5">
-          <div className="text-center">
-            <div className="text-xs font-semibold text-ink-2 mb-1">Team {winningTeam}</div>
-            <input
+        <div className="flex items-center justify-center gap-4">
+          <Field
+            data-invalid={scoresInvalid || undefined}
+            className="w-16 items-center gap-1"
+          >
+            <FieldLabel
+              htmlFor="match-score-winner"
+              className="justify-center whitespace-nowrap text-xs font-semibold text-ink-2"
+            >
+              Team {displayWinningTeam}
+            </FieldLabel>
+            <Input
+              id="match-score-winner"
               type="number"
               value={winnerScore}
-              onChange={(e) => setWinnerScore(parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                setWinnerScore(parseInt(e.target.value) || 0);
+                if (error) setError(null);
+              }}
               min={1}
               max={10}
-              aria-label={`Team ${winningTeam} score`}
-              className="app-input w-16 h-12 text-2xl font-semibold text-center text-ok app-measured"
+              aria-label={`Team ${displayWinningTeam} score`}
+              aria-invalid={scoresInvalid || undefined}
+              className="h-12 text-2xl font-semibold text-center text-ok app-measured p-0"
             />
-          </div>
+          </Field>
           <span className="text-2xl text-muted mt-4">-</span>
-          <div className="text-center">
-            <div className="text-xs font-semibold text-ink-2 mb-1">Team {losingTeam}</div>
-            <input
+          <Field
+            data-invalid={scoresInvalid || undefined}
+            className="w-16 items-center gap-1"
+          >
+            <FieldLabel
+              htmlFor="match-score-loser"
+              className="justify-center whitespace-nowrap text-xs font-semibold text-ink-2"
+            >
+              Team {losingTeam}
+            </FieldLabel>
+            <Input
+              id="match-score-loser"
               type="number"
               value={loserScore}
-              onChange={(e) => setLoserScore(parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                setLoserScore(parseInt(e.target.value) || 0);
+                if (error) setError(null);
+              }}
               min={0}
               max={9}
               aria-label={`Team ${losingTeam} score`}
-              className="app-input w-16 h-12 text-2xl font-semibold text-center text-bad app-measured"
+              aria-invalid={scoresInvalid || undefined}
+              className="h-12 text-2xl font-semibold text-center text-bad app-measured p-0"
             />
-          </div>
+          </Field>
         </div>
 
         {winnerScore > loserScore && (
-          <div className="mb-4 p-3 app-well">
-            <div className="text-sm font-semibold text-ink-2 text-center">
-              {(() => {
-                const diff = winnerScore - loserScore;
-                const factor = winnerScore > 0 ? diff / winnerScore : 0;
-                const adjustment = Math.round(50 * factor);
-                if (factor >= 0.75) return `Stomp! Auto: ±${adjustment} SR`;
-                if (factor >= 0.5) return `Solid win: ±${adjustment} SR`;
-                if (factor >= 0.25) return `Close game: ±${adjustment} SR`;
-                return `Very close: ±${adjustment} SR`;
-              })()}
-            </div>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <label className="text-xs font-semibold text-ink-2 flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
+          <Card variant="well">
+            <CardContent className="p-3 flex flex-col gap-2">
+              <div className="text-sm font-semibold text-ink-2 text-center">
+                {autoAdjustment.label}
+              </div>
+              <Field orientation="horizontal" className="w-fit mx-auto gap-2">
+                <Checkbox
+                  id="match-score-custom-sr"
                   checked={customAdj}
-                  onChange={(e) => {
-                    setCustomAdj(e.target.checked);
-                    if (e.target.checked) {
-                      const diff = winnerScore - loserScore;
-                      const factor = winnerScore > 0 ? diff / winnerScore : 0;
-                      const auto = Math.round(50 * factor);
-                      setWinnerAdj(auto);
-                      setLoserAdj(auto);
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked === true;
+                    setCustomAdj(isChecked);
+                    if (isChecked) {
+                      setWinnerAdj(autoAdjustment.adjustment);
+                      setLoserAdj(autoAdjustment.adjustment);
                     }
                   }}
-                  className="w-4 h-4 accent-focus"
                 />
-                Custom SR
-              </label>
-            </div>
-            {customAdj && (
-              <div className="mt-3 flex items-center justify-center gap-4">
-                <div className="text-center">
-                  <div className="text-xs font-semibold text-ok mb-1">Winners</div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-ok text-sm font-semibold">+</span>
-                    <input
-                      type="number"
-                      value={winnerAdj}
-                      onChange={(e) => setWinnerAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                      min={0}
-                      max={100}
-                      aria-label="Winners SR adjustment"
-                      className="app-input w-14 h-8 text-sm text-center text-ok app-measured"
-                    />
-                  </div>
+                <FieldLabel htmlFor="match-score-custom-sr" className="text-xs cursor-pointer">
+                  Custom SR
+                </FieldLabel>
+              </Field>
+              {customAdj && (
+                <div className="mt-1 flex items-center justify-center gap-4">
+                  <Field className="w-auto items-center gap-1">
+                    <FieldLabel
+                      htmlFor="match-score-winner-adj"
+                      className="justify-center text-xs font-semibold text-ok"
+                    >
+                      Winners
+                    </FieldLabel>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-ok text-sm font-semibold">+</span>
+                      <Input
+                        id="match-score-winner-adj"
+                        type="number"
+                        value={winnerAdj}
+                        onChange={(e) => setWinnerAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                        min={0}
+                        max={100}
+                        aria-label="Winners SR adjustment"
+                        className="w-14 h-8 text-sm text-center text-ok app-measured p-0"
+                      />
+                    </div>
+                  </Field>
+                  <Field className="w-auto items-center gap-1">
+                    <FieldLabel
+                      htmlFor="match-score-loser-adj"
+                      className="justify-center text-xs font-semibold text-bad"
+                    >
+                      Losers
+                    </FieldLabel>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-bad text-sm font-semibold">−</span>
+                      <Input
+                        id="match-score-loser-adj"
+                        type="number"
+                        value={loserAdj}
+                        onChange={(e) => setLoserAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                        min={0}
+                        max={100}
+                        aria-label="Losers SR adjustment"
+                        className="w-14 h-8 text-sm text-center text-bad app-measured p-0"
+                      />
+                    </div>
+                  </Field>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs font-semibold text-bad mb-1">Losers</div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-bad text-sm font-semibold">−</span>
-                    <input
-                      type="number"
-                      value={loserAdj}
-                      onChange={(e) => setLoserAdj(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                      min={0}
-                      max={100}
-                      aria-label="Losers SR adjustment"
-                      className="app-input w-14 h-8 text-sm text-center text-bad app-measured"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {isStadium && (
-          <div className="mb-4 p-3 app-well">
-            <div className="text-xs font-semibold text-ink-2 mb-2 text-center">Final Cash (optional)</div>
-            <div className="flex items-center justify-center gap-3">
-              <div className="text-center">
-                <div className="text-xs text-pink-ink font-semibold mb-1">Team 1</div>
-                <input
-                  type="number"
-                  value={team1Cash}
-                  onChange={(e) => setTeam1Cash(e.target.value)}
-                  placeholder="$"
-                  aria-label="Team 1 final cash"
-                  className="app-input w-24 h-10 text-base text-center app-measured"
-                />
-              </div>
-              <span className="text-muted text-sm mt-4">vs</span>
-              <div className="text-center">
-                <div className="text-xs text-sky-ink font-semibold mb-1">Team 2</div>
-                <input
-                  type="number"
-                  value={team2Cash}
-                  onChange={(e) => setTeam2Cash(e.target.value)}
-                  placeholder="$"
-                  aria-label="Team 2 final cash"
-                  className="app-input w-24 h-10 text-base text-center app-measured"
-                />
-              </div>
-            </div>
-          </div>
+          <Card variant="well">
+            <CardContent className="p-3">
+              <FieldSet className="gap-2">
+                <FieldLegend variant="label" className="mb-0 w-full text-center text-xs text-ink-2">
+                  Final Cash (optional)
+                </FieldLegend>
+                <div className="flex items-center justify-center gap-3">
+                  <Field className="w-24 items-center gap-1">
+                    <FieldLabel
+                      htmlFor="match-score-team1-cash"
+                      className="justify-center text-xs text-pink-ink font-semibold"
+                    >
+                      Team 1
+                    </FieldLabel>
+                    <Input
+                      id="match-score-team1-cash"
+                      type="number"
+                      value={team1Cash}
+                      onChange={(e) => setTeam1Cash(e.target.value)}
+                      placeholder="$"
+                      aria-label="Team 1 final cash"
+                      className="h-10 text-base text-center app-measured px-2 py-1"
+                    />
+                  </Field>
+                  <span className="text-muted text-sm mt-4">vs</span>
+                  <Field className="w-24 items-center gap-1">
+                    <FieldLabel
+                      htmlFor="match-score-team2-cash"
+                      className="justify-center text-xs text-sky-ink font-semibold"
+                    >
+                      Team 2
+                    </FieldLabel>
+                    <Input
+                      id="match-score-team2-cash"
+                      type="number"
+                      value={team2Cash}
+                      onChange={(e) => setTeam2Cash(e.target.value)}
+                      placeholder="$"
+                      aria-label="Team 2 final cash"
+                      className="h-10 text-base text-center app-measured px-2 py-1"
+                    />
+                  </Field>
+                </div>
+              </FieldSet>
+            </CardContent>
+          </Card>
         )}
 
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 py-2 px-3 app-secondary rounded-pill text-sm font-semibold"
-          >
+        <DialogFooter className="sm:justify-stretch gap-2.5">
+          <Button variant="secondary" className="flex-1" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="quiet"
+            className="flex-1"
             onClick={handleSkip}
-            className="flex-1 py-2 px-3 app-quiet rounded-pill text-sm font-semibold"
             title="Skip score input and use minimal adjustment"
           >
             Skip
-          </button>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            className="flex-1 py-2 px-3 app-primary rounded-pill text-sm font-semibold"
-          >
+          </Button>
+          <Button variant="primary" className="flex-1" onClick={handleConfirm}>
             Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -13,6 +13,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(tauriConfig.version),
   },
+  server: {
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

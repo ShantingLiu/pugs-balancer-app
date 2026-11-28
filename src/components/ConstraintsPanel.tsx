@@ -1,7 +1,29 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useId } from "react";
 import { X } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import { usePlayerStore } from "@store/playerStore";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import type { SoftConstraint } from "@engine/types";
 
 // =============================================================================
@@ -14,6 +36,10 @@ export function ConstraintsPanel() {
   const [isHard, setIsHard] = useState(false);
   const [playerA, setPlayerA] = useState("");
   const [playerB, setPlayerB] = useState("");
+  const playerAId = useId();
+  const playerBId = useId();
+  const typeLabelId = useId();
+  const hardCheckboxId = useId();
 
   const softConstraints = useSessionStore((state) => state.softConstraints);
   const addSoftConstraint = useSessionStore((state) => state.addSoftConstraint);
@@ -52,11 +78,35 @@ export function ConstraintsPanel() {
 
   const formatPlayerName = (battletag: string) => battletag.split("#")[0];
 
+  const playerAItems = useMemo<{ value: string | null; label: string }[]>(
+    () => [
+      { value: null, label: "Select player 1…" },
+      ...lobbyPlayers.map((p) => ({
+        value: p.battletag,
+        label: formatPlayerName(p.battletag),
+      })),
+    ],
+    [lobbyPlayers]
+  );
+
+  const playerBItems = useMemo<{ value: string | null; label: string }[]>(
+    () => [
+      { value: null, label: "Select player 2…" },
+      ...lobbyPlayers
+        .filter((p) => p.battletag !== playerA)
+        .map((p) => ({
+          value: p.battletag,
+          label: formatPlayerName(p.battletag),
+        })),
+    ],
+    [lobbyPlayers, playerA]
+  );
+
   const hardCount = softConstraints.filter((c) => c.hard).length;
   const softCount = softConstraints.length - hardCount;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-heading">
           Constraints
@@ -68,23 +118,24 @@ export function ConstraintsPanel() {
             </span>
           )}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {softConstraints.length > 0 && (
-            <button
-              type="button"
+            <Button
+              variant="link"
+              size="xs"
               onClick={clearSoftConstraints}
-              className="text-xs font-semibold text-bad hover:underline"
+              className="h-auto p-0 text-bad"
             >
               Clear all
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="sky"
+            size="xs"
             onClick={() => setIsAdding(true)}
-            className="text-xs font-semibold px-3 py-1 app-sky rounded-pill"
           >
             + Add
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -94,151 +145,184 @@ export function ConstraintsPanel() {
         </p>
       )}
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         {softConstraints.map((constraint, idx) => (
           <div
             key={idx}
-            className={`flex items-center justify-between px-3 py-2 rounded-well text-sm border ${
+            className={cn(
+              "flex items-center justify-between px-3 py-2 rounded-well text-sm border",
               constraint.hard
                 ? "bg-warn-soft border-warn-edge"
                 : "bg-paper-3 border-rule"
-            }`}
+            )}
           >
             <div className="flex flex-wrap items-center gap-2">
               {constraint.hard && (
-                <span className="text-xs px-2 py-0.5 bg-paper-2 border border-warn-edge text-warn rounded-pill font-semibold">
+                <Badge variant="warn" className="px-2 bg-paper-2">
                   Must
-                </span>
+                </Badge>
               )}
               <span className="font-semibold text-ink">
                 {formatPlayerName(constraint.players[0])}
               </span>
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-pill border ${
-                  constraint.type === "together"
-                    ? "bg-ok-soft border-ok-edge text-ok"
-                    : "bg-bad-soft border-bad-edge text-bad"
-                }`}
+              <Badge
+                variant={constraint.type === "together" ? "ok" : "bad"}
+                className="px-2"
               >
                 {constraint.type === "together" ? "↔ together" : "↮ apart"}
-              </span>
+              </Badge>
               <span className="font-semibold text-ink">
                 {formatPlayerName(constraint.players[1])}
               </span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              shape="pill"
               onClick={() => handleRemove(constraint.players)}
-              className="text-muted hover:text-bad p-1 rounded-pill"
+              className="text-muted hover:text-bad hover:bg-bad-soft"
               aria-label="Remove constraint"
             >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+              <X aria-hidden="true" />
+            </Button>
           </div>
         ))}
       </div>
 
       {isAdding && (
-        <div className="p-3.5 app-well space-y-3">
-          <select
-            value={playerA}
-            onChange={(e) => setPlayerA(e.target.value)}
-            aria-label="Select player 1"
-            className="app-input w-full px-3 py-2 text-sm"
-          >
-            <option value="">Select player 1…</option>
-            {lobbyPlayers.map((p) => (
-              <option key={p.battletag} value={p.battletag}>
-                {formatPlayerName(p.battletag)}
-              </option>
-            ))}
-          </select>
+        <Card variant="well" className="p-3.5 gap-3">
+          <FieldGroup className="gap-3">
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor={playerAId} className="sr-only">
+                Player 1
+              </FieldLabel>
+              <Select
+                items={playerAItems}
+                value={playerA || null}
+                onValueChange={(v) => setPlayerA(v ?? "")}
+              >
+                <SelectTrigger id={playerAId} aria-label="Select player 1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {lobbyPlayers.map((p) => (
+                      <SelectItem key={p.battletag} value={p.battletag}>
+                        {formatPlayerName(p.battletag)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setConstraintType("together")}
-              className={`flex-1 py-1.5 text-sm font-semibold rounded-pill border ${
-                constraintType === "together"
-                  ? "bg-ok-soft border-ok-edge text-ok"
-                  : "bg-paper-2 border-rule text-ink-2 hover:bg-ok-soft"
-              }`}
+            <Field className="gap-1.5">
+              <FieldTitle id={typeLabelId} className="sr-only">
+                Constraint type
+              </FieldTitle>
+              <ToggleGroup
+                value={[constraintType]}
+                onValueChange={(vals) => {
+                  if (vals[0] === "together" || vals[0] === "apart") {
+                    setConstraintType(vals[0]);
+                  }
+                }}
+                aria-labelledby={typeLabelId}
+                className="w-full"
+              >
+                <ToggleGroupItem
+                  value="together"
+                  activeVariant="ok"
+                  className="flex-1"
+                >
+                  ↔ Together
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="apart"
+                  activeVariant="bad"
+                  className="flex-1"
+                >
+                  ↮ Apart
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </Field>
+
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor={playerBId} className="sr-only">
+                Player 2
+              </FieldLabel>
+              <Select
+                items={playerBItems}
+                value={playerB || null}
+                onValueChange={(v) => setPlayerB(v ?? "")}
+              >
+                <SelectTrigger id={playerBId} aria-label="Select player 2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {lobbyPlayers
+                      .filter((p) => p.battletag !== playerA)
+                      .map((p) => (
+                        <SelectItem key={p.battletag} value={p.battletag}>
+                          {formatPlayerName(p.battletag)}
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field
+              orientation="horizontal"
+              className="gap-3 p-2.5 bg-paper-2 border border-rule rounded-well"
             >
-              ↔ Together
-            </button>
-            <button
-              type="button"
-              onClick={() => setConstraintType("apart")}
-              className={`flex-1 py-1.5 text-sm font-semibold rounded-pill border ${
-                constraintType === "apart"
-                  ? "bg-bad-soft border-bad-edge text-bad"
-                  : "bg-paper-2 border-rule text-ink-2 hover:bg-bad-soft"
-              }`}
-            >
-              ↮ Apart
-            </button>
-          </div>
-
-          <select
-            value={playerB}
-            onChange={(e) => setPlayerB(e.target.value)}
-            aria-label="Select player 2"
-            className="app-input w-full px-3 py-2 text-sm"
-          >
-            <option value="">Select player 2…</option>
-            {lobbyPlayers
-              .filter((p) => p.battletag !== playerA)
-              .map((p) => (
-                <option key={p.battletag} value={p.battletag}>
-                  {formatPlayerName(p.battletag)}
-                </option>
-              ))}
-          </select>
-
-          <div className="flex items-center gap-3 p-2.5 bg-paper-2 border border-rule rounded-well">
-            <label className="flex items-center gap-2 cursor-pointer flex-1">
-              <input
-                type="checkbox"
+              <Checkbox
+                id={hardCheckboxId}
                 checked={isHard}
-                onChange={(e) => setIsHard(e.target.checked)}
-                className="w-4 h-4 accent-focus"
+                onCheckedChange={(checked) => setIsHard(checked === true)}
               />
-              <span className={`text-sm font-semibold ${isHard ? "text-warn" : "text-ink-2"}`}>
-                Hard constraint
-              </span>
-            </label>
-            <span className="text-xs text-muted">
-              {isHard ? "Balance fails if violated" : "Prefer but may violate"}
-            </span>
-          </div>
+              <FieldContent className="gap-0.5">
+                <FieldLabel
+                  htmlFor={hardCheckboxId}
+                  className={cn(
+                    "cursor-pointer text-sm font-semibold",
+                    isHard ? "text-warn" : "text-ink-2"
+                  )}
+                >
+                  Hard constraint
+                </FieldLabel>
+                <FieldDescription>
+                  {isHard ? "Balance fails if violated" : "Prefer but may violate"}
+                </FieldDescription>
+              </FieldContent>
+            </Field>
+          </FieldGroup>
 
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => {
                 setIsAdding(false);
                 setIsHard(false);
               }}
-              className="flex-1 py-2 text-sm font-semibold app-secondary rounded-pill"
+              className="flex-1"
             >
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant={isHard ? "ghost" : "primary"}
               onClick={handleAdd}
               disabled={!playerA || !playerB || playerA === playerB}
-              className={`flex-1 py-2 text-sm font-semibold rounded-pill ${
-                !playerA || !playerB || playerA === playerB
-                  ? "app-quiet"
-                  : isHard
-                  ? "bg-warn-soft border border-warn-edge text-warn"
-                  : "app-primary"
-              }`}
+              className={cn(
+                "flex-1",
+                isHard && "bg-warn-soft border border-warn-edge text-warn hover:bg-warn-fill hover:text-warn-btn-ink"
+              )}
             >
               Add {isHard ? "Hard" : "Soft"} Constraint
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

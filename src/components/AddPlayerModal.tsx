@@ -1,9 +1,42 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { Player, Role } from "@engine/types";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
 import { getHeroesByRole } from "@utils/heroUtils";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldSet,
+  FieldLegend,
+  FieldTitle,
+} from "@/components/ui/field";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 // =============================================================================
 // AddPlayerModal - Add or edit players in-app
@@ -38,6 +71,43 @@ const COMP_RANKS = [
   "Master 5", "Master 4", "Master 3", "Master 2", "Master 1",
   "Grandmaster 5", "Grandmaster 4", "Grandmaster 3", "Grandmaster 2", "Grandmaster 1",
   "Champion 5", "Champion 4", "Champion 3", "Champion 2", "Champion 1",
+];
+
+const STADIUM_RANK_ITEMS: { value: string | null; label: string }[] = [
+  { value: null, label: "None" },
+  ...STADIUM_RANKS.map((rank) => ({ value: rank, label: rank })),
+];
+
+const COMP_RANK_ITEMS: { value: string | null; label: string }[] = [
+  { value: null, label: "None" },
+  ...COMP_RANKS.map((rank) => ({ value: rank, label: rank })),
+];
+
+const ROLE_CONFIG = [
+  {
+    role: "Tank" as const,
+    stadiumField: "tankRank" as const,
+    compField: "tankCompRank" as const,
+    oneTrickField: "tankOneTrick" as const,
+    textClass: "text-tank",
+    selectedClass: "bg-yellow-600",
+  },
+  {
+    role: "DPS" as const,
+    stadiumField: "dpsRank" as const,
+    compField: "dpsCompRank" as const,
+    oneTrickField: "dpsOneTrick" as const,
+    textClass: "text-dps",
+    selectedClass: "role-dps",
+  },
+  {
+    role: "Support" as const,
+    stadiumField: "supportRank" as const,
+    compField: "supportCompRank" as const,
+    oneTrickField: "supportOneTrick" as const,
+    textClass: "text-sup",
+    selectedClass: "role-support",
+  },
 ];
 
 const EMPTY_FORM: Omit<Player, "battletag"> = {
@@ -85,22 +155,26 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
   const getPlayer = usePlayerStore((state) => state.getPlayer);
   const renamePlayerInSession = useSessionStore((state) => state.renamePlayerInSession);
 
-  const [battletag, setBattletag] = useState("");
-  const [originalBattletag, setOriginalBattletag] = useState("");
-  const [form, setForm] = useState<Omit<Player, "battletag">>(EMPTY_FORM);
+  const [battletag, setBattletag] = useState(() =>
+    isOpen && editPlayer ? editPlayer.battletag : ""
+  );
+  const [originalBattletag, setOriginalBattletag] = useState(() =>
+    isOpen && editPlayer ? editPlayer.battletag : ""
+  );
+  const [form, setForm] = useState<Omit<Player, "battletag">>(() =>
+    isOpen && editPlayer ? { ...editPlayer } : EMPTY_FORM
+  );
   const [errors, setErrors] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeEditPlayer, setActiveEditPlayer] = useState<Player | null>(() =>
+    editPlayer ?? null
+  );
+  const [prevProps, setPrevProps] = useState({ isOpen, editPlayer });
 
-  const isEditing = !!editPlayer;
-
-  const HEROES_BY_ROLE: Record<Role, string[]> = {
-    Tank: getHeroesByRole("Tank"),
-    DPS: getHeroesByRole("DPS"),
-    Support: getHeroesByRole("Support"),
-  };
-
-  useEffect(() => {
+  if (isOpen !== prevProps.isOpen || editPlayer !== prevProps.editPlayer) {
+    setPrevProps({ isOpen, editPlayer });
     if (isOpen) {
+      setActiveEditPlayer(editPlayer ?? null);
       if (editPlayer) {
         setBattletag(editPlayer.battletag);
         setOriginalBattletag(editPlayer.battletag);
@@ -121,7 +195,18 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
       setErrors([]);
       setShowDeleteConfirm(false);
     }
-  }, [isOpen, editPlayer]);
+  }
+
+  const isEditing = !!activeEditPlayer;
+
+  const HEROES_BY_ROLE = useMemo<Record<Role, string[]>>(
+    () => ({
+      Tank: getHeroesByRole("Tank"),
+      DPS: getHeroesByRole("DPS"),
+      Support: getHeroesByRole("Support"),
+    }),
+    []
+  );
 
   const validate = (): string[] => {
     const errs: string[] = [];
@@ -218,27 +303,24 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
   };
 
   const handleDelete = () => {
-    if (editPlayer) {
-      removePlayer(editPlayer.battletag);
+    if (activeEditPlayer) {
+      removePlayer(activeEditPlayer.battletag);
       onClose();
     }
   };
 
-  const toggleRole = (role: Role) => {
+  const handleRolesChange = (nextRoles: Role[]) => {
     setForm((prev) => {
-      const newRoles = prev.rolesWilling.includes(role)
-        ? prev.rolesWilling.filter((r) => r !== role)
-        : [...prev.rolesWilling, role];
-
-      const newPref = prev.rolePreference.filter((r) => newRoles.includes(r));
-      if (newRoles.length > 0 && newRoles.includes(role) && !newPref.includes(role)) {
-        newPref.push(role);
-      }
+      const added = nextRoles.filter((r) => !prev.rolesWilling.includes(r));
+      const newPref = [
+        ...prev.rolePreference.filter((r) => nextRoles.includes(r)),
+        ...added.filter((r) => !prev.rolePreference.includes(r)),
+      ];
 
       return {
         ...prev,
-        rolesWilling: newRoles,
-        rolePreference: newPref.filter((r) => newRoles.includes(r)),
+        rolesWilling: nextRoles,
+        rolePreference: newPref,
       };
     });
   };
@@ -271,69 +353,95 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
     });
   };
 
-  if (!isOpen) return null;
+  const battletagInvalid = errors.some(
+    (e) => e.includes("Battletag") || e.includes("battletag")
+  );
+  const rolesInvalid = errors.some((e) => e.includes("at least one role"));
+  const heroPoolInvalid = errors.some((e) => e.includes("hero pool"));
 
   return (
-    <div className="fixed inset-0 app-backdrop flex items-center justify-center z-50">
-      <div className="app-modal p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
-        <h2 className="text-xl font-semibold text-ink mb-4">
-          {isEditing ? "Edit Player" : "Add New Player"}
-        </h2>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            {isEditing ? "Edit Player" : "Add New Player"}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing
+              ? "Edit player details, roles, ranks, and hero pool."
+              : "Add a new player with roles, ranks, and hero pool."}
+          </DialogDescription>
+        </DialogHeader>
 
         {errors.length > 0 && (
-          <div className="mb-4 p-3 bg-bad-soft border border-bad-edge rounded-well">
-            <ul className="text-sm text-bad list-disc list-inside space-y-0.5">
-              {errors.map((err, i) => (
-                <li key={i}>{err}</li>
-              ))}
-            </ul>
-          </div>
+          <Alert variant="bad">
+            <AlertDescription className="text-bad">
+              <ul className="list-disc list-inside flex flex-col gap-0.5">
+                {errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
 
-        <div className="space-y-4">
+        <FieldGroup className="gap-4">
           {/* Battletag */}
-          <div>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">Battletag *</label>
-            <input
+          <Field data-invalid={battletagInvalid || undefined} className="gap-1.5">
+            <FieldLabel htmlFor="add-player-battletag">Battletag *</FieldLabel>
+            <Input
+              id="add-player-battletag"
               type="text"
               value={battletag}
               onChange={(e) => setBattletag(e.target.value)}
               placeholder="Name or Name#1234"
-              className="app-input w-full px-3 py-2 text-sm"
+              aria-invalid={battletagInvalid || undefined}
             />
-          </div>
+          </Field>
 
           {/* Roles Willing */}
-          <div>
-            <label className="block text-sm font-semibold text-ink-2 mb-1.5">Roles Willing *</label>
-            <div className="flex flex-wrap gap-2">
-              {ROLES.map((role) => (
-                <button
-                  type="button"
-                  key={role}
-                  onClick={() => toggleRole(role)}
-                  className={`px-4 py-2 rounded-pill text-sm font-semibold border ${
-                    form.rolesWilling.includes(role)
-                      ? role === "Tank"
-                        ? "bg-yellow-600"
-                        : role === "DPS"
-                        ? "role-dps"
-                        : "role-support"
-                      : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft"
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-          </div>
+          <FieldSet className="gap-1.5">
+            <FieldLegend
+              variant="label"
+              className={cn("mb-0", rolesInvalid && "text-destructive")}
+            >
+              Roles Willing *
+            </FieldLegend>
+            <Field data-invalid={rolesInvalid || undefined} className="w-fit gap-1">
+              <ToggleGroup
+                multiple
+                value={form.rolesWilling}
+                onValueChange={handleRolesChange}
+                aria-label="Roles Willing"
+                size="default"
+                className="flex-wrap gap-1.5"
+              >
+                {ROLE_CONFIG.map(({ role, selectedClass }) => {
+                  const isSelected = form.rolesWilling.includes(role);
+                  return (
+                    <ToggleGroupItem
+                      key={role}
+                      value={role}
+                      activeVariant="none"
+                      className={cn(
+                        "px-4 py-1.5",
+                        isSelected
+                          ? selectedClass
+                          : "text-ink-2 hover:bg-sky-soft"
+                      )}
+                    >
+                      {role}
+                    </ToggleGroupItem>
+                  );
+                })}
+              </ToggleGroup>
+            </Field>
+          </FieldSet>
 
           {/* Role Preference Order */}
           {form.rolesWilling.length > 1 && (
-            <div>
-              <label className="block text-sm font-semibold text-ink-2 mb-1.5">
-                Role Preference (first = most preferred)
-              </label>
+            <Field className="gap-1.5">
+              <FieldTitle>Role Preference (first = most preferred)</FieldTitle>
               <div className="flex flex-wrap gap-2.5">
                 {(form.rolePreference.length === form.rolesWilling.length
                   ? form.rolePreference
@@ -342,134 +450,213 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
                   <div key={role} className="flex items-center gap-1">
                     <span className="text-muted text-sm app-measured">{idx + 1}.</span>
                     <span
-                      className={`px-3 py-1 rounded-pill text-sm font-semibold border ${
+                      className={cn(
+                        "px-3 py-1 rounded-pill text-sm font-semibold border",
                         idx === 0
                           ? "bg-pink-soft border-pink-edge text-pink-ink"
                           : "bg-paper-3 border-rule text-ink-2"
-                      }`}
+                      )}
                     >
                       {role}
                     </span>
                     <div className="flex flex-col">
                       {idx > 0 && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => {
                             const newPref = [...arr];
                             [newPref[idx - 1], newPref[idx]] = [newPref[idx], newPref[idx - 1]];
                             setForm((prev) => ({ ...prev, rolePreference: newPref }));
                           }}
-                          className="text-muted hover:text-ink px-1"
+                          className="text-muted hover:text-ink"
                           title="Move up"
                           aria-label={`Move ${role} up`}
                         >
-                          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                          <ChevronUp aria-hidden="true" />
+                        </Button>
                       )}
                       {idx < arr.length - 1 && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => {
                             const newPref = [...arr];
                             [newPref[idx], newPref[idx + 1]] = [newPref[idx + 1], newPref[idx]];
                             setForm((prev) => ({ ...prev, rolePreference: newPref }));
                           }}
-                          className="text-muted hover:text-ink px-1"
+                          className="text-muted hover:text-ink"
                           title="Move down"
                           aria-label={`Move ${role} down`}
                         >
-                          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                        </button>
+                          <ChevronDown aria-hidden="true" />
+                        </Button>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </Field>
           )}
 
           {/* Ranks - Per Role + Shared 6v6 */}
           {form.rolesWilling.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-sm font-semibold text-ink-2">
-                Ranks per Role
-                <span className="text-xs font-normal text-muted ml-2">
-                  (Stadium or 5v5 Comp rank)
-                </span>
+            <FieldSet className="gap-3">
+              <div className="flex flex-col gap-0.5">
+                <FieldLegend variant="label" className="mb-0">
+                  Ranks per Role
+                </FieldLegend>
+                <FieldDescription>
+                  Stadium or 5v5 Comp rank
+                </FieldDescription>
               </div>
 
-              {RANK_ROLE_FIELDS.filter(({ role }) => form.rolesWilling.includes(role)).map(
-                ({ role, textColorClass, stadiumField, compField }) => (
-                  <div key={role} className="p-3 app-well">
-                    <div className={`text-sm font-semibold ${textColorClass} mb-2`}>{role}</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-muted mb-1">Stadium Rank</label>
-                        <select
-                          value={form[stadiumField] || ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, [stadiumField]: e.target.value || null }))
-                          }
-                          className="app-input w-full px-3 py-2 text-sm"
+              {ROLE_CONFIG.filter(({ role }) => form.rolesWilling.includes(role)).map(
+                ({ role, stadiumField, compField, textClass }) => {
+                  const roleRankInvalid = errors.some((e) =>
+                    e.startsWith(`${role} requires`)
+                  );
+                  const stadiumId = `add-player-${role.toLowerCase()}-stadium-rank`;
+                  const compId = `add-player-${role.toLowerCase()}-comp-rank`;
+                  return (
+                    <div key={role} className="p-3 app-well">
+                      <div className={cn("text-sm font-semibold mb-2", textClass)}>{role}</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Field
+                          data-invalid={roleRankInvalid || undefined}
+                          className="gap-1"
                         >
-                          <option value="">None</option>
-                          {STADIUM_RANKS.map((rank) => (
-                            <option key={rank} value={rank}>{rank}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-muted mb-1">5v5 Comp Rank</label>
-                        <select
-                          value={form[compField] || ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, [compField]: e.target.value || null }))
-                          }
-                          className="app-input w-full px-3 py-2 text-sm"
+                          <FieldLabel
+                            htmlFor={stadiumId}
+                            className="text-xs font-normal text-muted"
+                          >
+                            Stadium Rank
+                          </FieldLabel>
+                          <Select
+                            items={STADIUM_RANK_ITEMS}
+                            value={form[stadiumField]}
+                            onValueChange={(val) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                [stadiumField]: val,
+                              }))
+                            }
+                          >
+                            <SelectTrigger
+                              id={stadiumId}
+                              aria-label={`${role} Stadium Rank`}
+                              aria-invalid={roleRankInvalid || undefined}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {STADIUM_RANK_ITEMS.map((item) => (
+                                  <SelectItem key={item.value ?? "__none__"} value={item.value}>
+                                    {item.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field
+                          data-invalid={roleRankInvalid || undefined}
+                          className="gap-1"
                         >
-                          <option value="">None</option>
-                          {COMP_RANKS.map((rank) => (
-                            <option key={rank} value={rank}>{rank}</option>
-                          ))}
-                        </select>
+                          <FieldLabel
+                            htmlFor={compId}
+                            className="text-xs font-normal text-muted"
+                          >
+                            5v5 Comp Rank
+                          </FieldLabel>
+                          <Select
+                            items={COMP_RANK_ITEMS}
+                            value={form[compField]}
+                            onValueChange={(val) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                [compField]: val,
+                              }))
+                            }
+                          >
+                            <SelectTrigger
+                              id={compId}
+                              aria-label={`${role} 5v5 Comp Rank`}
+                              aria-invalid={roleRankInvalid || undefined}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {COMP_RANK_ITEMS.map((item) => (
+                                  <SelectItem key={item.value ?? "__none__"} value={item.value}>
+                                    {item.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </Field>
                       </div>
                     </div>
-                  </div>
-                )
+                  );
+                }
               )}
 
               <div className="p-3 app-well">
-                <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="player-6v6-rank" className="text-sm font-semibold text-ink-2">
-                    6v6 Comp Rank
-                  </label>
-                  <span className="text-xs text-muted">
-                    Shared across all roles (no role lock)
-                  </span>
-                </div>
-                <select
-                  id="player-6v6-rank"
-                  value={form.regular6v6Rank || ""}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, regular6v6Rank: e.target.value || null }))
-                  }
-                  className="app-input w-full px-3 py-2 text-sm"
-                >
-                  <option value="">None</option>
-                  {COMP_RANKS.map((rank) => (
-                    <option key={rank} value={rank}>{rank}</option>
-                  ))}
-                </select>
+                <Field className="gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel
+                      htmlFor="player-6v6-rank"
+                      className="text-sm font-semibold text-ink-2"
+                    >
+                      6v6 Comp Rank
+                    </FieldLabel>
+                    <span className="text-xs text-muted">
+                      Shared across all roles (no role lock)
+                    </span>
+                  </div>
+                  <Select
+                    items={COMP_RANK_ITEMS}
+                    value={form.regular6v6Rank}
+                    onValueChange={(val) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        regular6v6Rank: val,
+                      }))
+                    }
+                  >
+                    <SelectTrigger
+                      id="player-6v6-rank"
+                      aria-label="6v6 Comp Rank"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {COMP_RANK_ITEMS.map((item) => (
+                          <SelectItem key={item.value ?? "__none__"} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
               </div>
-            </div>
+            </FieldSet>
           )}
 
           {/* Hero Pool */}
-          <div>
-            <label className="block text-sm font-semibold text-ink-2 mb-1.5">
+          <FieldSet className="gap-2">
+            <FieldLegend
+              variant="label"
+              className={cn("mb-0", heroPoolInvalid && "text-destructive")}
+            >
               Hero Pool * ({form.heroPool.length} selected)
-            </label>
-            <div className="space-y-3">
+            </FieldLegend>
+            <div className="flex flex-col gap-3">
               {ROLES.map((role) => (
                 <div key={role}>
                   <div className="flex items-center gap-3 mb-1.5">
@@ -495,11 +682,12 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
                         type="button"
                         key={hero}
                         onClick={() => toggleHero(hero)}
-                        className={`px-2.5 py-1 rounded-pill text-xs font-semibold border ${
+                        className={cn(
+                          "px-2.5 py-1 rounded-pill text-xs font-semibold border",
                           form.heroPool.includes(hero)
                             ? "bg-pink-soft border-pink-edge text-pink-ink"
                             : "bg-paper-3 border-rule text-ink-2 hover:bg-sky-soft"
-                        }`}
+                        )}
                       >
                         {hero}
                       </button>
@@ -508,164 +696,162 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
                 </div>
               ))}
             </div>
-          </div>
+          </FieldSet>
 
           {/* One-trick per role */}
           {form.rolesWilling.length > 0 && (
-            <div className="space-y-2.5">
-              <div className="text-sm font-semibold text-ink-2">
-                One-Trick Heroes
-                <span className="text-xs font-normal text-muted ml-2">
-                  (Select if player only plays one hero for a role)
-                </span>
+            <FieldSet className="gap-2.5">
+              <div className="flex flex-col gap-0.5">
+                <FieldLegend variant="label" className="mb-0">
+                  One-Trick Heroes
+                </FieldLegend>
+                <FieldDescription>
+                  Select if player only plays one hero for a role
+                </FieldDescription>
               </div>
 
-              {form.rolesWilling.includes("Tank") && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-tank w-16">Tank</span>
-                  <select
-                    value={form.tankOneTrick || ""}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, tankOneTrick: e.target.value || null }))
-                    }
-                    className="app-input flex-1 px-3 py-1.5 text-sm"
-                  >
-                    <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["Tank"].filter((h) => form.heroPool.includes(h)).map((hero) => (
-                      <option key={hero} value={hero}>{hero}</option>
-                    ))}
-                  </select>
-                </div>
+              {ROLE_CONFIG.filter(({ role }) => form.rolesWilling.includes(role)).map(
+                ({ role, oneTrickField, textClass }) => {
+                  const oneTrickHero = form[oneTrickField];
+                  const oneTrickInvalid = Boolean(
+                    oneTrickHero && errors.some((e) => e.includes(`"${oneTrickHero}"`))
+                  );
+                  const oneTrickId = `add-player-${role.toLowerCase()}-onetrick`;
+                  const oneTrickItems: { value: string | null; label: string }[] = [
+                    { value: null, label: "Not a one-trick" },
+                    ...HEROES_BY_ROLE[role]
+                      .filter((h) => form.heroPool.includes(h))
+                      .map((hero) => ({ value: hero, label: hero })),
+                  ];
+                  return (
+                    <Field
+                      key={role}
+                      orientation="horizontal"
+                      data-invalid={oneTrickInvalid || undefined}
+                      className="gap-3"
+                    >
+                      <FieldLabel
+                        htmlFor={oneTrickId}
+                        className={cn("w-16 shrink-0 flex-none", textClass)}
+                      >
+                        {role}
+                      </FieldLabel>
+                      <Select
+                        items={oneTrickItems}
+                        value={form[oneTrickField]}
+                        onValueChange={(val) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            [oneTrickField]: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger
+                          id={oneTrickId}
+                          size="sm"
+                          className="flex-1"
+                          aria-label={`${role} One-Trick Hero`}
+                          aria-invalid={oneTrickInvalid || undefined}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {oneTrickItems.map((item) => (
+                              <SelectItem key={item.value ?? "__none__"} value={item.value}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  );
+                }
               )}
-
-              {form.rolesWilling.includes("DPS") && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-dps w-16">DPS</span>
-                  <select
-                    value={form.dpsOneTrick || ""}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, dpsOneTrick: e.target.value || null }))
-                    }
-                    className="app-input flex-1 px-3 py-1.5 text-sm"
-                  >
-                    <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["DPS"].filter((h) => form.heroPool.includes(h)).map((hero) => (
-                      <option key={hero} value={hero}>{hero}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {form.rolesWilling.includes("Support") && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-sup w-16">Support</span>
-                  <select
-                    value={form.supportOneTrick || ""}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, supportOneTrick: e.target.value || null }))
-                    }
-                    className="app-input flex-1 px-3 py-1.5 text-sm"
-                  >
-                    <option value="">Not a one-trick</option>
-                    {HEROES_BY_ROLE["Support"].filter((h) => form.heroPool.includes(h)).map((hero) => (
-                      <option key={hero} value={hero}>{hero}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+            </FieldSet>
           )}
 
           {/* Weight Modifier */}
-          <div>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">
-              Weight Modifier (<span className="app-measured">{form.weightModifier > 0 ? "+" : ""}{form.weightModifier}</span>)
-            </label>
-            <input
-              type="range"
-              min="-500"
-              max="500"
-              step="50"
+          <Field className="gap-2">
+            <FieldLabel id="add-player-weight-label">
+              Weight Modifier (
+              <span className="app-measured">
+                {form.weightModifier > 0 ? "+" : ""}
+                {form.weightModifier}
+              </span>
+              )
+            </FieldLabel>
+            <Slider
+              aria-labelledby="add-player-weight-label"
+              min={-500}
+              max={500}
+              step={50}
               value={form.weightModifier}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, weightModifier: parseInt(e.target.value) }))
-              }
-              style={{ "--range-pct": `${((form.weightModifier + 500) / 1000) * 100}%` } as React.CSSProperties}
-              className="w-full app-range"
+              onValueChange={(val) => {
+                const next = typeof val === "number" ? val : val[0];
+                setForm((prev) => ({ ...prev, weightModifier: next }));
+              }}
             />
             <div className="flex justify-between text-xs text-muted app-measured">
               <span>-500 (weaker)</span>
               <span>0</span>
               <span>+500 (stronger)</span>
             </div>
-          </div>
+          </Field>
 
           {/* Notes */}
-          <div>
-            <label className="block text-sm font-semibold text-ink-2 mb-1">Notes</label>
-            <textarea
+          <Field className="gap-1.5">
+            <FieldLabel htmlFor="add-player-notes">Notes</FieldLabel>
+            <Textarea
+              id="add-player-notes"
               value={form.notes || ""}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value || null }))
               }
               placeholder="Optional notes about this player..."
               rows={2}
-              className="app-input w-full px-3 py-2 text-sm resize-none"
+              className="min-h-0 resize-none"
             />
-          </div>
-        </div>
+          </Field>
+        </FieldGroup>
 
         {/* Actions */}
-        <div className="flex flex-wrap justify-between gap-3 mt-6 pt-4 border-t border-rule">
+        <Separator />
+        <DialogFooter className="flex-wrap sm:justify-between gap-3">
           <div>
             {isEditing && !showDeleteConfirm && (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2 app-danger rounded-pill text-sm font-semibold"
-              >
+              <Button variant="danger" onClick={() => setShowDeleteConfirm(true)}>
                 Delete Player
-              </button>
+              </Button>
             )}
             {showDeleteConfirm && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-bad font-semibold">Are you sure?</span>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="px-3 py-1.5 app-danger rounded-pill text-sm font-semibold"
-                >
+                <Button variant="danger" size="sm" onClick={handleDelete}>
                   Yes, delete
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-3 py-1.5 app-secondary rounded-pill text-sm font-semibold"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 app-secondary rounded-pill text-sm font-semibold"
-            >
+            <Button variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="px-5 py-2 app-primary rounded-pill text-sm font-semibold"
-            >
+            </Button>
+            <Button variant="primary" onClick={handleSubmit}>
               {isEditing ? "Save Changes" : "Add Player"}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
