@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-mode="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="color-scheme" content="light dark" />
@@ -20,8 +20,10 @@
       try {
         var s = JSON.parse(localStorage.getItem("pugs-balancer-session") || "{}");
         var m = s && s.state && s.state.colorMode;
-        if (m === "dark" || m === "light") document.documentElement.dataset.mode = m;
-      } catch (e) {}
+        document.documentElement.dataset.mode = m === "light" || m === "dark" ? m : "dark";
+      } catch (e) {
+        document.documentElement.dataset.mode = "dark";
+      }
     </script>
   </head>
   <body>

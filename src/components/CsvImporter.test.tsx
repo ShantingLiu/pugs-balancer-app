@@ -1,8 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CsvImporter } from "./CsvImporter";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
+
+const mockExportCsvFile = vi.fn();
+const mockOpenExportFolder = vi.fn();
+const mockTriggerBrowserDownload = vi.fn();
+
+vi.mock("@services/csvExport", () => ({
+  exportCsvFile: (...args: unknown[]) => mockExportCsvFile(...args),
+  openExportFolder: (...args: unknown[]) => mockOpenExportFolder(...args),
+  triggerBrowserDownload: (...args: unknown[]) =>
+    mockTriggerBrowserDownload(...args),
+}));
 
 function buildCsv(battletags: string[]): string {
   const header =
@@ -24,6 +35,7 @@ function uploadCsvFile(container: HTMLElement, csvContent: string, name = "roste
 
 describe("CsvImporter merge prompt", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     usePlayerStore.setState(usePlayerStore.getInitialState());
     useSessionStore.setState(useSessionStore.getInitialState());
   });
@@ -109,5 +121,89 @@ describe("CsvImporter merge prompt", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(usePlayerStore.getState().players.size).toBe(2);
+  });
+
+  it("exports CSV via csvExport service and shows saved location in Details", async () => {
+    mockExportCsvFile.mockResolvedValueOnce({
+      location: "C:\\Users\\Jenny\\Documents\\SwoosPugsBalancer\\export\\pugs-players.csv",
+      isDesktopExport: true,
+    });
+
+    const { container } = render(<CsvImporter />);
+    uploadCsvFile(container, buildCsv(["Alpha#1", "Bravo#2"]));
+    await waitFor(() => expect(usePlayerStore.getState().players.size).toBe(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+
+    expect(await screen.findByText(/Exported 2 players/)).toBeInTheDocument();
+    expect(mockExportCsvFile).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(
+      screen.getByText(/SwoosPugsBalancer\\export\\pugs-players\.csv/)
+    ).toBeInTheDocument();
+  });
+
+  it("opens export folder directly when Open Export Folder is clicked", async () => {
+    mockOpenExportFolder.mockResolvedValueOnce(
+      "C:\\Users\\Jenny\\Documents\\SwoosPugsBalancer\\export"
+    );
+
+    render(<CsvImporter />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Export Folder" }));
+
+    await waitFor(() => {
+      expect(mockOpenExportFolder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("displays warning details automatically on import and cleanly round-trips exported CSV", async () => {
+    let exportedCsv = "";
+    mockExportCsvFile.mockImplementationOnce(async (_filename: string, csv: string) => {
+      exportedCsv = csv;
+      return {
+        location: "C:\\Users\\Jenny\\Documents\\SwoosPugsBalancer\\export\\pugs-players.csv",
+        isDesktopExport: true,
+      };
+    });
+
+    const { container } = render(<CsvImporter />);
+    uploadCsvFile(
+      container,
+      "battletag,tank_rank,roles_willing,hero_pool\nWarnPlayer#1,Pro 2,Tank,"
+    );
+
+    expect(
+      await screen.findByText(/Imported 1 players \(1 warning\)\. Session stats and lobby cleared\./)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Row 2: No heroes specified, archetype checks will be skipped/)
+    ).toBeInTheDocument();
+
+    // Hide & re-open Details toggle works
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
+    expect(
+      screen.queryByText(/Row 2: No heroes specified, archetype checks will be skipped/)
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(
+      screen.getByText(/Row 2: No heroes specified, archetype checks will be skipped/)
+    ).toBeInTheDocument();
+
+    // Clean round-trip: import clean roster, export, replace roster with exported CSV -> 0 warnings
+    uploadCsvFile(container, buildCsv(["Clean#1", "Clean#2"]));
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("button", { name: "New CSV Only (2)" }));
+    await waitFor(() => expect(usePlayerStore.getState().players.size).toBe(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    await waitFor(() => expect(mockExportCsvFile).toHaveBeenCalledTimes(1));
+
+    uploadCsvFile(container, exportedCsv);
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("button", { name: "Replace Roster" }));
+    expect(
+      await screen.findByText("Imported 2 players. Session stats and lobby cleared.")
+    ).toBeInTheDocument();
   });
 });

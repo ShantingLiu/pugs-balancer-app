@@ -2,7 +2,7 @@ import type { LobbyPlayer, Player, Role } from "@engine/types";
 import { LockKeyhole, Scale, Star } from "lucide-react";
 import { useSessionStore } from "@store/sessionStore";
 import { parseBattletag } from "@utils/heroUtils";
-import { getRoleRankDisplay } from "@utils/rankMapper";
+import { getRoleRankDisplay, getShared6v6Rank } from "@utils/rankMapper";
 
 // =============================================================================
 // PlayerCard - Displays a player's information
@@ -174,34 +174,50 @@ export function PlayerCard({
         </div>
       )}
 
-      {/* Ranks - only show for roles they're willing to play */}
+      {/* Ranks - single shared rank in 6v6 mode if set, otherwise per willing role */}
       <div className="text-xs text-ink-2 space-y-0.5">
-        {player.rolesWilling.includes("Tank") && (() => {
-          const tankRank = getRoleRankDisplay(player, "Tank", gameMode);
-          return tankRank ? (
-            <div className="flex justify-between">
-              <span>Tank</span>
-              <span className={`font-semibold ${getRoleTextColor("Tank")}`}>{tankRank}</span>
-            </div>
-          ) : null;
-        })()}
-        {player.rolesWilling.includes("DPS") && (() => {
-          const dpsRank = getRoleRankDisplay(player, "DPS", gameMode);
-          return dpsRank ? (
-            <div className="flex justify-between">
-              <span>DPS</span>
-              <span className={`font-semibold ${getRoleTextColor("DPS")}`}>{dpsRank}</span>
-            </div>
-          ) : null;
-        })()}
-        {player.rolesWilling.includes("Support") && (() => {
-          const supportRank = getRoleRankDisplay(player, "Support", gameMode);
-          return supportRank ? (
-            <div className="flex justify-between">
-              <span>Support</span>
-              <span className={`font-semibold ${getRoleTextColor("Support")}`}>{supportRank}</span>
-            </div>
-          ) : null;
+        {(() => {
+          const shared6v6Rank = gameMode === "regular_6v6" ? getShared6v6Rank(player) : null;
+          if (shared6v6Rank) {
+            return (
+              <div className="flex justify-between">
+                <span>6v6 Rank</span>
+                <span className="font-semibold text-ink">{shared6v6Rank}</span>
+              </div>
+            );
+          }
+
+          return (
+            <>
+              {player.rolesWilling.includes("Tank") && (() => {
+                const tankRank = getRoleRankDisplay(player, "Tank", gameMode);
+                return tankRank ? (
+                  <div className="flex justify-between">
+                    <span>Tank</span>
+                    <span className={`font-semibold ${getRoleTextColor("Tank")}`}>{tankRank}</span>
+                  </div>
+                ) : null;
+              })()}
+              {player.rolesWilling.includes("DPS") && (() => {
+                const dpsRank = getRoleRankDisplay(player, "DPS", gameMode);
+                return dpsRank ? (
+                  <div className="flex justify-between">
+                    <span>DPS</span>
+                    <span className={`font-semibold ${getRoleTextColor("DPS")}`}>{dpsRank}</span>
+                  </div>
+                ) : null;
+              })()}
+              {player.rolesWilling.includes("Support") && (() => {
+                const supportRank = getRoleRankDisplay(player, "Support", gameMode);
+                return supportRank ? (
+                  <div className="flex justify-between">
+                    <span>Support</span>
+                    <span className={`font-semibold ${getRoleTextColor("Support")}`}>{supportRank}</span>
+                  </div>
+                ) : null;
+              })()}
+            </>
+          );
         })()}
       </div>
 

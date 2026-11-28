@@ -155,5 +155,19 @@ Flex6v6#2222,,Platinum 1,Emerald 2,,"Tank","Reinhardt"`;
       expect(result.valid[1].tankCompRank).toBe("Platinum 1");
       expect(result.valid[1].tank6v6Rank).toBe("Emerald 2");
     });
+
+    it("should normalize diacritics, case, punctuation in hero names and strip UTF-8 BOM + CRLF", () => {
+      const csv =
+        "\uFEFFbattletag,tank_rank,dps_rank,support_rank,roles_willing,hero_pool\r\n" +
+        'AccentUser#1234,Pro 2,Pro 1,Pro 3,"Tank,DPS,Support","d.va,soldier 76,Torbjörn,Lúcio"\r\n';
+
+      const result = parsePlayersCSV(csv);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+      expect(result.valid).toHaveLength(1);
+      expect(result.valid[0].battletag).toBe("AccentUser#1234");
+      expect(result.valid[0].heroPool).toEqual(["D.Va", "Soldier: 76", "Torbjorn", "Lucio"]);
+    });
   });
 });

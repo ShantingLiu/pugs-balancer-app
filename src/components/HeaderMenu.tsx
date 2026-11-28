@@ -47,6 +47,11 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
   } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const closeMenu = () => {
+    setIsOpen(false);
+    setUpdateNote(null);
+  };
+
   const handleCheckForUpdates = async () => {
     if (checkingUpdates) return;
     setCheckingUpdates(true);
@@ -55,7 +60,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
     try {
       const result = await checkForAppUpdateManual();
       if (result.status === "available") {
-        setIsOpen(false);
+        closeMenu();
         onUpdateFound?.(result.update);
       } else if (result.status === "up-to-date") {
         setUpdateNote({
@@ -81,12 +86,12 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        closeMenu();
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsOpen(false);
+        closeMenu();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -104,15 +109,15 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
 
   const handleModeSelect = (mode: GameMode) => {
     if (mode === gameMode) {
-      setIsOpen(false);
+      closeMenu();
       return;
     }
     if (hasActiveSession) {
       setConfirmMode(mode);
-      setIsOpen(false);
+      closeMenu();
     } else {
       setGameMode(mode);
-      setIsOpen(false);
+      closeMenu();
     }
   };
 
@@ -121,7 +126,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
       <div className="relative" ref={menuRef}>
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => (isOpen ? closeMenu() : setIsOpen(true))}
           aria-expanded={isOpen}
           aria-haspopup="menu"
           aria-label="Menu"
@@ -165,7 +170,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
                 <button
                   type="button"
                   onClick={() => {
-                    setIsOpen(false);
+                    closeMenu();
                     onOpenSheets();
                   }}
                   className="app-secondary px-3 py-2 rounded-pill text-xs font-semibold"
@@ -175,7 +180,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
                 <button
                   type="button"
                   onClick={() => {
-                    setIsOpen(false);
+                    closeMenu();
                     onSync();
                   }}
                   disabled={syncDisabled}
@@ -244,7 +249,7 @@ export function HeaderMenu({ onOpenSheets, onSync, onUpdateFound }: HeaderMenuPr
                       key={option.id}
                       onClick={() => {
                         setLayoutMode(option.id);
-                        setIsOpen(false);
+                        closeMenu();
                       }}
                       title={option.description}
                       className={`px-2.5 py-2 rounded-well border text-xs font-semibold flex items-center justify-center gap-1 ${

@@ -58,10 +58,11 @@ function detectDelimiter(csv: string): string {
  * Parse CSV string into array of raw rows
  */
 function parseCSV(csv: string): RawCsvRow[] {
-  const delimiter = detectDelimiter(csv);
+  const cleanCsv = csv.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const delimiter = detectDelimiter(cleanCsv);
   
   // Join multi-line quoted fields before splitting into rows
-  const logicalLines = splitCSVLines(csv.trim());
+  const logicalLines = splitCSVLines(cleanCsv.trim());
 
   if (logicalLines.length < 2) {
     return [];
@@ -292,11 +293,31 @@ function isValidRankFormat(rank: string): boolean {
   return /^[\w-]+(\s+\d)?$/.test(rank);
 }
 
+function normalizeHeroKey(hero: string): string {
+  return hero
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+const CANONICAL_HERO_MAP = new Map<string, string>(
+  Object.keys(heroesConfig.heroes).map((canonical) => [
+    normalizeHeroKey(canonical),
+    canonical,
+  ])
+);
+
+function resolveHeroName(hero: string): string | null {
+  if (hero in heroesConfig.heroes) return hero;
+  return CANONICAL_HERO_MAP.get(normalizeHeroKey(hero)) ?? null;
+}
+
 /**
- * Check if hero exists in config
+ * Check if hero exists in config (supports case, punctuation, and accent variants)
  */
 function isKnownHero(hero: string): boolean {
-  return hero in heroesConfig.heroes;
+  return resolveHeroName(hero) !== null;
 }
 
 /** Validate a single role string (case-insensitive) */
@@ -319,8 +340,10 @@ export function validateHeroes(hero: string): boolean {
  * Get hero's role from config
  */
 function getHeroRole(hero: string): Role | null {
+  const canonical = resolveHeroName(hero);
+  if (!canonical) return null;
   const heroData = (heroesConfig.heroes as Record<string, { role: string }>)[
-    hero
+    canonical
   ];
   return heroData ? (heroData.role as Role) : null;
 }
@@ -402,7 +425,9 @@ function validateRow(
   }
 
   // Parse hero pool
-  const heroPool = parseList(row.hero_pool);
+  const heroPool = parseList(row.hero_pool).map(
+    (hero) => resolveHeroName(hero) ?? hero
+  );
   if (heroPool.length === 0) {
     warnings.push({
       row: rowNum,
@@ -412,17 +437,14 @@ function validateRow(
 
   // Validate heroes
   for (const hero of heroPool) {
-    if (!isKnownHero(hero)) {
+    const heroRole = getHeroRole(hero);
+    if (!heroRole) {
       warnings.push({ row: rowNum, message: `Unknown hero: ${hero}` });
-    } else {
-      // Check if hero matches willing roles
-      const heroRole = getHeroRole(hero);
-      if (heroRole && !rolesWilling.includes(heroRole)) {
-        warnings.push({
-          row: rowNum,
-          message: `${hero} is a ${heroRole} hero but player not willing to play ${heroRole}`,
-        });
-      }
+    } else if (!rolesWilling.includes(heroRole)) {
+      warnings.push({
+        row: rowNum,
+        message: `${hero} is a ${heroRole} hero but player not willing to play ${heroRole}`,
+      });
     }
   }
 

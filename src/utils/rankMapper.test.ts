@@ -115,11 +115,32 @@ describe("rankMapper", () => {
       expect(getRoleRankSR(player, "Tank", "regular_5v5")).toBe(3200);
       expect(getRoleRankDisplay(player, "Tank", "regular_5v5")).toBe("Emerald 3");
 
-      expect(getRoleRankSR(player, "Tank", "regular_6v6")).toBe(4200);
-      expect(getRoleRankDisplay(player, "Tank", "regular_6v6")).toBe("Master 3");
+      expect(getRoleRankSR(player, "Tank", "regular_6v6")).toBe(3700);
+      expect(getRoleRankDisplay(player, "Tank", "regular_6v6")).toBe("Diamond 3");
 
       expect(getRoleRankSR(player, "DPS", "regular_6v6")).toBe(3700);
       expect(getRoleRankDisplay(player, "DPS", "regular_6v6")).toBe("Diamond 3");
+
+      expect(getRoleRankSR(player, "Support", "regular_6v6")).toBe(3700);
+      expect(getRoleRankDisplay(player, "Support", "regular_6v6")).toBe("Diamond 3");
+    });
+
+    it("should share legacy 6v6 rank across all roles when regular6v6Rank is absent", () => {
+      const player = {
+        tankRank: null,
+        dpsRank: null,
+        supportRank: null,
+        tank6v6Rank: "Master 3",
+        dps6v6Rank: null,
+        support6v6Rank: null,
+        regularCompRank: "Gold 3",
+        regular6v6Rank: null,
+      };
+
+      expect(getRoleRankSR(player, "Tank", "regular_6v6")).toBe(4200);
+      expect(getRoleRankSR(player, "DPS", "regular_6v6")).toBe(4200);
+      expect(getRoleRankSR(player, "Support", "regular_6v6")).toBe(4200);
+      expect(getRoleRankDisplay(player, "DPS", "regular_6v6")).toBe("Master 3");
     });
 
     it("should fallback cleanly to 5v5 comp rank in 6v6 mode if no 6v6 rank is set", () => {

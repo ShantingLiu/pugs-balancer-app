@@ -40,7 +40,10 @@ describe("HeaderMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Wide Teams" }));
     expect(useSessionStore.getState().layoutMode).toBe("wide-teams");
 
+    expect(useSessionStore.getState().colorMode).toBe("dark");
     fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Light" }));
+    expect(useSessionStore.getState().colorMode).toBe("light");
     fireEvent.click(screen.getByRole("button", { name: "Dark" }));
     expect(useSessionStore.getState().colorMode).toBe("dark");
 
@@ -113,5 +116,23 @@ describe("HeaderMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("GitHub unreachable");
+  });
+
+  it("clears the up-to-date message when closing and reopening the menu", async () => {
+    mockCheckForAppUpdateManual.mockResolvedValueOnce({ status: "up-to-date" });
+
+    render(<HeaderMenu onOpenSheets={onOpenSheets} onSync={onSync} />);
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check for Updates" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Everything up-to-date");
+
+    // Click outside menu to close it
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    // Reopen menu -> stale status text should be gone
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

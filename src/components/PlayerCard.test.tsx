@@ -87,4 +87,25 @@ describe("PlayerCard role lock multi-select", () => {
     expect(screen.getByRole("button", { name: "D" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: "S" })).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("displays a single shared 6v6 rank row in regular_6v6 mode instead of per-role ranks", () => {
+    useSessionStore.setState({ gameMode: "regular_6v6" });
+    const player = makeFlexLobbyPlayer({
+      regular6v6Rank: "Diamond 3",
+      tankRank: "Pro 3",
+      dpsRank: "Elite 1",
+      supportRank: "All-Star 2",
+    });
+
+    render(<PlayerCard player={player} />);
+
+    expect(screen.getByText("6v6 Rank")).toBeInTheDocument();
+    expect(screen.getByText("Diamond 3")).toBeInTheDocument();
+    expect(screen.queryByText("Pro 3")).not.toBeInTheDocument();
+    expect(screen.queryByText("Elite 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("All-Star 2")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Tank")).toHaveLength(1);
+    expect(screen.getAllByText("DPS")).toHaveLength(1);
+    expect(screen.getAllByText("Support")).toHaveLength(1);
+  });
 });

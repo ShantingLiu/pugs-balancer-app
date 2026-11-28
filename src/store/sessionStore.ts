@@ -267,7 +267,7 @@ const sessionStorage = {
         parsed.state.draftMode = parsed.state.draftMode ?? false;
         // Default layoutMode and colorMode for existing sessions
         parsed.state.layoutMode = parsed.state.layoutMode || "sidebar-left";
-        parsed.state.colorMode = parsed.state.colorMode || "light";
+        parsed.state.colorMode = parsed.state.colorMode || "dark";
       }
       return parsed;
     } catch (e) {
@@ -361,7 +361,7 @@ const initialState: SessionState = {
   showWeightModifiers: true,
   fontScale: "normal" as const,
   layoutMode: "sidebar-left" as const,
-  colorMode: "light" as const,
+  colorMode: "dark" as const,
   draftMode: false,
 };
 

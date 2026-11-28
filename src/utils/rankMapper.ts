@@ -91,6 +91,20 @@ type RoleRankCandidate = {
   isStadium: boolean;
 };
 
+/**
+ * Get a player's single shared 6v6 rank across all roles.
+ * Prefers `regular6v6Rank`, falling back to legacy per-role 6v6 fields if present.
+ */
+export function getShared6v6Rank(player: PlayerRankFields): string | null {
+  return (
+    player.regular6v6Rank ||
+    player.tank6v6Rank ||
+    player.dps6v6Rank ||
+    player.support6v6Rank ||
+    null
+  );
+}
+
 function getRoleCandidates(
   player: PlayerRankFields,
   role: Role,
@@ -102,21 +116,24 @@ function getRoleCandidates(
     role === "Tank" ? player.tankCompRank : role === "DPS" ? player.dpsCompRank : player.supportCompRank;
   const rank6v6 =
     role === "Tank" ? player.tank6v6Rank : role === "DPS" ? player.dps6v6Rank : player.support6v6Rank;
+  const shared6v6Rank = getShared6v6Rank(player);
 
   if (mode === "stadium_5v5") {
     return [
       { rank: stadiumRank, isStadium: true },
       { rank: compRank, isStadium: false },
-      { rank: rank6v6, isStadium: false },
-      { rank: player.regularCompRank, isStadium: false },
       { rank: player.regular6v6Rank, isStadium: false },
+      { rank: rank6v6, isStadium: false },
+      { rank: shared6v6Rank, isStadium: false },
+      { rank: player.regularCompRank, isStadium: false },
     ];
   }
 
   if (mode === "regular_6v6") {
     return [
-      { rank: rank6v6, isStadium: false },
       { rank: player.regular6v6Rank, isStadium: false },
+      { rank: rank6v6, isStadium: false },
+      { rank: shared6v6Rank, isStadium: false },
       { rank: compRank, isStadium: false },
       { rank: player.regularCompRank, isStadium: false },
       { rank: stadiumRank, isStadium: true },
@@ -126,8 +143,9 @@ function getRoleCandidates(
   return [
     { rank: compRank, isStadium: false },
     { rank: player.regularCompRank, isStadium: false },
-    { rank: rank6v6, isStadium: false },
     { rank: player.regular6v6Rank, isStadium: false },
+    { rank: rank6v6, isStadium: false },
+    { rank: shared6v6Rank, isStadium: false },
     { rank: stadiumRank, isStadium: true },
   ];
 }

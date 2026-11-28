@@ -1,3 +1,4 @@
+mod export_files;
 mod keychain;
 mod oauth_listener;
 
@@ -15,6 +16,8 @@ pub fn run() {
       keychain::keychain_delete,
       oauth_listener::bind_oauth_listener,
       oauth_listener::await_oauth_redirect,
+      export_files::export_csv_file,
+      export_files::open_export_folder,
     ])
     .manage(oauth_listener::OAuthListenerState(
       std::sync::Mutex::new(None),

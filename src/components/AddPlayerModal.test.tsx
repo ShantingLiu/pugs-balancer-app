@@ -255,6 +255,34 @@ describe("AddPlayerModal", () => {
       expect(addedPlayer).toBeDefined();
       expect(addedPlayer?.rolesWilling).toContain("Tank");
     });
+
+    it("saves a single shared 6v6 Comp Rank across all willing roles", async () => {
+      render(<AddPlayerModal isOpen={true} onClose={mockOnClose} />);
+
+      fireEvent.change(screen.getByPlaceholderText(/battletag|name/i), {
+        target: { value: "SixVeeSix#1234" },
+      });
+
+      fireEvent.click(screen.getAllByText("Tank")[0]);
+      fireEvent.click(screen.getAllByText("DPS")[0]);
+
+      const rank6v6Selects = screen.getAllByLabelText("6v6 Comp Rank");
+      expect(rank6v6Selects).toHaveLength(1);
+      fireEvent.change(rank6v6Selects[0], { target: { value: "Diamond 3" } });
+
+      fireEvent.click(screen.getAllByText("Reinhardt")[0]);
+      fireEvent.click(screen.getByText("Add Player"));
+
+      await waitFor(() => {
+        expect(mockOnClose).toHaveBeenCalled();
+      });
+
+      const saved = usePlayerStore.getState().getPlayer("SixVeeSix#1234");
+      expect(saved?.regular6v6Rank).toBe("Diamond 3");
+      expect(saved?.tank6v6Rank).toBeNull();
+      expect(saved?.dps6v6Rank).toBeNull();
+      expect(saved?.support6v6Rank).toBeNull();
+    });
   });
 
   describe("rename functionality", () => {

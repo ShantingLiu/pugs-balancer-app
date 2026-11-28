@@ -1,9 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Download, FileSpreadsheet, Gamepad2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, FolderOpen, Gamepad2, Upload } from "lucide-react";
 import { parsePlayersCSV } from "@utils/csvParser";
 import { usePlayerStore } from "@store/playerStore";
 import { useSessionStore } from "@store/sessionStore";
-import type { Player, GameMode } from "@engine/types";
+import {
+  exportCsvFile,
+  openExportFolder,
+  triggerBrowserDownload,
+} from "@services/csvExport";
+import type { Player, GameMode, ValidationWarning } from "@engine/types";
 import { CsvImportModal } from "./CsvImportModal";
 
 // =============================================================================
@@ -95,7 +100,7 @@ export function CsvImporter() {
   const [pendingImport, setPendingImport] = useState<{
     incomingPlayers: Player[];
     missingExisting: Player[];
-    warningCount: number;
+    warnings: ValidationWarning[];
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,11 +119,16 @@ export function CsvImporter() {
     if (lastResult) {
       setSuccessMessage(null);
       setSuccessDetails(null);
+      setShowDetails(false);
     }
   }, [lastResult]);
 
   const finalizeImport = useCallback(
-    (incomingPlayers: Player[], keptMissingPlayers: Player[], warningCount: number) => {
+    (
+      incomingPlayers: Player[],
+      keptMissingPlayers: Player[],
+      warnings: ValidationWarning[]
+    ) => {
       clearSessionStats();
       clearLobby();
       setLastResult(null);
@@ -130,10 +140,19 @@ export function CsvImporter() {
         keptMissingPlayers.length > 0
           ? ` (${incomingPlayers.length} from CSV + ${keptMissingPlayers.length} existing kept)`
           : "";
-      const warningNote = warningCount > 0 ? ` (${warningCount} warnings)` : "";
+      const warningNote =
+        warnings.length > 0
+          ? ` (${warnings.length} ${warnings.length === 1 ? "warning" : "warnings"})`
+          : "";
       setSuccessMessage(
         `Imported ${merged.length} players${keptNote}${warningNote}. Session stats and lobby cleared.`
       );
+      setSuccessDetails(
+        warnings.length > 0
+          ? warnings.map((w) => `Row ${w.row}: ${w.message}`).join("\n")
+          : null
+      );
+      setShowDetails(warnings.length > 0);
       setPendingImport(null);
     },
     [setPlayers, clearSessionStats, clearLobby, setLastResult]
@@ -144,6 +163,7 @@ export function CsvImporter() {
       setError(null);
       setSuccessMessage(null);
       setSuccessDetails(null);
+      setShowDetails(false);
 
       if (!csvContent.trim()) {
         setError("No content to import");
@@ -183,12 +203,12 @@ export function CsvImporter() {
         setPendingImport({
           incomingPlayers: result.valid,
           missingExisting,
-          warningCount: result.warnings.length,
+          warnings: result.warnings,
         });
         return;
       }
 
-      finalizeImport(result.valid, [], result.warnings.length);
+      finalizeImport(result.valid, [], result.warnings);
     },
     [playerCount, players, finalizeImport]
   );
@@ -249,15 +269,7 @@ export function CsvImporter() {
 Player1#1234,Pro 2,,Elite 3,,,,,,,"Tank,DPS","Tank,DPS","Reinhardt,D.Va,Zarya",,,,,,0,Example player,0,0,0
 Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,Mercy,,,0,Support one-trick,0,0,0`;
 
-    const blob = new Blob([templateContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "pugs-players-template.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    triggerBrowserDownload("pugs-players-template.csv", templateContent);
   }, []);
 
   const handleLoadSampleData = useCallback(async () => {
@@ -275,7 +287,8 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
     }
   }, [handleImport]);
 
-  const handleExportCSV = useCallback(() => {
+  const handleExportCSV = useCallback(async () => {
+    setError(null);
     const playerArray = Array.from(players.values());
     if (playerArray.length === 0) {
       setError("No players to export");
@@ -283,30 +296,41 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
     }
 
     const csvContent = playersToCSV(playerArray, sessionWins);
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
     const modeSlug = gameMode.replace("_", "-");
     const filename = `pugs-players-${modeSlug}-${new Date().toISOString().split("T")[0]}.csv`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 
-    const hasAnySessionWins = (bt: string) =>
-      sessionWins.stadium_5v5.has(bt) ||
-      sessionWins.regular_5v5.has(bt) ||
-      sessionWins.regular_6v6.has(bt);
-    const playersWithSessionWins = playerArray.filter((p) => hasAnySessionWins(p.battletag)).length;
-    const sessionWinsMsg = playersWithSessionWins > 0
-      ? ` (${playersWithSessionWins} with session wins)`
-      : "";
-    setSuccessMessage(`Exported ${playerArray.length} players${sessionWinsMsg}`);
-    setSuccessDetails(`File: ${filename}\nLocation: Downloads folder`);
-    setShowDetails(false);
+    try {
+      const { location } = await exportCsvFile(filename, csvContent);
+      const hasAnySessionWins = (bt: string) =>
+        sessionWins.stadium_5v5.has(bt) ||
+        sessionWins.regular_5v5.has(bt) ||
+        sessionWins.regular_6v6.has(bt);
+      const playersWithSessionWins = playerArray.filter((p) =>
+        hasAnySessionWins(p.battletag),
+      ).length;
+      const sessionWinsMsg =
+        playersWithSessionWins > 0
+          ? ` (${playersWithSessionWins} with session wins)`
+          : "";
+      setSuccessMessage(`Exported ${playerArray.length} players${sessionWinsMsg}`);
+      setSuccessDetails(`File: ${filename}\nLocation: ${location}`);
+      setShowDetails(false);
+    } catch (err) {
+      setError(
+        "Failed to export CSV: " +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
   }, [players, sessionWins, gameMode]);
+
+  const handleOpenExportFolder = useCallback(async () => {
+    setError(null);
+    try {
+      await openExportFolder();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -351,7 +375,7 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
         className="hidden"
       />
 
-      {/* Action buttons - 2x2 grid */}
+      {/* Action buttons */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
@@ -369,6 +393,14 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
         >
           <FileSpreadsheet className="h-3.5 w-3.5 text-sky-ink" aria-hidden="true" />
           <span>Template</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleOpenExportFolder}
+          className="app-secondary col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold rounded-well"
+        >
+          <FolderOpen className="h-3.5 w-3.5 text-sky-ink" aria-hidden="true" />
+          <span>Open Export Folder</span>
         </button>
         <button
           type="button"
@@ -404,7 +436,7 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
             )}
           </div>
           {showDetails && successDetails && (
-            <div className="mt-2 pt-2 border-t border-ok-edge text-xs text-ink-2 whitespace-pre-wrap">
+            <div className="mt-2 pt-2 border-t border-ok-edge text-xs text-ink-2 whitespace-pre-wrap max-h-40 overflow-y-auto">
               {successDetails}
             </div>
           )}
@@ -419,7 +451,7 @@ Player2#5678,,Pro 1,Pro 2,,,,,,,"DPS,Support","Support,DPS","Ana,Kiriko,Ashe",,,
             finalizeImport(
               pendingImport.incomingPlayers,
               keptMissingPlayers,
-              pendingImport.warningCount
+              pendingImport.warnings
             )
           }
           onCancel={() => setPendingImport(null)}

@@ -73,11 +73,10 @@ const RANK_ROLE_FIELDS: Array<{
   textColorClass: string;
   stadiumField: "tankRank" | "dpsRank" | "supportRank";
   compField: "tankCompRank" | "dpsCompRank" | "supportCompRank";
-  rank6v6Field: "tank6v6Rank" | "dps6v6Rank" | "support6v6Rank";
 }> = [
-  { role: "Tank", textColorClass: "text-tank", stadiumField: "tankRank", compField: "tankCompRank", rank6v6Field: "tank6v6Rank" },
-  { role: "DPS", textColorClass: "text-dps", stadiumField: "dpsRank", compField: "dpsCompRank", rank6v6Field: "dps6v6Rank" },
-  { role: "Support", textColorClass: "text-sup", stadiumField: "supportRank", compField: "supportCompRank", rank6v6Field: "support6v6Rank" },
+  { role: "Tank", textColorClass: "text-tank", stadiumField: "tankRank", compField: "tankCompRank" },
+  { role: "DPS", textColorClass: "text-dps", stadiumField: "dpsRank", compField: "dpsCompRank" },
+  { role: "Support", textColorClass: "text-sup", stadiumField: "supportRank", compField: "supportCompRank" },
 ];
 
 export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalProps) {
@@ -105,7 +104,15 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
       if (editPlayer) {
         setBattletag(editPlayer.battletag);
         setOriginalBattletag(editPlayer.battletag);
-        setForm({ ...editPlayer });
+        setForm({
+          ...editPlayer,
+          regular6v6Rank:
+            editPlayer.regular6v6Rank ||
+            editPlayer.tank6v6Rank ||
+            editPlayer.dps6v6Rank ||
+            editPlayer.support6v6Rank ||
+            null,
+        });
       } else {
         setBattletag("");
         setOriginalBattletag("");
@@ -139,7 +146,6 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
       if (
         !form[cfg.stadiumField] &&
         !form[cfg.compField] &&
-        !form[cfg.rank6v6Field] &&
         !form.regularCompRank &&
         !form.regular6v6Rank
       ) {
@@ -175,6 +181,9 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
     const player: Player = {
       ...form,
       battletag,
+      tank6v6Rank: null,
+      dps6v6Rank: null,
+      support6v6Rank: null,
       isOneTrick: derivedIsOneTrick,
       oneTrickHero: derivedOneTrickHero,
       rolePreference: form.rolePreference.filter((r) => form.rolesWilling.includes(r)),
@@ -379,21 +388,21 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
             </div>
           )}
 
-          {/* Ranks - Per Role */}
+          {/* Ranks - Per Role + Shared 6v6 */}
           {form.rolesWilling.length > 0 && (
             <div className="space-y-3">
               <div className="text-sm font-semibold text-ink-2">
                 Ranks per Role
                 <span className="text-xs font-normal text-muted ml-2">
-                  (Stadium, 5v5 Comp, or 6v6 Comp rank)
+                  (Stadium or 5v5 Comp rank)
                 </span>
               </div>
 
               {RANK_ROLE_FIELDS.filter(({ role }) => form.rolesWilling.includes(role)).map(
-                ({ role, textColorClass, stadiumField, compField, rank6v6Field }) => (
+                ({ role, textColorClass, stadiumField, compField }) => (
                   <div key={role} className="p-3 app-well">
                     <div className={`text-sm font-semibold ${textColorClass} mb-2`}>{role}</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-muted mb-1">Stadium Rank</label>
                         <select
@@ -424,25 +433,34 @@ export function AddPlayerModal({ isOpen, onClose, editPlayer }: AddPlayerModalPr
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-xs text-muted mb-1">6v6 Comp Rank</label>
-                        <select
-                          value={form[rank6v6Field] || ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({ ...prev, [rank6v6Field]: e.target.value || null }))
-                          }
-                          className="app-input w-full px-3 py-2 text-sm"
-                        >
-                          <option value="">None</option>
-                          {COMP_RANKS.map((rank) => (
-                            <option key={rank} value={rank}>{rank}</option>
-                          ))}
-                        </select>
-                      </div>
                     </div>
                   </div>
                 )
               )}
+
+              <div className="p-3 app-well">
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="player-6v6-rank" className="text-sm font-semibold text-ink-2">
+                    6v6 Comp Rank
+                  </label>
+                  <span className="text-xs text-muted">
+                    Shared across all roles (no role lock)
+                  </span>
+                </div>
+                <select
+                  id="player-6v6-rank"
+                  value={form.regular6v6Rank || ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, regular6v6Rank: e.target.value || null }))
+                  }
+                  className="app-input w-full px-3 py-2 text-sm"
+                >
+                  <option value="">None</option>
+                  {COMP_RANKS.map((rank) => (
+                    <option key={rank} value={rank}>{rank}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
